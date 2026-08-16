@@ -8,13 +8,13 @@ import { resolvePlaceCoordinates } from '../services/places';
 
 const ingestSchema = z.object({
   url: z.url('Must be a valid social media URL (Instagram or TikTok)'),
-  playlistId: z.string().optional(),
+  guideId: z.string().optional(),
 });
 
 export const ingestRouter = new Hono<AppEnv>();
 
 ingestRouter.post('/', zValidator('json', ingestSchema), async (c) => {
-  const { url, playlistId } = c.req.valid('json');
+  const { url, guideId } = c.req.valid('json');
   const startTime = performance.now();
 
   try {
@@ -49,7 +49,7 @@ ingestRouter.post('/', zValidator('json', ingestSchema), async (c) => {
         success: true,
         data: {
           url,
-          playlistId: playlistId ?? null,
+          guideId: guideId ?? null,
           platform: scrapedData.platform,
           shortcode: scrapedData.shortcode ?? null,
           caption: scrapedData.caption,

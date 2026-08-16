@@ -13,8 +13,9 @@ erDiagram
     POSTS ||--o{ POST_RESTAURANTS : references
     RESTAURANTS ||--|{ RESTAURANT_LOCATIONS : has
     RESTAURANT_LOCATIONS ||--o{ POST_RESTAURANTS : tagged_in
-    RESTAURANT_LOCATIONS ||--o{ USER_SAVED_PLACES : saved_by
-    USERS ||--o{ USER_SAVED_PLACES : saves
+    RESTAURANT_LOCATIONS ||--o{ GUIDE_ITEMS : included_in
+    GUIDES ||--|{ GUIDE_ITEMS : contains
+    USERS ||--o{ GUIDES : owns
     
     POSTS {
         uuid id PK
@@ -50,6 +51,24 @@ erDiagram
     POST_RESTAURANTS {
         uuid post_id FK
         uuid restaurant_location_id FK
+    }
+
+    GUIDES {
+        uuid id PK
+        uuid user_id FK
+        string name "e.g. Tokyo 2026 or West Village Dates"
+        string description
+        string emoji
+        string destination_city
+        boolean is_public
+        timestamp created_at
+    }
+
+    GUIDE_ITEMS {
+        uuid guide_id FK
+        uuid restaurant_location_id FK
+        string custom_notes
+        integer order_index
     }
 ```
 

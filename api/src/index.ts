@@ -3,7 +3,7 @@ import { cors } from 'hono/cors';
 import type { AppEnv } from './types/env';
 import { ingestRouter } from './routes/ingest';
 import { crumbsRouter } from './routes/crumbs';
-import { playlistsRouter } from './routes/playlists';
+import { guidesRouter } from './routes/guides';
 
 const app = new Hono<AppEnv>();
 
@@ -24,7 +24,7 @@ app.get('/', (c) => {
 const _routes = app
   .route('/api/ingest', ingestRouter)
   .route('/api/crumbs', crumbsRouter)
-  .route('/api/playlists', playlistsRouter);
+  .route('/api/guides', guidesRouter);
 
 export default app;
 export type AppType = typeof _routes;

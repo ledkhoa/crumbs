@@ -41,7 +41,7 @@ api/
 │   ├── routes/             # Hono route handlers
 │   │   ├── ingest.ts       # POST /api/ingest (Receives social media links, runs scraping & AI extraction)
 │   │   ├── crumbs.ts       # GET/PATCH /api/crumbs (Inbox & saved food spots)
-│   │   └── playlists.ts    # GET/POST /api/playlists (Curated lists / "Spotify for Cravings")
+│   │   └── guides.ts       # GET/POST /api/guides (Curated lists & travel guides)
 │   ├── services/           # Reusable backend services
 │   │   ├── ai.ts           # Vercel AI SDK generateObject + Gemini 2.5 Flash structured extraction
 │   │   ├── places.ts       # Place resolution & geocoding (Google Places / Mapbox)
@@ -62,7 +62,7 @@ api/
 ## Service Responsibilities & Flow
 
 1. **`src/routes/ingest.ts`**:
-   - Validates input payload `{ url: string, playlistId?: string }` via `@hono/zod-validator`.
+   - Validates input payload `{ url: string, guideId?: string }` via `@hono/zod-validator`.
    - Calls `scrapeSocialPost` to fetch metadata (Apify or dev fallback).
    - Calls `extractRestaurantDetails` to parse structured restaurant entities via Gemini 2.5 Flash.
    - Calls `resolvePlaceCoordinates` to resolve lat/lng and map links.
