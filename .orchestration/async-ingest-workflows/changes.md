@@ -13,37 +13,33 @@ Implemented durable asynchronous ingestion using **Cloudflare Workflows** so tha
 * [**`api/src/types/env.ts`**](file:///Users/khoa/Documents/crumbs/api/src/types/env.ts):
   * Defined `IngestWorkflowParams` (`url`, `guideId`, `userId`).
   * Added `INGEST_WORKFLOW: Workflow<IngestWorkflowParams>` and `GOOGLE_PLACES_API_KEY?: string` to `Bindings`.
-* [**`api/worker-configuration.d.ts`**](file:///Users/khoa/Documents/crumbs/api/worker-configuration.d.ts):
-  * Generated Cloudflare runtime types via `wrangler types`.
-* [**`api/eslint.config.mjs`**](file:///Users/khoa/Documents/crumbs/api/eslint.config.mjs) & [**`api/tsconfig.json`**](file:///Users/khoa/Documents/crumbs/api/tsconfig.json):
-  * Configured project types and ignored generated declarations in ESLint.
+* [**`api/drizzle.config.ts`**](file:///Users/khoa/Documents/crumbs/api/drizzle.config.ts):
+  * Configured Drizzle Kit for PostgreSQL / Neon Database with migrations path `src/db/migrations`.
 
-### B. Class-Based Services (Dependency Injection)
+### B. Drizzle Database Layer (`api/src/db/`)
+* [**`api/src/db/schemas/auth.table.ts`**](file:///Users/khoa/Documents/crumbs/api/src/db/schemas/auth.table.ts): BetterAuth tables (`User`, `Session`, `Account`, `Verification`).
+* [**`api/src/db/schemas/constants.ts`**](file:///Users/khoa/Documents/crumbs/api/src/db/schemas/constants.ts): Timestamps with timezone, platform, post type, and crumb status enums.
+* [**`api/src/db/schemas/posts.table.ts`**](file:///Users/khoa/Documents/crumbs/api/src/db/schemas/posts.table.ts): Canonical posts with unique compound index on `(platform, platform_post_id)`.
+* [**`api/src/db/schemas/restaurants.table.ts`**](file:///Users/khoa/Documents/crumbs/api/src/db/schemas/restaurants.table.ts): Canonical restaurants with unique index on `google_place_id`, geocoded coordinates, structured opening hours, and `places_last_synced_at` (6-month TTL).
+* [**`api/src/db/schemas/postRestaurants.table.ts`**](file:///Users/khoa/Documents/crumbs/api/src/db/schemas/postRestaurants.table.ts): Canonical junction table linking posts to restaurants with creator dishes and vibe tags.
+* [**`api/src/db/schemas/guides.table.ts`**](file:///Users/khoa/Documents/crumbs/api/src/db/schemas/guides.table.ts): User-curated guides.
+* [**`api/src/db/schemas/crumbs.table.ts`**](file:///Users/khoa/Documents/crumbs/api/src/db/schemas/crumbs.table.ts): User saved spots (`userId`, `restaurantId`, `sourcePostId`, `status: 'inbox' | 'saved' | 'visited'`).
+* [**`api/src/db/schemas/guideCrumbs.table.ts`**](file:///Users/khoa/Documents/crumbs/api/src/db/schemas/guideCrumbs.table.ts): Ordered guide spots (`guideId`, `crumbId`, `orderIndex`).
+* [**`api/src/db/schemas/relations.ts`**](file:///Users/khoa/Documents/crumbs/api/src/db/schemas/relations.ts): Comprehensive Drizzle relations across all entities.
+* [**`api/src/db/client.ts`**](file:///Users/khoa/Documents/crumbs/api/src/db/client.ts): `createDb` factory for `@neondatabase/serverless` connection.
+
+### C. Class-Based Services & Multimodal Vision
 * [**`api/src/services/scraper.ts`**](file:///Users/khoa/Documents/crumbs/api/src/services/scraper.ts):
-  * Implemented `ScraperService` wrapping the official `apify-client` SDK.
-  * Added typed `ScraperError` with specific error codes (`TOKEN_MISSING`, `SCRAPE_FAILED`, `NO_DATA_RETURNED`, `UNSUPPORTED_PLATFORM`).
-  * Removed dirty mock fallbacks in favor of explicit, retryable exceptions.
+  * Scrapes post metadata, identifies `platform_post_id` and `post_type`, and returns all carousel slide URLs.
 * [**`api/src/services/ai.ts`**](file:///Users/khoa/Documents/crumbs/api/src/services/ai.ts):
-  * Implemented `AIService` using modern `generateText({ output: Output.object({ schema }) })` pattern (replacing deprecated `generateObject`).
+  * Multimodal vision extraction using `gemini-3.7-flash` and `Output.object` to OCR graphic carousel slides and video covers.
 * [**`api/src/services/places.ts`**](file:///Users/khoa/Documents/crumbs/api/src/services/places.ts):
-  * Implemented `PlacesService` using **Google Places API (New)** Text Search (`https://places.googleapis.com/v1/places:searchText`) with exact address, lat/lng coordinates, photos, ratings, and Google Maps URIs.
+  * Google Places API (New) Text Search with FieldMask for coordinates, address, photos, and ratings.
 
-### C. Workflow Engine
+### D. Workflow Engine & Routes
 * [**`api/src/workflows/ingestWorkflow.ts`**](file:///Users/khoa/Documents/crumbs/api/src/workflows/ingestWorkflow.ts):
-  * Implemented `IngestWorkflow` extending `WorkflowEntrypoint`.
-  * Instantiates `ScraperService`, `AIService`, and `PlacesService` once with environment bindings.
-  * **Step 1 (`scrape-social-post`)**: Scrapes metadata with automatic exponential retry policy (`retries: { limit: 3, delay: '5s', backoff: 'exponential' }`).
-  * **Step 2 (`extract-restaurant-details`)**: Structured restaurant entity and vibe extraction with Gemini 2.5 Flash.
-  * **Step 3 (`resolve-place-coordinates`)**: Enriches restaurant entities with exact addresses and coordinates via Google Places API (New).
-  * **Step 4 (`cache-thumbnail-snapshot`)**: Prepares media snapshot metadata (with TODO for Cloudflare R2 bucket storage).
-  * **Step 5 (`persist-and-log-crumb`)**: Logs structured result and prepares payload for future Drizzle/NeonDB storage.
-
+  * Durable 5-step workflow with exponential retry policies and structured logging.
 * [**`api/src/types/crumb.ts`**](file:///Users/khoa/Documents/crumbs/api/src/types/crumb.ts):
-  * Defined unified domain interfaces: `EnrichedRestaurant`, `MediaSnapshot`, and `ProcessedCrumbPayload`.
+  * Unified types: `EnrichedRestaurant`, `MediaSnapshot`, and `ProcessedCrumbPayload`.
 * [**`api/src/routes/ingest.ts`**](file:///Users/khoa/Documents/crumbs/api/src/routes/ingest.ts):
-  * `POST /api/ingest`: Dispatches `c.env.INGEST_WORKFLOW.create()` and returns `202 Accepted` with `workflowId`.
-  * `GET /api/ingest/:instanceId`: Queries workflow status and returns typed `ProcessedCrumbPayload`.
-* [**`api/src/index.ts`**](file:///Users/khoa/Documents/crumbs/api/src/index.ts):
-  * Exported `IngestWorkflow` for Cloudflare Workers runtime.
-* [**`api/agents.md`**](file:///Users/khoa/Documents/crumbs/api/agents.md):
-  * Added Service Architecture Standards (Class-Based Services & Dependency Injection) and updated Failure Log.
+  * `POST /api/ingest` and `GET /api/ingest/:instanceId` with typed `ProcessedCrumbPayload`.

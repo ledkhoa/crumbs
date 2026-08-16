@@ -3,7 +3,8 @@ export interface ScrapedPostData {
   locationName?: string;
   mediaUrls?: string[];
   platform: 'instagram' | 'tiktok' | 'unknown';
-  shortcode?: string;
+  postType: 'reel' | 'carousel' | 'post' | 'video' | 'unknown';
+  platformPostId?: string;
   rawMetadataJson?: string;
 }
 
@@ -23,9 +24,9 @@ export class ScraperError extends Error {
 }
 
 /**
- * Extracts a normalized shortcode from an Instagram URL.
+ * Extracts a normalized platform post ID from an Instagram URL.
  */
-export function extractInstagramShortcode(url: string): string | null {
+export function extractInstagramPostId(url: string): string | null {
   const match = url.match(/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
   return match ? match[1] : null;
 }
@@ -53,8 +54,9 @@ export class ScraperService {
     }
 
     const platform = isInstagram ? 'instagram' : 'tiktok';
-    const shortcode = isInstagram
-      ? (extractInstagramShortcode(url) ?? undefined)
+    const isReel = url.includes('/reel/');
+    const platformPostId = isInstagram
+      ? (extractInstagramPostId(url) ?? undefined)
       : undefined;
 
     if (!this.token) {
@@ -97,6 +99,7 @@ export class ScraperService {
         locationName?: string;
         location?: string;
         displayUrl?: string;
+        type?: string;
         childPosts?: Array<{ displayUrl?: string; [key: string]: unknown }>;
         images?: string[];
         [key: string]: unknown;
@@ -105,7 +108,6 @@ export class ScraperService {
       if (items && items.length > 0) {
         const item = items[0];
 
-        // Collect all slide image URLs for multi-image carousel posts
         const slideUrls =
           item.childPosts && Array.isArray(item.childPosts)
             ? item.childPosts
@@ -122,12 +124,20 @@ export class ScraperService {
                 ? [item.displayUrl]
                 : [];
 
+        const postType: ScrapedPostData['postType'] =
+          slideUrls.length > 0
+            ? 'carousel'
+            : isReel || item.type === 'Video'
+              ? 'reel'
+              : 'post';
+
         return {
           caption: item.caption || '',
           locationName: item.locationName || item.location || '',
           mediaUrls,
           platform,
-          shortcode,
+          postType,
+          platformPostId,
           rawMetadataJson: JSON.stringify(item),
         };
       }

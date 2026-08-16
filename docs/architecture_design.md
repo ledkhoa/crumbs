@@ -6,123 +6,169 @@ This document details the database schema and standard AI input/output schemas f
 
 ## 1. Database Schema Design (SQL / Drizzle)
 
-To support multiple locations (chains/branches), multi-restaurant posts, and user trip-planning, we use a normalized relational schema.
+To support multiple locations (chains/branches), multi-restaurant posts, and user trip-planning, we use a normalized relational schema with global canonical entities and user-scoped collections.
 
 ```mermaid
 erDiagram
-    POSTS ||--o{ POST_RESTAURANTS : references
-    RESTAURANTS ||--|{ RESTAURANT_LOCATIONS : has
-    RESTAURANT_LOCATIONS ||--o{ POST_RESTAURANTS : tagged_in
-    RESTAURANT_LOCATIONS ||--o{ GUIDE_ITEMS : included_in
-    GUIDES ||--|{ GUIDE_ITEMS : contains
-    USERS ||--o{ GUIDES : owns
-    
+    USERS ||--o{ GUIDES : creates
+    USERS ||--o{ USER_CRUMBS : saves
+    POSTS ||--o{ POST_RESTAURANTS : features
+    RESTAURANTS ||--o{ POST_RESTAURANTS : featured_in
+    POSTS ||--o{ USER_CRUMBS : source_post
+    RESTAURANTS ||--o{ USER_CRUMBS : saved_restaurant
+    GUIDES ||--o{ GUIDE_CRUMBS : groups
+    USER_CRUMBS ||--o{ GUIDE_CRUMBS : placed_in
+
+    USERS {
+        uuid id PK
+        string email UK
+        string name
+        boolean email_verified
+        string image
+        timestamp created_at
+        timestamp updated_at
+    }
+
     POSTS {
         uuid id PK
-        string shortcode UK "Unique normalized Instagram key"
-        string source_url
-        string platform "instagram | tiktok"
-        string status "pending | scraping | processing | completed | failed"
-        string caption
-        string location_name "Original tagged location"
-        jsonb raw_metadata
+        string platform "instagram | tiktok | youtube"
+        string post_type "reel | carousel | post | video | short"
+        string platform_post_id UK "Unique platform key"
+        text original_url
+        text caption
+        string location_name
+        jsonb media_urls
+        jsonb media_snapshot
+        string classification
+        text summary
+        text raw_metadata_json
         timestamp created_at
+        timestamp updated_at
     }
 
     RESTAURANTS {
         uuid id PK
+        string google_place_id UK "Google Place ID for deduplication"
         string name
-        string cuisine
-        string website
-    }
-
-    RESTAURANT_LOCATIONS {
-        uuid id PK
-        uuid restaurant_id FK
-        string address
+        text formatted_address
         string city
         string state
         string country
-        decimal latitude
-        decimal longitude
-        geography coordinates "For spatial map indexing"
+        float latitude
+        float longitude
+        string cuisine
+        numeric rating
+        integer user_rating_count
+        string price_level
+        text maps_url
+        text website_url
+        text photo_url
+        jsonb regular_opening_hours
+        timestamp places_last_synced_at
+        timestamp created_at
+        timestamp updated_at
     }
 
     POST_RESTAURANTS {
+        uuid id PK
         uuid post_id FK
-        uuid restaurant_location_id FK
+        uuid restaurant_id FK
+        jsonb recommended_dishes
+        jsonb vibe_tags
+        text creator_notes
+        timestamp created_at
+        timestamp updated_at
     }
 
     GUIDES {
         uuid id PK
         uuid user_id FK
-        string name "e.g. Tokyo 2026 or West Village Dates"
-        string description
-        string emoji
-        string destination_city
+        string name
+        text description
+        string emoji_icon
+        text cover_image_url
         boolean is_public
         timestamp created_at
+        timestamp updated_at
     }
 
-    GUIDE_ITEMS {
+    USER_CRUMBS {
+        uuid id PK
+        uuid user_id FK
+        uuid restaurant_id FK
+        uuid source_post_id FK "Preserves original reel/tiktok source"
+        string status "inbox | saved | visited"
+        text user_notes
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    GUIDE_CRUMBS {
+        uuid id PK
         uuid guide_id FK
-        uuid restaurant_location_id FK
-        string custom_notes
+        uuid user_crumb_id FK
         integer order_index
+        timestamp created_at
+        timestamp updated_at
     }
 ```
 
 ### Table Definitions
 
 #### `posts`
-Tracks scraping/processing status to prevent duplicate API requests.
+Canonical table tracking ingested social media posts.
 *   `id` (UUID, PK)
-*   `shortcode` (VARCHAR, Unique Index): E.g., `DXq15-wEQgf` (stripped of tracking query parameters).
-*   `source_url` (TEXT): Normalized original URL.
-*   `platform` (VARCHAR): `"instagram"` or `"tiktok"`.
-*   `status` (VARCHAR): `"pending"` | `"scraping"` | `"processing"` | `"completed"` | `"failed"`.
+*   `platform` (VARCHAR, 32): `"instagram"` | `"tiktok"` | `"youtube"`
+*   `post_type` (VARCHAR, 32): `"reel"` | `"carousel"` | `"post"` | `"video"` | `"short"`
+*   `platform_post_id` (VARCHAR, 128, Unique Index with platform): E.g., `DaiKM-vjXrl`.
+*   `original_url` (TEXT): Normalized original URL.
 *   `caption` (TEXT, Optional)
 *   `location_name` (VARCHAR, Optional)
-*   `raw_metadata` (JSONB): Full dump from Apify for archival/debugging.
-*   `error_message` (TEXT, Optional)
+*   `media_urls` (JSONB): Array of image/video URLs.
+*   `media_snapshot` (JSONB): R2 snapshot status and key.
+*   `classification` (VARCHAR, 64): `"restaurant_related"` | `"travel_unrelated_to_restaurants"` | `"random_unrelated"`.
+*   `summary` (TEXT, Optional)
+*   `raw_metadata_json` (TEXT, Optional): Full serialized payload from scraper.
 
 #### `restaurants`
-Base entity representing the brand/restaurant itself.
+Canonical table representing physical dining spots, deduplicated via `google_place_id`.
 *   `id` (UUID, PK)
+*   `google_place_id` (VARCHAR, Unique Index)
 *   `name` (VARCHAR)
-*   `cuisine` (VARCHAR, Optional)
-*   `website` (VARCHAR, Optional)
-
-#### `restaurant_locations`
-Specific geographic locations (since restaurants can have multiple branches).
-*   `id` (UUID, PK)
-*   `restaurant_id` (UUID, FK -> `restaurants.id`)
-*   `address` (VARCHAR, Optional)
-*   `city` (VARCHAR, Optional)
-*   `state` (VARCHAR, Optional)
-*   `country` (VARCHAR, Optional)
-*   `latitude` (DECIMAL)
-*   `longitude` (DECIMAL)
+*   `formatted_address` (TEXT)
+*   `city`, `state`, `country` (VARCHAR)
+*   `latitude`, `longitude` (DOUBLE PRECISION)
+*   `cuisine` (VARCHAR)
+*   `rating` (NUMERIC)
+*   `user_rating_count` (INTEGER)
+*   `price_level` (VARCHAR)
+*   `maps_url`, `website_url`, `photo_url` (TEXT)
+*   `regular_opening_hours` (JSONB)
+*   `places_last_synced_at` (TIMESTAMP WITH TIMEZONE): 6-month cache TTL.
 
 #### `post_restaurants` (Join Table)
-Connects posts to the restaurants extracted from them (supports posts listing multiple restaurants).
-*   `post_id` (UUID, FK -> `posts.id`, Composite PK)
-*   `restaurant_location_id` (UUID, FK -> `restaurant_locations.id`, Composite PK)
+Connects posts to the restaurants extracted from them with creator-specific recommended dishes and vibe tags.
+*   `id` (UUID, PK)
+*   `post_id` (UUID, FK -> `posts.id`)
+*   `restaurant_id` (UUID, FK -> `restaurants.id`)
+*   `recommended_dishes` (JSONB)
+*   `vibe_tags` (JSONB)
+*   `creator_notes` (TEXT)
 
 ---
 
 ## 2. AI Input & Output Schemas (Vercel AI SDK)
 
-To ensure the AI extracts structured data reliably, we will switch from `generateText` to `generateObject` using the **Vercel AI SDK** with **Zod** schema validation.
+To ensure the AI extracts structured data reliably, we use `generateText` with `Output.object` via the **Vercel AI SDK** with **Zod** schema validation and multimodal vision.
 
 ### AI Input Payload (JSON)
-Only minimal clean metadata is sent to the LLM to minimize token consumption:
+Minimal clean metadata and slide images sent to the LLM:
 ```typescript
 interface AIInput {
-  shortcode: string;
+  platformPostId: string;
   caption: string;
   taggedLocation?: string;
-  hashtags?: string[];
+  mediaUrls?: string[];
 }
 ```
 

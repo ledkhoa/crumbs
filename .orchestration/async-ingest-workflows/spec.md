@@ -1,7 +1,7 @@
 # Technical Specification: Async Ingestion Engine with Cloudflare Workflows
 
 ## 1. Overview
-The Crumbs Ingestion Engine handles incoming social media links (Instagram Reels, TikTok) shared from the mobile app's Share Sheet without blocking the client. We implement **Cloudflare Workflows** to orchestrate asynchronous scraping, AI extraction, Google Places address resolution, and persistence with automatic step retries and durability.
+The Crumbs Ingestion Engine handles incoming social media links (Instagram Reels, TikTok) shared from the mobile app's Share Sheet without blocking the client. We implement **Cloudflare Workflows** to orchestrate asynchronous scraping, AI extraction, Google Places address resolution, and Drizzle/Neon database persistence with automatic step retries and durability.
 
 ---
 
@@ -13,8 +13,8 @@ sequenceDiagram
     actor User as Mobile App / Share Sheet
     participant API as Hono Ingest Route (POST /api/ingest)
     participant WF as Cloudflare Workflow (IngestWorkflow)
-    participant Scraper as ScraperService (Apify SDK)
-    participant AI as AIService (Gemini 2.5 Flash)
+    participant Scraper as ScraperService (Apify REST)
+    participant AI as AIService (Gemini 3.7 Flash + Vision)
     participant Places as PlacesService (Google Places API New)
 
     User->>API: POST /api/ingest { url, guideId? }
@@ -24,9 +24,9 @@ sequenceDiagram
     rect rgb(240, 248, 255)
         Note over WF: Cloudflare Workflows Background Execution
         WF->>Scraper: step.do("scrape-social-post", { retries: 3 })
-        Scraper-->>WF: Raw caption, location, media URLs
+        Scraper-->>WF: Raw caption, location, media URLs, platformPostId, postType
         WF->>AI: step.do("extract-restaurant-details", { retries: 2 })
-        AI-->>WF: Structured restaurant entity & vibe tags
+        AI-->>WF: Structured restaurant entities, hero dishes, vibe tags (via Vision)
         WF->>Places: step.do("resolve-place-coordinates", { retries: 2 })
         Places-->>WF: Exact address, lat/lng, Place ID, Maps URL, photos
         WF->>WF: step.do("cache-thumbnail-snapshot") [TODO R2]
@@ -34,44 +34,76 @@ sequenceDiagram
     end
 
     User->>API: GET /api/ingest/:instanceId (Polling)
-    API-->>User: 200 OK { status: "complete" | "running", data }
+    API-->>User: 200 OK { status: "complete" | "running", output: ProcessedCrumbPayload }
 ```
 
 ---
 
-## 3. Agreed Decisions
+## 3. Database & Entity Architecture (Drizzle ORM / Neon PostgreSQL)
 
-1. **Service Architecture:** All services under `src/services/` are class-based with constructor dependency injection (`ScraperService`, `AIService`, `PlacesService`).
-2. **Scraping Engine:** Official `apify-client` SDK with typed `ScraperError` (no silent mock fallbacks).
-3. **AI Extraction:** Vercel AI SDK `generateText` with `Output.object({ schema })`.
-4. **Geocoding & Place Enrichment:** Google Places API (New) Text Search (`https://places.googleapis.com/v1/places:searchText`).
-5. **Persistence Target:** Log workflow results to console and return the normalized payload from the workflow instance; full Drizzle + NeonDB integration will follow in a subsequent phase.
-6. **Thumbnail Storage:** Add a distinct `cache-thumbnail-snapshot` workflow step with a structured TODO for Cloudflare R2 bucket integration.
-7. **Async Exclusivity:** All ingestion runs asynchronously via `INGEST_WORKFLOW`.
+```mermaid
+erDiagram
+    USERS ||--o{ GUIDES : creates
+    USERS ||--o{ CRUMBS : saves
+    POSTS ||--o{ POST_RESTAURANTS : features
+    RESTAURANTS ||--o{ POST_RESTAURANTS : featured_in
+    POSTS ||--o{ CRUMBS : source_post
+    RESTAURANTS ||--o{ CRUMBS : saved_restaurant
+    GUIDES ||--o{ GUIDE_CRUMBS : groups
+    CRUMBS ||--o{ GUIDE_CRUMBS : placed_in
 
----
+    USERS {
+        uuid id PK
+        string email UK
+        string name
+        boolean email_verified
+    }
 
-## 4. Implementation Details
+    POSTS {
+        uuid id PK
+        string platform
+        string post_type
+        string platform_post_id UK
+        text original_url
+        text caption
+        jsonb media_urls
+    }
 
-### A. Configuration & Types
-* Update [`wrangler.jsonc`](file:///Users/khoa/Documents/crumbs/api/wrangler.jsonc):
-  * Register the workflow binding `INGEST_WORKFLOW` mapping to class `IngestWorkflow`.
-* Update [`src/types/env.ts`](file:///Users/khoa/Documents/crumbs/api/src/types/env.ts):
-  * Define `IngestWorkflowParams` (`url: string`, `guideId?: string`, `userId?: string`).
-  * Add `INGEST_WORKFLOW: Workflow<IngestWorkflowParams>`, `GOOGLE_PLACES_API_KEY?: string`, `APIFY_TOKEN?: string` to `Bindings`.
+    RESTAURANTS {
+        uuid id PK
+        string google_place_id UK
+        string name
+        float latitude
+        float longitude
+        timestamp places_last_synced_at
+    }
 
-### B. Ingest Workflow Implementation
-* Create [`src/workflows/ingestWorkflow.ts`](file:///Users/khoa/Documents/crumbs/api/src/workflows/ingestWorkflow.ts):
-  * `IngestWorkflow extends WorkflowEntrypoint<Bindings, IngestWorkflowParams>`
-  * **Step 1 (`scrape-social-post`)**: Calls `scraper.scrape(url)` with 3 exponential retries.
-  * **Step 2 (`extract-restaurant-details`)**: Calls `ai.extract(scraped)` using Gemini 2.5 Flash + Zod schema via `generateText(Output.object)`.
-  * **Step 3 (`resolve-place-coordinates`)**: Calls `places.resolve(name, city, address)` via Google Places API (New).
-  * **Step 4 (`cache-thumbnail-snapshot`)**: Prepares media snapshot structure with TODO for Cloudflare R2 upload.
-  * **Step 5 (`persist-and-log-crumb`)**: Logs structured crumb output and returns the final object.
+    POST_RESTAURANTS {
+        uuid id PK
+        uuid post_id FK
+        uuid restaurant_id FK
+        jsonb recommended_dishes
+        jsonb vibe_tags
+    }
 
-### C. API Endpoints
-* Update [`src/routes/ingest.ts`](file:///Users/khoa/Documents/crumbs/api/src/routes/ingest.ts):
-  * `POST /api/ingest`: Creates workflow instance via `c.env.INGEST_WORKFLOW.create()` and returns `202 Accepted` with `workflowId`.
-  * `GET /api/ingest/:instanceId`: Retrieves workflow instance status using `c.env.INGEST_WORKFLOW.get(instanceId)`.
-* Update [`src/index.ts`](file:///Users/khoa/Documents/crumbs/api/src/index.ts):
-  * Export `IngestWorkflow` class so Cloudflare Workers runtime can instantiate the workflow entrypoint.
+    GUIDES {
+        uuid id PK
+        uuid user_id FK
+        string name
+    }
+
+    CRUMBS {
+        uuid id PK
+        uuid user_id FK
+        uuid restaurant_id FK
+        uuid source_post_id FK
+        string status "inbox | saved | visited"
+    }
+
+    GUIDE_CRUMBS {
+        uuid id PK
+        uuid guide_id FK
+        uuid crumb_id FK
+        int order_index
+    }
+```
