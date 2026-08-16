@@ -55,6 +55,7 @@ export const postExtractionSchema = z.object({
     ),
 });
 
+export type ExtractedRestaurant = z.infer<typeof extractedRestaurantSchema>;
 export type PostExtractionResult = z.infer<typeof postExtractionSchema>;
 
 /**

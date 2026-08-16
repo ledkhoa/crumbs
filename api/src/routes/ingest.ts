@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import type { AppEnv } from '../types/env';
+import type { ProcessedCrumbPayload } from '../types/crumb';
 
 const ingestSchema = z.object({
   url: z.url('Must be a valid social media URL (Instagram or TikTok)'),
@@ -66,7 +67,7 @@ ingestRouter.get('/:instanceId', async (c) => {
       success: true,
       workflowId: instanceId,
       status: status.status,
-      output: status.output ?? null,
+      output: (status.output as ProcessedCrumbPayload) ?? null,
       error: status.error ?? null,
     });
   } catch (error: unknown) {
