@@ -4,6 +4,7 @@ import type { AppEnv } from './types/env';
 import { ingestRouter } from './routes/ingest';
 import { crumbsRouter } from './routes/crumbs';
 import { guidesRouter } from './routes/guides';
+import { IngestWorkflow } from './workflows/ingestWorkflow';
 
 const app = new Hono<AppEnv>();
 
@@ -27,4 +28,5 @@ const _routes = app
   .route('/api/guides', guidesRouter);
 
 export default app;
+export { IngestWorkflow };
 export type AppType = typeof _routes;

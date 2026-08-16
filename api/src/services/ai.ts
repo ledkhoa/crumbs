@@ -75,7 +75,7 @@ Caption:
 """
 ${scrapedData.caption}
 """
-${scrapedData.rawItem ? `Raw Metadata: ${JSON.stringify(scrapedData.rawItem, null, 2)}` : ''}`;
+${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` : ''}`;
 
   const { object } = await generateObject({
     model: google('gemini-2.5-flash'),
