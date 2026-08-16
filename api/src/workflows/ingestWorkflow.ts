@@ -4,15 +4,23 @@ import {
   WorkflowEvent,
 } from 'cloudflare:workers';
 import type { Bindings, IngestWorkflowParams } from '../types/env';
+import type {
+  EnrichedRestaurant,
+  MediaSnapshot,
+  ProcessedCrumbPayload,
+} from '../types/crumb';
 import { ScraperService, type ScrapedPostData } from '../services/scraper';
-import { AIService } from '../services/ai';
+import { AIService, type PostExtractionResult } from '../services/ai';
 import { PlacesService } from '../services/places';
 
 export class IngestWorkflow extends WorkflowEntrypoint<
   Bindings,
   IngestWorkflowParams
 > {
-  async run(event: WorkflowEvent<IngestWorkflowParams>, step: WorkflowStep) {
+  async run(
+    event: WorkflowEvent<IngestWorkflowParams>,
+    step: WorkflowStep,
+  ): Promise<ProcessedCrumbPayload> {
     const { url, guideId, userId } = event.payload;
     const workflowStartTime = performance.now();
 
@@ -80,7 +88,7 @@ export class IngestWorkflow extends WorkflowEntrypoint<
         },
         timeout: '1 minute',
       },
-      async () => {
+      async (): Promise<PostExtractionResult> => {
         console.log(`🧠 [Step 2/5] Running AI structured entity extraction...`);
         const result = await ai.extract(scrapedData);
 
@@ -115,12 +123,12 @@ export class IngestWorkflow extends WorkflowEntrypoint<
           delay: '2 seconds',
         },
       },
-      async () => {
+      async (): Promise<EnrichedRestaurant[]> => {
         console.log(
           `📍 [Step 3/5] Resolving coordinates & addresses for ${extraction.restaurants.length} place(s)...`,
         );
 
-        const enriched = await Promise.all(
+        const enriched: EnrichedRestaurant[] = await Promise.all(
           extraction.restaurants.map(async (restaurant, index) => {
             const placeDetails = await places.resolve(
               restaurant.name,
@@ -160,14 +168,14 @@ export class IngestWorkflow extends WorkflowEntrypoint<
 
     const mediaSnapshot = await step.do(
       'cache-thumbnail-snapshot',
-      async () => {
+      async (): Promise<MediaSnapshot> => {
         console.log(`🖼️ [Step 4/5] Staging thumbnail media snapshot...`);
         const primaryMediaUrl = scrapedData?.mediaUrls?.[0] ?? null;
 
-        const snapshot = {
+        const snapshot: MediaSnapshot = {
           originalUrl: primaryMediaUrl,
           r2Key: null,
-          status: 'pending_r2_setup' as const,
+          status: 'pending_r2_setup',
         };
 
         console.log(
@@ -178,42 +186,45 @@ export class IngestWorkflow extends WorkflowEntrypoint<
       },
     );
 
-    const finalizedCrumb = await step.do('persist-and-log-crumb', async () => {
-      const totalDuration = performance.now() - workflowStartTime;
+    const finalizedCrumb = await step.do(
+      'persist-and-log-crumb',
+      async (): Promise<ProcessedCrumbPayload> => {
+        const totalDuration = performance.now() - workflowStartTime;
 
-      const result = {
-        url,
-        guideId: guideId ?? null,
-        userId: userId ?? null,
-        platform: scrapedData?.platform ?? 'unknown',
-        shortcode: scrapedData?.shortcode ?? null,
-        caption: scrapedData?.caption ?? '',
-        locationName: scrapedData?.locationName ?? null,
-        mediaUrls: scrapedData?.mediaUrls ?? [],
-        mediaSnapshot,
-        classification: extraction.classification,
-        summary: extraction.summary,
-        restaurants: enrichedRestaurants,
-        processedAt: new Date().toISOString(),
-      };
+        const result: ProcessedCrumbPayload = {
+          url,
+          guideId: guideId ?? null,
+          userId: userId ?? null,
+          platform: scrapedData?.platform ?? 'unknown',
+          shortcode: scrapedData?.shortcode ?? null,
+          caption: scrapedData?.caption ?? '',
+          locationName: scrapedData?.locationName ?? null,
+          mediaUrls: scrapedData?.mediaUrls ?? [],
+          mediaSnapshot,
+          classification: extraction.classification,
+          summary: extraction.summary,
+          restaurants: enrichedRestaurants,
+          processedAt: new Date().toISOString(),
+        };
 
-      console.log(
-        `\n✨ ===============================================================`,
-      );
-      console.log(
-        `🎉 [IngestWorkflow COMPLETED in ${Math.round(totalDuration)}ms]`,
-      );
-      console.log(
-        `📦 FINALIZED CRUMB PAYLOAD:\n`,
-        JSON.stringify(result, null, 2),
-      );
-      console.log(
-        `===============================================================\n`,
-      );
+        console.log(
+          `\n✨ ===============================================================`,
+        );
+        console.log(
+          `🎉 [IngestWorkflow COMPLETED in ${Math.round(totalDuration)}ms]`,
+        );
+        console.log(
+          `📦 FINALIZED CRUMB PAYLOAD:\n`,
+          JSON.stringify(result, null, 2),
+        );
+        console.log(
+          `===============================================================\n`,
+        );
 
-      // TODO: Future persistence via Drizzle ORM into NeonDB / Postgres
-      return result;
-    });
+        // TODO: Future persistence via Drizzle ORM into NeonDB / Postgres
+        return result;
+      },
+    );
 
     return finalizedCrumb;
   }

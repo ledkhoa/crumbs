@@ -38,10 +38,11 @@ Implemented durable asynchronous ingestion using **Cloudflare Workflows** so tha
   * **Step 4 (`cache-thumbnail-snapshot`)**: Prepares media snapshot metadata (with TODO for Cloudflare R2 bucket storage).
   * **Step 5 (`persist-and-log-crumb`)**: Logs structured result and prepares payload for future Drizzle/NeonDB storage.
 
-### D. Routes & Documentation
+* [**`api/src/types/crumb.ts`**](file:///Users/khoa/Documents/crumbs/api/src/types/crumb.ts):
+  * Defined unified domain interfaces: `EnrichedRestaurant`, `MediaSnapshot`, and `ProcessedCrumbPayload`.
 * [**`api/src/routes/ingest.ts`**](file:///Users/khoa/Documents/crumbs/api/src/routes/ingest.ts):
   * `POST /api/ingest`: Dispatches `c.env.INGEST_WORKFLOW.create()` and returns `202 Accepted` with `workflowId`.
-  * `GET /api/ingest/:instanceId`: Queries workflow status and output.
+  * `GET /api/ingest/:instanceId`: Queries workflow status and returns typed `ProcessedCrumbPayload`.
 * [**`api/src/index.ts`**](file:///Users/khoa/Documents/crumbs/api/src/index.ts):
   * Exported `IngestWorkflow` for Cloudflare Workers runtime.
 * [**`api/agents.md`**](file:///Users/khoa/Documents/crumbs/api/agents.md):
