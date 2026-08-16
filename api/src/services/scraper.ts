@@ -1,5 +1,3 @@
-import { ApifyClient } from 'apify-client';
-
 export interface ScrapedPostData {
   caption: string;
   locationName?: string;
@@ -36,18 +34,11 @@ export function extractInstagramShortcode(url: string): string | null {
  * ScraperService manages social media content extraction from Instagram & TikTok.
  */
 export class ScraperService {
-  private client?: ApifyClient;
-
-  constructor(private token?: string) {
-    if (token) {
-      this.client = new ApifyClient({ token });
-    }
-  }
+  constructor(private token?: string) {}
 
   /**
-   * Scrapes metadata for a given post URL.
-   * Throws a ScraperError if scraping fails or token is missing,
-   * enabling Cloudflare Workflows to retry transient failures.
+   * Scrapes metadata for a given post URL using Apify's synchronous actor endpoint.
+   * Throws a typed ScraperError on failure to trigger Cloudflare Workflows automatic retries.
    */
   async scrape(url: string): Promise<ScrapedPostData> {
     const isInstagram = url.includes('instagram.com');
@@ -66,9 +57,9 @@ export class ScraperService {
       ? (extractInstagramShortcode(url) ?? undefined)
       : undefined;
 
-    if (!this.token || !this.client) {
+    if (!this.token) {
       throw new ScraperError(
-        'APIFY_TOKEN is missing or not configured. Cannot perform live scraping.',
+        'APIFY_TOKEN is missing or not configured in environment bindings.',
         'TOKEN_MISSING',
         false,
       );
@@ -79,29 +70,62 @@ export class ScraperService {
         `[ScraperService] Fetching live ${platform} data via Apify for: ${url}`,
       );
 
-      const run = await this.client.actor('apify/instagram-scraper').call({
-        directUrls: [url],
-        resultsType: 'details',
-        resultsLimit: 1,
-      });
+      const response = await fetch(
+        `https://api.apify.com/v2/actors/apify~instagram-scraper/run-sync-get-dataset-items?token=${this.token}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            directUrls: [url],
+            resultsType: 'details',
+            resultsLimit: 1,
+          }),
+        },
+      );
 
-      const { items } = await this.client
-        .dataset(run.defaultDatasetId)
-        .listItems();
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new ScraperError(
+          `Apify API returned HTTP ${response.status}: ${errorText}`,
+          'SCRAPE_FAILED',
+          true,
+        );
+      }
 
-      if (items.length > 0) {
-        const item = items[0] as {
-          caption?: string;
-          locationName?: string;
-          location?: string;
-          displayUrl?: string;
-          [key: string]: unknown;
-        };
+      const items = (await response.json()) as Array<{
+        caption?: string;
+        locationName?: string;
+        location?: string;
+        displayUrl?: string;
+        childPosts?: Array<{ displayUrl?: string; [key: string]: unknown }>;
+        images?: string[];
+        [key: string]: unknown;
+      }>;
+
+      if (items && items.length > 0) {
+        const item = items[0];
+
+        // Collect all slide image URLs for multi-image carousel posts
+        const slideUrls =
+          item.childPosts && Array.isArray(item.childPosts)
+            ? item.childPosts
+                .map((child) => child.displayUrl)
+                .filter((url): url is string => Boolean(url))
+            : [];
+
+        const mediaUrls =
+          slideUrls.length > 0
+            ? slideUrls
+            : item.images && item.images.length > 0
+              ? item.images
+              : item.displayUrl
+                ? [item.displayUrl]
+                : [];
 
         return {
           caption: item.caption || '',
           locationName: item.locationName || item.location || '',
-          mediaUrls: item.displayUrl ? [item.displayUrl] : [],
+          mediaUrls,
           platform,
           shortcode,
           rawMetadataJson: JSON.stringify(item),

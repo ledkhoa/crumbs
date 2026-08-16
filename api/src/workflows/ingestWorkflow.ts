@@ -14,16 +14,27 @@ export class IngestWorkflow extends WorkflowEntrypoint<
 > {
   async run(event: WorkflowEvent<IngestWorkflowParams>, step: WorkflowStep) {
     const { url, guideId, userId } = event.payload;
+    const workflowStartTime = performance.now();
 
-    // 1. Initialize services with context bindings once
+    console.log(
+      `\n🚀 ===============================================================`,
+    );
+    console.log(`🍞 [IngestWorkflow] NEW INGESTION TRIGGERED`);
+    console.log(`🔗 URL:       ${url}`);
+    console.log(`🗺️ Guide ID:  ${guideId || 'None (Inbox)'}`);
+    console.log(`👤 User ID:   ${userId || 'Anonymous'}`);
+    console.log(`⏰ Started:   ${new Date().toISOString()}`);
+    console.log(
+      `===============================================================\n`,
+    );
+
     const scraper = new ScraperService(this.env.APIFY_TOKEN);
     const ai = new AIService(this.env.GOOGLE_GENERATIVE_AI_API_KEY);
     const places = new PlacesService(
       this.env.GOOGLE_PLACES_API_KEY || this.env.GOOGLE_GENERATIVE_AI_API_KEY,
     );
 
-    // Step 1: Scrape social media post metadata (with automatic retry on failure)
-    const scrapedData = (await step.do(
+    const scrapedData = await step.do(
       'scrape-social-post',
       {
         retries: {
@@ -34,11 +45,31 @@ export class IngestWorkflow extends WorkflowEntrypoint<
         timeout: '2 minutes',
       },
       async (): Promise<ScrapedPostData> => {
-        return await scraper.scrape(url);
-      },
-    )) as ScrapedPostData;
+        console.log(`📥 [Step 1/5] Scraping post metadata for: ${url}`);
+        const data = await scraper.scrape(url);
 
-    // Step 2: Extract structured restaurant details & vibe tags with Gemini 2.5 Flash
+        console.log(
+          `\n✅ [Step 1/5 SUCCESS] Metadata retrieved:`,
+          JSON.stringify(
+            {
+              platform: data.platform,
+              shortcode: data.shortcode,
+              locationName: data.locationName,
+              mediaUrlsCount: data.mediaUrls?.length ?? 0,
+              captionSnippet:
+                data.caption.length > 120
+                  ? `${data.caption.substring(0, 120)}...`
+                  : data.caption,
+            },
+            null,
+            2,
+          ),
+        );
+
+        return data;
+      },
+    );
+
     const extraction = await step.do(
       'extract-restaurant-details',
       {
@@ -50,11 +81,32 @@ export class IngestWorkflow extends WorkflowEntrypoint<
         timeout: '1 minute',
       },
       async () => {
-        return await ai.extract(scrapedData);
+        console.log(`🧠 [Step 2/5] Running AI structured entity extraction...`);
+        const result = await ai.extract(scrapedData);
+
+        console.log(
+          `\n✅ [Step 2/5 SUCCESS] AI Extraction Complete:`,
+          JSON.stringify(
+            {
+              classification: result.classification,
+              summary: result.summary,
+              restaurantCount: result.restaurants.length,
+              restaurants: result.restaurants.map((r) => ({
+                name: r.name,
+                cuisine: r.cuisine,
+                dishes: r.recommendedDishes,
+                vibes: r.vibe,
+              })),
+            },
+            null,
+            2,
+          ),
+        );
+
+        return result;
       },
     );
 
-    // Step 3: Resolve place details and geographic coordinates
     const enrichedRestaurants = await step.do(
       'resolve-place-coordinates',
       {
@@ -64,38 +116,71 @@ export class IngestWorkflow extends WorkflowEntrypoint<
         },
       },
       async () => {
-        return await Promise.all(
-          extraction.restaurants.map(async (restaurant) => {
+        console.log(
+          `📍 [Step 3/5] Resolving coordinates & addresses for ${extraction.restaurants.length} place(s)...`,
+        );
+
+        const enriched = await Promise.all(
+          extraction.restaurants.map(async (restaurant, index) => {
             const placeDetails = await places.resolve(
               restaurant.name,
               restaurant.city,
               restaurant.address,
             );
+
+            console.log(
+              `   📍 [Place ${index + 1}/${extraction.restaurants.length}] ${restaurant.name}:`,
+              JSON.stringify(
+                {
+                  formattedAddress: placeDetails.formattedAddress,
+                  coordinates:
+                    placeDetails.latitude && placeDetails.longitude
+                      ? `(${placeDetails.latitude}, ${placeDetails.longitude})`
+                      : 'Unavailable',
+                  rating: placeDetails.rating
+                    ? `⭐ ${placeDetails.rating} (${placeDetails.userRatingCount || 0} reviews)`
+                    : 'N/A',
+                  mapsUrl: placeDetails.mapsUrl,
+                },
+                null,
+                2,
+              ),
+            );
+
             return {
               ...restaurant,
               placeDetails,
             };
           }),
         );
+
+        return enriched;
       },
     );
 
-    // Step 4: Cache thumbnail snapshot (R2 bucket storage)
     const mediaSnapshot = await step.do(
       'cache-thumbnail-snapshot',
       async () => {
-        // TODO: Download video thumbnail from scrapedData.mediaUrls and upload to Cloudflare R2 bucket
+        console.log(`🖼️ [Step 4/5] Staging thumbnail media snapshot...`);
         const primaryMediaUrl = scrapedData?.mediaUrls?.[0] ?? null;
-        return {
+
+        const snapshot = {
           originalUrl: primaryMediaUrl,
           r2Key: null,
-          status: 'pending_r2_setup',
+          status: 'pending_r2_setup' as const,
         };
+
+        console.log(
+          `✅ [Step 4/5 SUCCESS] Media snapshot:`,
+          JSON.stringify(snapshot, null, 2),
+        );
+        return snapshot;
       },
     );
 
-    // Step 5: Finalize and log parsed crumb
     const finalizedCrumb = await step.do('persist-and-log-crumb', async () => {
+      const totalDuration = performance.now() - workflowStartTime;
+
       const result = {
         url,
         guideId: guideId ?? null,
@@ -113,9 +198,19 @@ export class IngestWorkflow extends WorkflowEntrypoint<
       };
 
       console.log(
-        '[IngestWorkflow] Successfully processed crumb:\n',
+        `\n✨ ===============================================================`,
+      );
+      console.log(
+        `🎉 [IngestWorkflow COMPLETED in ${Math.round(totalDuration)}ms]`,
+      );
+      console.log(
+        `📦 FINALIZED CRUMB PAYLOAD:\n`,
         JSON.stringify(result, null, 2),
       );
+      console.log(
+        `===============================================================\n`,
+      );
+
       // TODO: Future persistence via Drizzle ORM into NeonDB / Postgres
       return result;
     });

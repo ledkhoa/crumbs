@@ -15,7 +15,7 @@ export const extractedRestaurantSchema = z.object({
     .string()
     .optional()
     .describe(
-      'Street address of the restaurant if mentioned in caption or location',
+      'Street address of the restaurant if mentioned in caption, slides, or location',
     ),
   city: z.string().optional().describe('City where the restaurant is located'),
   state: z.string().optional().describe('State, province, or region'),
@@ -24,12 +24,12 @@ export const extractedRestaurantSchema = z.object({
     .array(z.string())
     .optional()
     .describe(
-      "Vibe tags (e.g. 'Cozy', 'Date Night', 'Late Night', 'Dimly Lit', 'Lively')",
+      "Vibe tags (e.g. 'Cozy', 'Date Night', 'Late Night', 'Dimly Lit', 'Lively', 'Scenic Views', 'Rooftop')",
     ),
   recommendedDishes: z
     .array(z.string())
     .optional()
-    .describe('List of signature or recommended dishes mentioned'),
+    .describe('List of signature or recommended dishes mentioned or shown'),
   notes: z
     .string()
     .optional()
@@ -58,7 +58,7 @@ export const postExtractionSchema = z.object({
 export type PostExtractionResult = z.infer<typeof postExtractionSchema>;
 
 /**
- * AIService handles structured entity extraction and classification using Gemini 2.5 Flash.
+ * AIService handles multimodal structured entity extraction and classification using Gemini 2.5 Flash.
  */
 export class AIService {
   private google: ReturnType<typeof createGoogleGenerativeAI>;
@@ -70,10 +70,11 @@ export class AIService {
   }
 
   /**
-   * Parses scraped social media content and returns structured restaurant entities.
+   * Parses scraped social media content and visual image slides/thumbnails,
+   * returning structured restaurant entities with high precision.
    */
   async extract(scrapedData: ScrapedPostData): Promise<PostExtractionResult> {
-    const prompt = `Analyze this social media post for restaurant/dining/food recommendations:
+    const promptText = `Analyze this social media post for restaurant/dining/food recommendations:
 Tagged Location: ${scrapedData.locationName || 'None'}
 Platform: ${scrapedData.platform}
 Caption:
@@ -82,12 +83,41 @@ ${scrapedData.caption}
 """
 ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` : ''}`;
 
+    const mediaUrls = (scrapedData.mediaUrls || []).filter(
+      (url) => url.startsWith('http://') || url.startsWith('https://'),
+    );
+
+    // Build modern multimodal message payload (supporting text + image files)
+    type MessageContentPart =
+      | { type: 'text'; text: string }
+      | { type: 'file'; data: URL; mediaType: string };
+
+    const content: MessageContentPart[] = [{ type: 'text', text: promptText }];
+
+    // Pass up to 10 visual slides/images for multimodal vision & OCR analysis
+    for (const url of mediaUrls.slice(0, 10)) {
+      try {
+        content.push({
+          type: 'file',
+          data: new URL(url),
+          mediaType: 'image/jpeg',
+        });
+      } catch (err) {
+        console.warn(`[AIService] Skipping invalid media URL: ${url}`, err);
+      }
+    }
+
     const { output } = await generateText({
-      model: this.google('gemini-2.5-flash'),
+      model: this.google('gemini-3.7-flash'),
       output: Output.object({ schema: postExtractionSchema }),
       system:
-        "You are an expert food & lifestyle curator for Crumbs ('Spotify for Cravings'). Extract structured restaurant details, signature hero dishes, and vibe tags with high precision. If multiple restaurants are featured in a list or carousel, extract each one individually.",
-      prompt,
+        "You are an expert food & lifestyle curator for Crumbs ('Spotify for Cravings'). Extract structured restaurant details, signature hero dishes, and vibe tags with high precision. When images or carousel slides are attached, carefully inspect all graphic text, titles, numbered lists, and photos to extract every featured restaurant, cafe, bar, or bakery individually.",
+      messages: [
+        {
+          role: 'user',
+          content,
+        },
+      ],
     });
 
     if (!output) {

@@ -146,8 +146,7 @@ ${instagramData.rawItem ? JSON.stringify(instagramData.rawItem, null, 2) : "None
 if (import.meta.main) {
   // Test different cases using URL flags or actual URLs
   const testUrls = [
-    "https://www.instagram.com/reel/DYbvJvPR9B-/",
-    "https://www.instagram.com/reel/DbYb0MzTFHh/?igsh=NTc4MTIwNjQ2YQ==",
+    "https://www.instagram.com/p/DaiKM-vjXrl/",
   ];
 
   for (const url of testUrls) {
