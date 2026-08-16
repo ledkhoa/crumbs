@@ -5,6 +5,9 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
@@ -14,8 +17,10 @@
   "dependencies": {
     "@ai-sdk/google": "^4.0.44",
     "@hono/zod-validator": "^0.9.0",
+    "@neondatabase/serverless": "^1.1.0",
     "ai": "^7.0.66",
     "apify-client": "^2.25.0",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.13.2",
     "zod": "^4.4.3"
   },
@@ -23,6 +28,7 @@
     "@cloudflare/workers-types": "^5.20260815.1",
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.2.0",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^10.8.1",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.6",

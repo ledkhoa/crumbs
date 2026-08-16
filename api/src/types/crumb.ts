@@ -25,7 +25,8 @@ export interface ProcessedCrumbPayload {
   guideId: string | null;
   userId: string | null;
   platform: 'instagram' | 'tiktok' | 'unknown';
-  shortcode: string | null;
+  postType: 'reel' | 'carousel' | 'post' | 'video' | 'unknown';
+  platformPostId: string | null;
   caption: string;
   locationName: string | null;
   mediaUrls: string[];

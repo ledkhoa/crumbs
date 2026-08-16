@@ -61,7 +61,8 @@ export class IngestWorkflow extends WorkflowEntrypoint<
           JSON.stringify(
             {
               platform: data.platform,
-              shortcode: data.shortcode,
+              postType: data.postType,
+              platformPostId: data.platformPostId,
               locationName: data.locationName,
               mediaUrlsCount: data.mediaUrls?.length ?? 0,
               captionSnippet:
@@ -196,7 +197,8 @@ export class IngestWorkflow extends WorkflowEntrypoint<
           guideId: guideId ?? null,
           userId: userId ?? null,
           platform: scrapedData?.platform ?? 'unknown',
-          shortcode: scrapedData?.shortcode ?? null,
+          postType: scrapedData?.postType ?? 'unknown',
+          platformPostId: scrapedData?.platformPostId ?? null,
           caption: scrapedData?.caption ?? '',
           locationName: scrapedData?.locationName ?? null,
           mediaUrls: scrapedData?.mediaUrls ?? [],
