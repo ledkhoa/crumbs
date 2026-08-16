@@ -4,7 +4,7 @@ export interface ScrapedPostData {
   mediaUrls?: string[];
   platform: 'instagram' | 'tiktok' | 'unknown';
   shortcode?: string;
-  rawItem?: Record<string, unknown>;
+  rawMetadataJson?: string;
 }
 
 /**
@@ -68,7 +68,7 @@ export async function scrapeSocialPost(
         mediaUrls: item.displayUrl ? [item.displayUrl] : [],
         platform,
         shortcode,
-        rawItem: item,
+        rawMetadataJson: JSON.stringify(item),
       };
     }
 

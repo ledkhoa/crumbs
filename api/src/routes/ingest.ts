@@ -2,79 +2,82 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import type { AppEnv } from '../types/env';
-import { scrapeSocialPost } from '../services/scraper';
-import { extractRestaurantDetails } from '../services/ai';
-import { resolvePlaceCoordinates } from '../services/places';
 
 const ingestSchema = z.object({
   url: z.url('Must be a valid social media URL (Instagram or TikTok)'),
   guideId: z.string().optional(),
+  userId: z.string().optional(),
 });
 
 export const ingestRouter = new Hono<AppEnv>();
 
+/**
+ * POST /api/ingest
+ * Accepts a social media link and triggers the durable background IngestWorkflow.
+ * Returns 202 Accepted immediately.
+ */
 ingestRouter.post('/', zValidator('json', ingestSchema), async (c) => {
-  const { url, guideId } = c.req.valid('json');
-  const startTime = performance.now();
+  const { url, guideId, userId } = c.req.valid('json');
 
   try {
-    // 1. Scrape post metadata
-    const scrapedData = await scrapeSocialPost(url, c.env.APIFY_TOKEN);
-
-    // 2. Extract structured restaurant details via LLM
-    const extraction = await extractRestaurantDetails(
-      scrapedData,
-      c.env.GOOGLE_GENERATIVE_AI_API_KEY,
-    );
-
-    // 3. Resolve coordinates for extracted restaurants
-    const enrichedRestaurants = await Promise.all(
-      extraction.restaurants.map(async (restaurant) => {
-        const placeDetails = await resolvePlaceCoordinates(
-          restaurant.name,
-          restaurant.city,
-          restaurant.address,
-        );
-        return {
-          ...restaurant,
-          placeDetails,
-        };
-      }),
-    );
-
-    const duration = performance.now() - startTime;
+    const instance = await c.env.INGEST_WORKFLOW.create({
+      params: {
+        url,
+        guideId,
+        userId,
+      },
+    });
 
     return c.json(
       {
         success: true,
-        data: {
-          url,
-          guideId: guideId ?? null,
-          platform: scrapedData.platform,
-          shortcode: scrapedData.shortcode ?? null,
-          caption: scrapedData.caption,
-          locationName: scrapedData.locationName ?? null,
-          mediaUrls: scrapedData.mediaUrls ?? [],
-          classification: extraction.classification,
-          summary: extraction.summary,
-          restaurants: enrichedRestaurants,
-        },
-        meta: {
-          processingTimeMs: Math.round(duration),
-        },
+        workflowId: instance.id,
+        status: 'queued',
+        message: 'Ingestion workflow dispatched successfully',
       },
-      200,
+      202,
     );
   } catch (error: unknown) {
     const message =
-      error instanceof Error ? error.message : 'Failed to process URL';
-    console.error('[Ingest Error]:', error);
+      error instanceof Error ? error.message : 'Failed to trigger ingestion';
+    console.error('[Ingest Trigger Error]:', error);
     return c.json(
       {
         success: false,
         error: message,
       },
       500,
+    );
+  }
+});
+
+/**
+ * GET /api/ingest/:instanceId
+ * Checks the execution status and output of a queued ingestion workflow instance.
+ */
+ingestRouter.get('/:instanceId', async (c) => {
+  const instanceId = c.req.param('instanceId');
+
+  try {
+    const instance = await c.env.INGEST_WORKFLOW.get(instanceId);
+    const status = await instance.status();
+
+    return c.json({
+      success: true,
+      workflowId: instanceId,
+      status: status.status,
+      output: status.output ?? null,
+      error: status.error ?? null,
+    });
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : 'Workflow instance not found';
+    return c.json(
+      {
+        success: false,
+        error: message,
+      },
+      404,
     );
   }
 });
