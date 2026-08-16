@@ -1,3 +1,5 @@
+import { ApifyClient } from 'apify-client';
+
 export interface ScrapedPostData {
   caption: string;
   locationName?: string;
@@ -5,6 +7,21 @@ export interface ScrapedPostData {
   platform: 'instagram' | 'tiktok' | 'unknown';
   shortcode?: string;
   rawMetadataJson?: string;
+}
+
+export class ScraperError extends Error {
+  constructor(
+    message: string,
+    public code:
+      | 'TOKEN_MISSING'
+      | 'SCRAPE_FAILED'
+      | 'NO_DATA_RETURNED'
+      | 'UNSUPPORTED_PLATFORM',
+    public isRetryable: boolean = true,
+  ) {
+    super(message);
+    this.name = 'ScraperError';
+  }
 }
 
 /**
@@ -16,93 +33,100 @@ export function extractInstagramShortcode(url: string): string | null {
 }
 
 /**
- * Scrapes post metadata using Apify if APIFY_TOKEN is configured.
- * Otherwise returns mock data for local testing.
+ * ScraperService manages social media content extraction from Instagram & TikTok.
  */
-export async function scrapeSocialPost(
-  url: string,
-  apifyToken?: string,
-): Promise<ScrapedPostData> {
-  const isInstagram = url.includes('instagram.com');
-  const isTikTok = url.includes('tiktok.com');
-  const platform = isInstagram ? 'instagram' : isTikTok ? 'tiktok' : 'unknown';
-  const shortcode = isInstagram
-    ? (extractInstagramShortcode(url) ?? undefined)
-    : undefined;
+export class ScraperService {
+  private client?: ApifyClient;
 
-  if (apifyToken && isInstagram) {
-    console.log(`[Scraper] Fetching live Instagram data via Apify for: ${url}`);
-    const response = await fetch(
-      `https://api.apify.com/v2/actors/apify~instagram-scraper/run-sync-get-dataset-items?token=${apifyToken}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          directUrls: [url],
-          resultsType: 'details',
-          resultsLimit: 1,
-        }),
-      },
-    );
+  constructor(private token?: string) {
+    if (token) {
+      this.client = new ApifyClient({ token });
+    }
+  }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Apify API returned HTTP ${response.status}: ${errorText}`,
+  /**
+   * Scrapes metadata for a given post URL.
+   * Throws a ScraperError if scraping fails or token is missing,
+   * enabling Cloudflare Workflows to retry transient failures.
+   */
+  async scrape(url: string): Promise<ScrapedPostData> {
+    const isInstagram = url.includes('instagram.com');
+    const isTikTok = url.includes('tiktok.com');
+
+    if (!isInstagram && !isTikTok) {
+      throw new ScraperError(
+        `Unsupported platform for URL: ${url}. Only Instagram and TikTok are supported.`,
+        'UNSUPPORTED_PLATFORM',
+        false,
       );
     }
 
-    const items = (await response.json()) as Array<{
-      caption?: string;
-      locationName?: string;
-      location?: string;
-      displayUrl?: string;
-      [key: string]: unknown;
-    }>;
+    const platform = isInstagram ? 'instagram' : 'tiktok';
+    const shortcode = isInstagram
+      ? (extractInstagramShortcode(url) ?? undefined)
+      : undefined;
 
-    if (items.length > 0) {
-      const item = items[0];
-      return {
-        caption: item.caption || '',
-        locationName: item.locationName || item.location || '',
-        mediaUrls: item.displayUrl ? [item.displayUrl] : [],
-        platform,
-        shortcode,
-        rawMetadataJson: JSON.stringify(item),
-      };
+    if (!this.token || !this.client) {
+      throw new ScraperError(
+        'APIFY_TOKEN is missing or not configured. Cannot perform live scraping.',
+        'TOKEN_MISSING',
+        false,
+      );
     }
 
-    throw new Error('No data returned by Apify for this URL');
-  }
+    try {
+      console.log(
+        `[ScraperService] Fetching live ${platform} data via Apify for: ${url}`,
+      );
 
-  // Development / Mock fallback
-  console.log(
-    '[Scraper] Using simulated fallback response (no APIFY_TOKEN configured or non-IG url)',
-  );
-  if (url.includes('type=travel')) {
-    return {
-      caption:
-        'Exploring Kyoto bamboo groves and temples! Travel goals for 2026. #kyoto #japan #travel',
-      locationName: 'Kyoto, Japan',
-      platform,
-      shortcode: shortcode ?? 'mock_travel_123',
-    };
-  }
+      const run = await this.client.actor('apify/instagram-scraper').call({
+        directUrls: [url],
+        resultsType: 'details',
+        resultsLimit: 1,
+      });
 
-  if (url.includes('type=random')) {
-    return {
-      caption: 'Funny golden retriever playing in the snow! #dogs #cute',
-      platform,
-      shortcode: shortcode ?? 'mock_dog_123',
-    };
-  }
+      const { items } = await this.client
+        .dataset(run.defaultDatasetId)
+        .listItems();
 
-  // Default mock restaurant post
-  return {
-    caption:
-      "Had the absolute best fresh pasta at L'Artusi in West Village tonight! Truly 10/10. Address: 228 W 10th St, New York, NY 10014. Must try the beef carpaccio and mushroom ragu!",
-    locationName: "L'Artusi",
-    platform,
-    shortcode: shortcode ?? 'mock_lartusi_123',
-  };
+      if (items.length > 0) {
+        const item = items[0] as {
+          caption?: string;
+          locationName?: string;
+          location?: string;
+          displayUrl?: string;
+          [key: string]: unknown;
+        };
+
+        return {
+          caption: item.caption || '',
+          locationName: item.locationName || item.location || '',
+          mediaUrls: item.displayUrl ? [item.displayUrl] : [],
+          platform,
+          shortcode,
+          rawMetadataJson: JSON.stringify(item),
+        };
+      }
+
+      throw new ScraperError(
+        `No post metadata returned by Apify for: ${url}. The post may be private or deleted.`,
+        'NO_DATA_RETURNED',
+        true,
+      );
+    } catch (error) {
+      if (error instanceof ScraperError) {
+        throw error;
+      }
+
+      const message =
+        error instanceof Error ? error.message : 'Unknown Apify scraping error';
+      console.error(`[ScraperService Error]: ${message}`, error);
+
+      throw new ScraperError(
+        `Failed to scrape post at ${url}: ${message}`,
+        'SCRAPE_FAILED',
+        true,
+      );
+    }
+  }
 }

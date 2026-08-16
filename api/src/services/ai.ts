@@ -1,4 +1,4 @@
-import { generateObject } from 'ai';
+import { generateText, Output } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
 import type { ScrapedPostData } from './scraper';
@@ -58,17 +58,22 @@ export const postExtractionSchema = z.object({
 export type PostExtractionResult = z.infer<typeof postExtractionSchema>;
 
 /**
- * Parses scraped social media content and returns structured restaurant entities.
+ * AIService handles structured entity extraction and classification using Gemini 2.5 Flash.
  */
-export async function extractRestaurantDetails(
-  scrapedData: ScrapedPostData,
-  apiKey?: string,
-): Promise<PostExtractionResult> {
-  const google = createGoogleGenerativeAI({
-    apiKey: apiKey || process.env.GOOGLE_GENERATIVE_AI_API_KEY,
-  });
+export class AIService {
+  private google: ReturnType<typeof createGoogleGenerativeAI>;
 
-  const prompt = `Analyze this social media post for restaurant/dining/food recommendations:
+  constructor(apiKey?: string) {
+    this.google = createGoogleGenerativeAI({
+      apiKey: apiKey || process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+    });
+  }
+
+  /**
+   * Parses scraped social media content and returns structured restaurant entities.
+   */
+  async extract(scrapedData: ScrapedPostData): Promise<PostExtractionResult> {
+    const prompt = `Analyze this social media post for restaurant/dining/food recommendations:
 Tagged Location: ${scrapedData.locationName || 'None'}
 Platform: ${scrapedData.platform}
 Caption:
@@ -77,13 +82,18 @@ ${scrapedData.caption}
 """
 ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` : ''}`;
 
-  const { object } = await generateObject({
-    model: google('gemini-2.5-flash'),
-    schema: postExtractionSchema,
-    system:
-      "You are an expert food & lifestyle curator for Crumbs ('Spotify for Cravings'). Extract structured restaurant details, signature hero dishes, and vibe tags with high precision. If multiple restaurants are featured in a list or carousel, extract each one individually.",
-    prompt,
-  });
+    const { output } = await generateText({
+      model: this.google('gemini-2.5-flash'),
+      output: Output.object({ schema: postExtractionSchema }),
+      system:
+        "You are an expert food & lifestyle curator for Crumbs ('Spotify for Cravings'). Extract structured restaurant details, signature hero dishes, and vibe tags with high precision. If multiple restaurants are featured in a list or carousel, extract each one individually.",
+      prompt,
+    });
 
-  return object;
+    if (!output) {
+      throw new Error('AI failed to generate structured output');
+    }
+
+    return output;
+  }
 }
