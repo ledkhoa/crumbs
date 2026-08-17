@@ -31,3 +31,5 @@ bun.lockb
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+mocks/

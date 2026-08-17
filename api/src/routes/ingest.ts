@@ -3,29 +3,34 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import type { AppEnv } from '../types/env';
 import type { ProcessedCrumbPayload } from '../types/crumb';
+import { requireAuth } from '../middlewares/auth';
 
 const ingestSchema = z.object({
   url: z.url('Must be a valid social media URL (Instagram or TikTok)'),
   guideId: z.string().optional(),
-  userId: z.string().optional(),
 });
 
 export const ingestRouter = new Hono<AppEnv>();
 
+// Protect all ingest routes with authentication
+ingestRouter.use('*', requireAuth);
+
 /**
- * POST /api/ingest
+ * POST /ingest
  * Accepts a social media link and triggers the durable background IngestWorkflow.
+ * Automatically associates the active authenticated user ID.
  * Returns 202 Accepted immediately.
  */
 ingestRouter.post('/', zValidator('json', ingestSchema), async (c) => {
-  const { url, guideId, userId } = c.req.valid('json');
+  const { url, guideId } = c.req.valid('json');
+  const user = c.get('user');
 
   try {
     const instance = await c.env.INGEST_WORKFLOW.create({
       params: {
         url,
         guideId,
-        userId,
+        userId: user.id,
       },
     });
 
@@ -53,7 +58,7 @@ ingestRouter.post('/', zValidator('json', ingestSchema), async (c) => {
 });
 
 /**
- * GET /api/ingest/:instanceId
+ * GET /ingest/:instanceId
  * Checks the execution status and output of a queued ingestion workflow instance.
  */
 ingestRouter.get('/:instanceId', async (c) => {
