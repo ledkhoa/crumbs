@@ -47,9 +47,9 @@ api/
 ├── src/
 │   ├── db/                 # Database schema, Drizzle client, and migrations
 │   ├── routes/             # Hono route handlers
-│   │   ├── ingest.ts       # POST /api/ingest (Receives social media links, runs scraping & AI extraction)
-│   │   ├── crumbs.ts       # GET/PATCH /api/crumbs (Inbox & saved food spots)
-│   │   └── guides.ts       # GET/POST /api/guides (Curated lists & travel guides)
+│   │   ├── ingest.ts       # POST /ingest (Receives social media links, runs scraping & AI extraction)
+│   │   ├── crumbs.ts       # GET/PATCH /crumbs (Inbox & saved food spots)
+│   │   └── guides.ts       # GET/POST /guides (Curated lists & travel guides)
 │   ├── services/           # Reusable backend services
 │   │   ├── ai.ts           # Vercel AI SDK generateText (Output.object) + Gemini 3.7 Flash multimodal vision extraction
 │   │   ├── places.ts       # Place resolution & geocoding (Google Places / Mapbox)
@@ -58,11 +58,12 @@ api/
 │   │   └── env.ts          # Cloudflare Worker Bindings (AppEnv, Bindings, IngestWorkflowParams)
 │   ├── workflows/          # Cloudflare Workflows durable background jobs
 │   │   └── ingestWorkflow.ts # IngestWorkflow (Scrape -> AI Extract -> Places Geocode -> Cache -> Persist)
+│   ├── auth.ts             # BetterAuth configuration with Drizzle adapter
 │   └── index.ts            # Main application entrypoint, CORS, route mounting, AppType export for RPC
 ├── .dev.vars               # Local development environment secrets (gitignored)
 ├── .prettierrc             # Prettier styling configuration
 ├── eslint.config.mjs       # Modern ESLint flat configuration (TypeScript + Prettier)
-├── package.json            # Scripts: dev, deploy, lint, format, typecheck, check
+├── package.json            # Scripts: dev, deploy, lint, format, typecheck, check, db:generate, db:migrate
 ├── tsconfig.json           # Strict TypeScript configuration with Worker & Node types
 └── wrangler.jsonc          # Cloudflare Workers configuration (compatibility_flags: ["nodejs_compat"], workflows: [ingest-workflow])
 ```
@@ -82,8 +83,8 @@ All services located under `src/services/` (`ScraperService`, `AIService`, `Plac
 ## Service Responsibilities & Flow
 
 1. **`src/routes/ingest.ts`**:
-   - `POST /api/ingest`: Validates payload `{ url, guideId?, userId? }` and creates an `INGEST_WORKFLOW` instance. Returns `202 Accepted` immediately.
-   - `GET /api/ingest/:instanceId`: Queries workflow status and output object.
+   - `POST /ingest`: Validates payload `{ url, guideId?, userId? }` and creates an `INGEST_WORKFLOW` instance. Returns `202 Accepted` immediately.
+   - `GET /ingest/:instanceId`: Queries workflow status and output object.
 2. **`src/workflows/ingestWorkflow.ts`**:
    - Initializes `ScraperService`, `AIService`, and `PlacesService` with environment bindings at the start of `run()`.
    - Executes multi-step durable background workflow:

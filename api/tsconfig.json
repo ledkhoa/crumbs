@@ -12,5 +12,10 @@
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx"
   },
-  "include": ["src/**/*", "worker-configuration.d.ts", "eslint.config.mjs"]
+  "include": [
+    "src/**/*",
+    "drizzle.config.ts",
+    "worker-configuration.d.ts",
+    "eslint.config.mjs"
+  ]
 }

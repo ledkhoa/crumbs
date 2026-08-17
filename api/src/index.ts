@@ -5,6 +5,7 @@ import { ingestRouter } from './routes/ingest';
 import { crumbsRouter } from './routes/crumbs';
 import { guidesRouter } from './routes/guides';
 import { IngestWorkflow } from './workflows/ingestWorkflow';
+import { getAuth } from './auth';
 
 const app = new Hono<AppEnv>();
 
@@ -21,11 +22,21 @@ app.get('/', (c) => {
   });
 });
 
-// Mount modular sub-routers
+// BetterAuth authentication handler
+app.on(['POST', 'GET'], '/auth/*', (c) => {
+  const auth = getAuth({
+    databaseUrl: c.env.DATABASE_URL || '',
+    secret: c.env.BETTER_AUTH_SECRET,
+    baseURL: c.env.BETTER_AUTH_URL,
+  });
+  return auth.handler(c.req.raw);
+});
+
+// Mount modular sub-routers without /api prefix
 const _routes = app
-  .route('/api/ingest', ingestRouter)
-  .route('/api/crumbs', crumbsRouter)
-  .route('/api/guides', guidesRouter);
+  .route('/ingest', ingestRouter)
+  .route('/crumbs', crumbsRouter)
+  .route('/guides', guidesRouter);
 
 export default app;
 export { IngestWorkflow };

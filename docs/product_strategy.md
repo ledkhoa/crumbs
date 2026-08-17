@@ -13,7 +13,7 @@ We replace:
 *   **Notes Apps / Bookmarks:** Text-heavy, hard to search, no geographic context.
 
 We introduce:
-*   **Aroma Maps:** A high-end visual layout prioritizing video captures, signature dish highlights, and emotional vibe tags over boring star ratings.
+*   **Cravings Maps:** A high-end visual layout prioritizing video captures, signature dish highlights, and emotional vibe tags over boring star ratings.
 *   **Curated Guides:** Whether curating local moods (*"Friday Date Nights"*, *"Late Night Slices"*) or trip itineraries (*"Tokyo 2026 Trip"*, *"Paris Bakery Crawl"*), users organize spots into beautiful, shareable Guides.
 
 ---
@@ -31,14 +31,15 @@ flowchart TD
 
 ### Phase 1: Frictionless Capture (The Input)
 *   User is browsing Instagram Reels/TikTok. They see a viral smash burger or Kyoto ramen shop.
-*   They tap the Share Sheet, select **Crumbs**, optionally pick a Guide, and keep scrolling.
-*   **AI Background Engine** parses the shortcode, fetches metadata, extracts details, and places it into the user's Inbox or selected Guide.
+*   They tap the iOS Share Sheet, select **Crumbs** (SwiftUI Share Extension), optionally pick a Guide, and keep scrolling.
+*   **AI Background Engine** parses the platform post ID, fetches metadata, extracts details, and places it into the user's Inbox or selected Guide.
 
 ### Phase 2: Guides & Curation (The Organization)
-When the user opens the app, they see their **Inbox** (newly extracted items). 
+When the user opens the iOS app, they see the **Living Map with Bottom Sheet & Thumb Control Bar**.
 *   **No Folders:** Instead of folders, users organize spots into **Guides** (e.g., *"West Village Date Spots"*, *"Tokyo 2026"*).
 *   **Vibe Tags & Hero Dishes:** The card features the visual frame from the video, the named "Hero Dish" (e.g. *Truffle Gnocchi*), and vibes (e.g. *Dimly lit, Cozy*).
-*   **Interactive Maps:** Guides can be viewed as a gorgeous map styled in warm buttercream, espresso, and tomato tones.
+*   **Bottom-First Controls:** Instant search, city switching (`📍 Soho ▾`), and `🎲 Decide For Me` are placed at the bottom for effortless one-handed thumb reach.
+*   **Interactive Maps:** Guides can be viewed as a gorgeous MapKit map styled with rich visual pins, hero dish badges, and cohesive theme aesthetics.
 
 ### Phase 3: The Decision Engine (The Execution)
 This is where the user transitions from **passive saver** to **active explorer**. On a Friday night or during a trip:
@@ -63,7 +64,7 @@ This is where the user transitions from **passive saver** to **active explorer**
 1.  **Frictionless Share Sheet Receiver:** Quick ingestion and guide categorization.
 2.  **Visual Inbox:** A queue of recently parsed links for users to tag, save, or dismiss.
 3.  **My Guides:** Create, rename, and add spots to custom guides.
-4.  **Aroma Map View:** Map interface displaying saved spots filterable by guide and city.
+4.  **Cravings Map View:** Interactive map interface displaying saved spots filterable by guide, proximity, and vibe.
 5.  **Direct Booking Shortcuts:** Quick redirect links to Google Maps, Resy, and OpenTable.
 
 ### Post-MVP (Monetization & Scale)
