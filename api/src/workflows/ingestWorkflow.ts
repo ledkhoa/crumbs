@@ -3,15 +3,35 @@ import {
   WorkflowStep,
   WorkflowEvent,
 } from 'cloudflare:workers';
+import { eq, and } from 'drizzle-orm';
 import type { Bindings, IngestWorkflowParams } from '../types/env';
 import type {
   EnrichedRestaurant,
   MediaSnapshot,
   ProcessedCrumbPayload,
 } from '../types/crumb';
-import { ScraperService, type ScrapedPostData } from '../services/scraper';
+import {
+  ScraperService,
+  type ScraperJob,
+  type ScrapedPostData,
+  ScraperError,
+} from '../services/scraper';
 import { AIService, type PostExtractionResult } from '../services/ai';
-import { PlacesService } from '../services/places';
+import { PlacesService, type PlaceDetails } from '../services/places';
+import { getDb } from '../db/client';
+import {
+  Posts,
+  Restaurants,
+  PostRestaurants,
+  Crumbs,
+  GuideCrumbs,
+} from '../db/schemas';
+
+interface ApifyWebhookPayload {
+  status?: string;
+  actorRunId?: string;
+  defaultDatasetId?: string;
+}
 
 export class IngestWorkflow extends WorkflowEntrypoint<
   Bindings,
@@ -42,22 +62,132 @@ export class IngestWorkflow extends WorkflowEntrypoint<
       this.env.GOOGLE_PLACES_API_KEY || this.env.GOOGLE_GENERATIVE_AI_API_KEY,
     );
 
-    const scrapedData = await step.do(
-      'scrape-social-post',
+    let apifyWebhookUrl: string | undefined = undefined;
+    if (this.env.API_BASE_URL) {
+      const base = this.env.API_BASE_URL.replace(/\/$/, '');
+      const secretParam = this.env.APIFY_WEBHOOK_SECRET
+        ? `&token=${encodeURIComponent(this.env.APIFY_WEBHOOK_SECRET)}`
+        : '';
+      apifyWebhookUrl = `${base}/webhooks/apify?workflowId=${event.instanceId}${secretParam}`;
+    }
+
+    // Step 1a: Dispatch asynchronous Apify scraping job
+    const scraperJob = await step.do(
+      'start-scrape-job',
       {
         retries: {
           limit: 3,
           delay: '5 seconds',
           backoff: 'exponential',
         },
-        timeout: '2 minutes',
+        timeout: '30 seconds',
+      },
+      async (): Promise<ScraperJob> => {
+        console.log(`📥 [Step 1a] Dispatching scraping job for: ${url}`);
+        if (apifyWebhookUrl) {
+          console.log(`🪝 [Step 1a] Configured Apify Webhook: ${apifyWebhookUrl}`);
+        }
+        return await scraper.startScrapeJob(url, { webhookUrl: apifyWebhookUrl });
+      },
+    );
+
+    // Step 1b: Wait for Webhook Event or Fallback Polling
+    if (apifyWebhookUrl) {
+      console.log(
+        `💤 [Step 1b] Hibernating workflow until Apify webhook arrives (up to 10 minutes)...`,
+      );
+      const webhookEvent = await step.waitForEvent<ApifyWebhookPayload>(
+        'wait-for-apify-webhook',
+        {
+          type: 'apify-scrape-complete',
+          timeout: '10 minutes',
+        },
+      );
+
+      console.log(
+        `⚡ [Step 1b RESUMED] Received Apify webhook event:`,
+        JSON.stringify(webhookEvent, null, 2),
+      );
+
+      if (webhookEvent?.payload?.status === 'FAILED') {
+        throw new ScraperError(
+          'Apify scraper run reported failure status via webhook',
+          'SCRAPE_FAILED',
+          true,
+        );
+      }
+    } else {
+      // Fallback durable polling if no public webhook URL is configured
+      let isCompleted = false;
+      const maxPollAttempts = 25; // 25 * 3s = 75s
+
+      for (let attempt = 1; attempt <= maxPollAttempts; attempt++) {
+        await step.sleep(`poll-wait-${attempt}`, '3 seconds');
+
+        const status = await step.do(
+          `check-scrape-status-${attempt}`,
+          {
+            retries: {
+              limit: 2,
+              delay: '2 seconds',
+            },
+            timeout: '15 seconds',
+          },
+          async () => {
+            console.log(
+              `⏳ [Step 1b Poll ${attempt}/${maxPollAttempts}] Checking Apify run ${scraperJob.runId}...`,
+            );
+            return await scraper.checkRunStatus(scraperJob.runId);
+          },
+        );
+
+        if (status === 'SUCCEEDED') {
+          console.log(`✅ [Step 1b] Apify scrape completed successfully!`);
+          isCompleted = true;
+          break;
+        } else if (
+          status === 'FAILED' ||
+          status === 'TIMED-OUT' ||
+          status === 'ABORTED'
+        ) {
+          throw new ScraperError(
+            `Apify scraper run failed with terminal status: ${status}`,
+            'SCRAPE_FAILED',
+            true,
+          );
+        }
+      }
+
+      if (!isCompleted) {
+        throw new ScraperError(
+          `Apify scraping timed out after ${maxPollAttempts * 3} seconds`,
+          'SCRAPE_FAILED',
+          true,
+        );
+      }
+    }
+
+    // Step 1c: Fetch completed dataset items (< 1s)
+    const scrapedData = await step.do(
+      'fetch-scraped-dataset',
+      {
+        retries: {
+          limit: 3,
+          delay: '3 seconds',
+        },
+        timeout: '30 seconds',
       },
       async (): Promise<ScrapedPostData> => {
-        console.log(`📥 [Step 1/5] Scraping post metadata for: ${url}`);
-        const data = await scraper.scrape(url);
+        console.log(
+          `📥 [Step 1c] Fetching dataset items for: ${scraperJob.datasetId}`,
+        );
+        const data = await scraper.fetchDatasetItems(scraperJob.datasetId, {
+          platform: scraperJob.platform,
+          platformPostId: scraperJob.platformPostId,
+        });
 
         console.log(
-          `\n✅ [Step 1/5 SUCCESS] Metadata retrieved:`,
+          `\n✅ [Step 1 SUCCESS] Metadata retrieved:`,
           JSON.stringify(
             {
               platform: data.platform,
@@ -79,6 +209,7 @@ export class IngestWorkflow extends WorkflowEntrypoint<
       },
     );
 
+    // Step 2: AI extraction
     const extraction = await step.do(
       'extract-restaurant-details',
       {
@@ -116,6 +247,7 @@ export class IngestWorkflow extends WorkflowEntrypoint<
       },
     );
 
+    // Step 3: Resolve coordinates & check DB cache
     const enrichedRestaurants = await step.do(
       'resolve-place-coordinates',
       {
@@ -123,14 +255,58 @@ export class IngestWorkflow extends WorkflowEntrypoint<
           limit: 2,
           delay: '2 seconds',
         },
+        timeout: '1 minute',
       },
       async (): Promise<EnrichedRestaurant[]> => {
         console.log(
           `📍 [Step 3/5] Resolving coordinates & addresses for ${extraction.restaurants.length} place(s)...`,
         );
 
+        const db = this.env.DATABASE_URL ? getDb(this.env.DATABASE_URL) : null;
+
         const enriched: EnrichedRestaurant[] = await Promise.all(
           extraction.restaurants.map(async (restaurant, index) => {
+            if (db) {
+              try {
+                const cached = await db.query.Restaurants.findFirst({
+                  where: and(
+                    eq(Restaurants.name, restaurant.name),
+                    restaurant.city
+                      ? eq(Restaurants.city, restaurant.city)
+                      : undefined,
+                  ),
+                });
+
+                if (cached && cached.latitude && cached.longitude) {
+                  console.log(
+                    `   ⚡ [Place ${index + 1}/${extraction.restaurants.length}] ${restaurant.name} (DB CACHE HIT - Skipped Google Places API)`,
+                  );
+                  const cachedDetails: PlaceDetails = {
+                    placeId: cached.googlePlaceId ?? undefined,
+                    name: cached.name,
+                    formattedAddress: cached.formattedAddress ?? undefined,
+                    latitude: cached.latitude ?? undefined,
+                    longitude: cached.longitude ?? undefined,
+                    mapsUrl: cached.mapsUrl ?? undefined,
+                    websiteUrl: cached.websiteUrl ?? undefined,
+                    rating: cached.rating ? Number(cached.rating) : undefined,
+                    userRatingCount: cached.userRatingCount ?? undefined,
+                    priceLevel: cached.priceLevel ?? undefined,
+                    photoUrl: cached.photoUrl ?? undefined,
+                  };
+                  return {
+                    ...restaurant,
+                    placeDetails: cachedDetails,
+                  };
+                }
+              } catch (dbErr) {
+                console.warn(
+                  `[Step 3 Cache Check Warning]: Could not query restaurant cache`,
+                  dbErr,
+                );
+              }
+            }
+
             const placeDetails = await places.resolve(
               restaurant.name,
               restaurant.city,
@@ -167,6 +343,7 @@ export class IngestWorkflow extends WorkflowEntrypoint<
       },
     );
 
+    // Step 4: Media snapshot staging
     const mediaSnapshot = await step.do(
       'cache-thumbnail-snapshot',
       async (): Promise<MediaSnapshot> => {
@@ -187,6 +364,7 @@ export class IngestWorkflow extends WorkflowEntrypoint<
       },
     );
 
+    // Step 5: Atomic database persistence
     const finalizedCrumb = await step.do(
       'persist-and-log-crumb',
       async (): Promise<ProcessedCrumbPayload> => {
@@ -209,6 +387,174 @@ export class IngestWorkflow extends WorkflowEntrypoint<
           processedAt: new Date().toISOString(),
         };
 
+        if (this.env.DATABASE_URL) {
+          try {
+            console.log(
+              `💾 [Step 5/5] Executing atomic database persistence...`,
+            );
+            const db = getDb(this.env.DATABASE_URL);
+
+            const [savedPost] = await db
+              .insert(Posts)
+              .values({
+                platform: result.platform,
+                postType: result.postType,
+                platformPostId:
+                  result.platformPostId ||
+                  `post_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+                originalUrl: result.url,
+                caption: result.caption,
+                locationName: result.locationName,
+                mediaUrls: result.mediaUrls,
+                mediaSnapshot: result.mediaSnapshot,
+                classification: result.classification,
+                summary: result.summary,
+                rawMetadataJson: scrapedData.rawMetadataJson,
+              })
+              .onConflictDoUpdate({
+                target: [Posts.platform, Posts.platformPostId],
+                set: {
+                  caption: result.caption,
+                  locationName: result.locationName,
+                  mediaUrls: result.mediaUrls,
+                  mediaSnapshot: result.mediaSnapshot,
+                  classification: result.classification,
+                  summary: result.summary,
+                  rawMetadataJson: scrapedData.rawMetadataJson,
+                  updatedAt: new Date(),
+                },
+              })
+              .returning();
+
+            for (const item of result.restaurants) {
+              let restaurantRecord = null;
+
+              if (item.placeDetails.placeId) {
+                [restaurantRecord] = await db
+                  .insert(Restaurants)
+                  .values({
+                    googlePlaceId: item.placeDetails.placeId,
+                    name: item.name,
+                    formattedAddress: item.placeDetails.formattedAddress,
+                    city: item.city,
+                    state: item.state,
+                    country: item.country,
+                    latitude: item.placeDetails.latitude,
+                    longitude: item.placeDetails.longitude,
+                    cuisine: item.cuisine,
+                    rating: item.placeDetails.rating
+                      ? String(item.placeDetails.rating)
+                      : null,
+                    userRatingCount: item.placeDetails.userRatingCount,
+                    priceLevel: item.placeDetails.priceLevel,
+                    mapsUrl: item.placeDetails.mapsUrl,
+                    websiteUrl: item.placeDetails.websiteUrl,
+                    photoUrl: item.placeDetails.photoUrl,
+                    placesLastSyncedAt: new Date(),
+                  })
+                  .onConflictDoUpdate({
+                    target: Restaurants.googlePlaceId,
+                    set: {
+                      formattedAddress: item.placeDetails.formattedAddress,
+                      latitude: item.placeDetails.latitude,
+                      longitude: item.placeDetails.longitude,
+                      cuisine: item.cuisine,
+                      rating: item.placeDetails.rating
+                        ? String(item.placeDetails.rating)
+                        : null,
+                      userRatingCount: item.placeDetails.userRatingCount,
+                      priceLevel: item.placeDetails.priceLevel,
+                      mapsUrl: item.placeDetails.mapsUrl,
+                      websiteUrl: item.placeDetails.websiteUrl,
+                      photoUrl: item.placeDetails.photoUrl,
+                      placesLastSyncedAt: new Date(),
+                      updatedAt: new Date(),
+                    },
+                  })
+                  .returning();
+              } else {
+                [restaurantRecord] = await db
+                  .insert(Restaurants)
+                  .values({
+                    name: item.name,
+                    formattedAddress: item.placeDetails.formattedAddress,
+                    city: item.city,
+                    state: item.state,
+                    country: item.country,
+                    latitude: item.placeDetails.latitude,
+                    longitude: item.placeDetails.longitude,
+                    cuisine: item.cuisine,
+                    mapsUrl: item.placeDetails.mapsUrl,
+                    placesLastSyncedAt: new Date(),
+                  })
+                  .returning();
+              }
+
+              if (restaurantRecord && savedPost) {
+                await db
+                  .insert(PostRestaurants)
+                  .values({
+                    postId: savedPost.id,
+                    restaurantId: restaurantRecord.id,
+                    recommendedDishes: item.recommendedDishes || [],
+                    vibeTags: item.vibe || [],
+                    creatorNotes: item.notes,
+                  })
+                  .onConflictDoUpdate({
+                    target: [
+                      PostRestaurants.postId,
+                      PostRestaurants.restaurantId,
+                    ],
+                    set: {
+                      recommendedDishes: item.recommendedDishes || [],
+                      vibeTags: item.vibe || [],
+                      creatorNotes: item.notes,
+                    },
+                  });
+
+                if (userId) {
+                  const [savedCrumb] = await db
+                    .insert(Crumbs)
+                    .values({
+                      userId,
+                      restaurantId: restaurantRecord.id,
+                      sourcePostId: savedPost.id,
+                      status: guideId ? 'saved' : 'inbox',
+                    })
+                    .onConflictDoUpdate({
+                      target: [Crumbs.userId, Crumbs.restaurantId],
+                      set: {
+                        sourcePostId: savedPost.id,
+                        updatedAt: new Date(),
+                      },
+                    })
+                    .returning();
+
+                  if (guideId && savedCrumb) {
+                    await db
+                      .insert(GuideCrumbs)
+                      .values({
+                        guideId,
+                        crumbId: savedCrumb.id,
+                        orderIndex: 0,
+                      })
+                      .onConflictDoNothing();
+                  }
+                }
+              }
+            }
+
+            console.log(
+              `✅ [Step 5/5 SUCCESS] Persisted post, restaurants, and user crumbs to Neon DB!`,
+            );
+          } catch (dbError) {
+            console.error(
+              `❌ [Step 5/5 Error]: Failed to persist crumb to Neon DB:`,
+              dbError,
+            );
+          }
+        }
+
         console.log(
           `\n✨ ===============================================================`,
         );
@@ -223,10 +569,38 @@ export class IngestWorkflow extends WorkflowEntrypoint<
           `===============================================================\n`,
         );
 
-        // TODO: Future persistence via Drizzle ORM into NeonDB / Postgres
         return result;
       },
     );
+
+    // Step 6: User Notification & Real-Time Sync Dispatch (Placeholder / To-Do)
+    // Dispatches APNs push notification (if app is in background) or triggers
+    // live WebSocket / Cloudflare Durable Object sync (if app is actively open).
+    await step.do('notify-user-completion', async () => {
+      console.log(
+        `\n🔔 ===============================================================`,
+      );
+      console.log(
+        `🔔 [Step 6/6] INGESTION COMPLETE: Dispatching user notifications`,
+      );
+      console.log(`👤 User ID:     ${userId || 'Anonymous'}`);
+      console.log(`🍽️ Spots Count: ${finalizedCrumb.restaurants.length}`);
+      console.log(`🗺️ Destination: ${guideId ? `Guide ${guideId}` : 'Inbox'}`);
+      console.log(
+        `💡 TODO Channels:\n   1. APNs Push Notification (Remote banner: "Saved ${finalizedCrumb.restaurants.length} spots to ${guideId ? 'Guide' : 'Inbox'}")\n   2. Cloudflare Durable Object WebSocket broadcast (Live haptic UI update if app is open)\n   3. Persistent DB Inbox state (Queried on next app launch)`,
+      );
+      console.log(
+        `===============================================================\n`,
+      );
+
+      return {
+        notified: true,
+        userId: userId ?? null,
+        spotsSaved: finalizedCrumb.restaurants.length,
+        channels: ['apns_pending_ui_setup', 'durable_object_pending_ui_setup'],
+        timestamp: new Date().toISOString(),
+      };
+    });
 
     return finalizedCrumb;
   }

@@ -249,11 +249,49 @@ To enable rapid visual testing and A/B aesthetic comparisons, color palettes are
 
 ---
 
-## 7. Next Steps for Design & Engineering
+---
+
+## 7. Real-Time Notification & Client Sync Architecture
+
+Because the ingestion pipeline operates asynchronously via Cloudflare Workflows (`POST /ingest` returns `202 Accepted`), the platform uses a 3-tier notification and synchronization model to inform the client app and user upon completion:
+
+```mermaid
+flowchart TD
+    WorkflowComplete[IngestWorkflow Completes Step 5 Persistence] --> Step6[Step 6: notify-user-completion]
+
+    Step6 --> Channel1[1. Remote APNs Push Notification<br/>Alert / Background Push]
+    Step6 --> Channel2[2. Cloudflare Durable Object + WebSockets<br/>Live In-App State Sync]
+    Step6 --> Channel3[3. Persistent Database State<br/>Inbox Query on App Launch]
+
+    Channel1 -->|App Closed / In Background| Banner[🔔 Push: '🍞 3 Spots saved from Reel!']
+    Channel2 -->|App Actively Open| LiveBadge[⚡ Real-time Haptic Pulse + Inbox Counter +1]
+    Channel3 -->|Next Time App Launches| PullToRefresh[📥 Inbox Tab: Fetches unreviewed spots]
+```
+
+### 1. Apple Push Notifications (APNs - Remote Alerts)
+* **Trigger:** When user shares a post from Instagram/TikTok and immediately returns to browsing social media or locks their device.
+* **Payload:** Rich iOS banner displaying the source creator and extracted restaurant names:
+  > **🍞 Crumbs**  
+  > *Saved 3 spots from @baliinsidertravel (Mozaic, Merlin's, Apéritif) to 🌴 Bali Trip 2026!*
+* **Action:** Tapping the notification launches the app and deep-links directly into the **Extracted Spots Review Sheet** or the target **Guide**.
+
+### 2. Cloudflare Durable Objects + WebSockets (In-App Real-Time Sync)
+* **Why Durable Objects:** Standard serverless workers are stateless across global data centers and cannot route events directly to an open socket without external Redis infrastructure. Cloudflare Durable Objects (`UserSyncSessionDO`) provide a single in-memory coordination point per user with zero-latency edge RPC and WebSocket hibernation (0 CPU cost while holding connections).
+* **Experience:** If the user is actively viewing the Map or Guides in Crumbs while the workflow finishes, the Durable Object receives the completion event directly from `IngestWorkflow` and pushes a live haptic pulse and real-time badge update to the Floating Liquid Glass Island (`📥 Inbox (3)`).
+
+### 3. Persistent Database Inbox (App Launch Fallback)
+* **Guarantee:** If notifications are disabled or the device was offline, the user's spots are permanently stored in Neon DB (`crumbs` table with `status: 'inbox'`).
+* **Experience:** The next time the app opens, `GET /crumbs?status=inbox` instantly populates the Inbox carousel.
+
+---
+
+## 8. Next Steps for Design & Engineering
 
 1. **For Designers / UI Agents:** Create high-fidelity Figma / SwiftUI mocks for:
    * (A) Native iOS Share Extension Modal (`ShareViewController` / SwiftUI) with Guide search.
    * (B) Home Screen (Clean Living MapKit + Floating Liquid Glass Control Island + Draggable Sheet).
    * (C) Guide View (Curated itinerary with route pins).
    * (D) Spot Detail Modal (Creator attribution + Hero dishes + booking buttons).
-2. **For API / Backend:** Wire `POST /api/ingest` and database queries to support the iOS client endpoints.
+2. **For API / Backend:** 
+   * Wire APNs HTTP/2 provider API and Cloudflare Durable Object `UserSyncSessionDO` upon native iOS UI integration.
+
