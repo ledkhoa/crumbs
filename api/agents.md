@@ -58,6 +58,8 @@ api/
 │   │   └── scraper.ts      # Social media scraper (Apify Instagram / TikTok with async webhook callback)
 │   ├── types/              # Type definitions
 │   │   └── env.ts          # Cloudflare Worker Bindings (AppEnv, Bindings, IngestWorkflowParams)
+│   ├── utils/              # Pure utility functions (url parser, formatters)
+│   │   └── url.ts          # Social URL parser (platform, platformPostId, postType)
 │   ├── workflows/          # Cloudflare Workflows durable background jobs
 │   │   └── ingestWorkflow.ts # IngestWorkflow (Scrape -> AI Extract -> Places Geocode -> Cache -> Persist)
 │   ├── auth.ts             # BetterAuth configuration with Drizzle adapter and bearer plugin

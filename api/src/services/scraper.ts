@@ -1,3 +1,5 @@
+import { parseSocialUrl } from '../utils/url';
+
 export interface ScrapedPostData {
   caption: string;
   locationName?: string;
@@ -31,14 +33,6 @@ export class ScraperError extends Error {
   }
 }
 
-/**
- * Extracts a normalized platform post ID from an Instagram URL.
- */
-export function extractInstagramPostId(url: string): string | null {
-  const match = url.match(/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
-  return match ? match[1] : null;
-}
-
 interface ApifyRunResponse {
   data?: {
     id: string;
@@ -67,22 +61,15 @@ export class ScraperService {
     url: string,
     options?: StartScrapeOptions,
   ): Promise<ScraperJob> {
-    const isInstagram = url.includes('instagram.com');
-    const isTikTok = url.includes('tiktok.com');
+    const { platform, platformPostId, postType } = parseSocialUrl(url);
 
-    if (!isInstagram && !isTikTok) {
+    if (platform === 'unknown') {
       throw new ScraperError(
         `Unsupported platform for URL: ${url}. Only Instagram and TikTok are supported.`,
         'UNSUPPORTED_PLATFORM',
         false,
       );
     }
-
-    const platform = isInstagram ? 'instagram' : 'tiktok';
-    const isReel = url.includes('/reel/');
-    const platformPostId = isInstagram
-      ? (extractInstagramPostId(url) ?? undefined)
-      : undefined;
 
     if (!this.token) {
       throw new ScraperError(
@@ -156,9 +143,9 @@ export class ScraperService {
     return {
       runId,
       datasetId,
-      platform,
-      postType: isReel ? 'reel' : 'post',
-      platformPostId,
+      platform: platform as 'instagram' | 'tiktok',
+      postType,
+      platformPostId: platformPostId ?? undefined,
     };
   }
 

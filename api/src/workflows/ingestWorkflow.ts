@@ -85,9 +85,13 @@ export class IngestWorkflow extends WorkflowEntrypoint<
       async (): Promise<ScraperJob> => {
         console.log(`📥 [Step 1a] Dispatching scraping job for: ${url}`);
         if (apifyWebhookUrl) {
-          console.log(`🪝 [Step 1a] Configured Apify Webhook: ${apifyWebhookUrl}`);
+          console.log(
+            `🪝 [Step 1a] Configured Apify Webhook: ${apifyWebhookUrl}`,
+          );
         }
-        return await scraper.startScrapeJob(url, { webhookUrl: apifyWebhookUrl });
+        return await scraper.startScrapeJob(url, {
+          webhookUrl: apifyWebhookUrl,
+        });
       },
     );
 
