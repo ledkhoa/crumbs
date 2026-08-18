@@ -5,7 +5,7 @@ import { eq, and } from 'drizzle-orm';
 import type { AppEnv } from '../types/env';
 import type { ProcessedCrumbPayload, EnrichedRestaurant } from '../types/crumb';
 import { requireAuth } from '../middlewares/auth';
-import { extractInstagramPostId } from '../services/scraper';
+import { parseSocialUrl } from '../utils/url';
 import { getDb } from '../db/client';
 import { Posts, Crumbs, GuideCrumbs } from '../db/schemas';
 
@@ -34,15 +34,9 @@ ingestRouter.post('/', zValidator('json', ingestSchema), async (c) => {
   // Fast-Path Cache Check
   if (c.env.DATABASE_URL) {
     try {
-      const isInstagram = url.includes('instagram.com');
-      const platform = isInstagram
-        ? 'instagram'
-        : url.includes('tiktok.com')
-          ? 'tiktok'
-          : 'unknown';
-      const platformPostId = isInstagram ? extractInstagramPostId(url) : null;
+      const { platform, platformPostId } = parseSocialUrl(url);
 
-      if (platformPostId) {
+      if (platformPostId && platform !== 'unknown') {
         const db = getDb(c.env.DATABASE_URL);
         const existingPost = await db.query.Posts.findFirst({
           where: and(
