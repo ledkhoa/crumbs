@@ -58,8 +58,19 @@ export const postExtractionSchema = z.object({
 export type ExtractedRestaurant = z.infer<typeof extractedRestaurantSchema>;
 export type PostExtractionResult = z.infer<typeof postExtractionSchema>;
 
+export class AIError extends Error {
+  constructor(
+    message: string,
+    public originalError?: unknown,
+    public isQuotaOrRateLimit: boolean = false,
+  ) {
+    super(message);
+    this.name = 'AIError';
+  }
+}
+
 /**
- * AIService handles multimodal structured entity extraction and classification using Gemini 2.5 Flash.
+ * AIService handles multimodal structured entity extraction and classification.
  */
 export class AIService {
   private google: ReturnType<typeof createGoogleGenerativeAI>;
@@ -88,14 +99,12 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
       (url) => url.startsWith('http://') || url.startsWith('https://'),
     );
 
-    // Build modern multimodal message payload (supporting text + image files)
     type MessageContentPart =
       | { type: 'text'; text: string }
       | { type: 'file'; data: URL; mediaType: string };
 
     const content: MessageContentPart[] = [{ type: 'text', text: promptText }];
 
-    // Pass up to 10 visual slides/images for multimodal vision & OCR analysis
     for (const url of mediaUrls.slice(0, 10)) {
       try {
         content.push({
@@ -108,23 +117,62 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
       }
     }
 
-    const { output } = await generateText({
-      model: this.google('gemini-3.7-flash'),
-      output: Output.object({ schema: postExtractionSchema }),
-      system:
-        "You are an expert food & lifestyle curator for Crumbs ('Spotify for Cravings'). Extract structured restaurant details, signature hero dishes, and vibe tags with high precision. When images or carousel slides are attached, carefully inspect all graphic text, titles, numbered lists, and photos to extract every featured restaurant, cafe, bar, or bakery individually.",
-      messages: [
-        {
-          role: 'user',
-          content,
-        },
-      ],
-    });
+    try {
+      const { output } = await generateText({
+        model: this.google('gemini-2.5-flash'),
+        output: Output.object({ schema: postExtractionSchema }),
+        system:
+          "You are an expert food & lifestyle curator for Crumbs ('Spotify for Cravings'). Extract structured restaurant details, signature hero dishes, and vibe tags with high precision. When images or carousel slides are attached, carefully inspect all graphic text, titles, numbered lists, and photos to extract every featured restaurant, cafe, bar, or bakery individually.",
+        messages: [
+          {
+            role: 'user',
+            content,
+          },
+        ],
+      });
 
-    if (!output) {
-      throw new Error('AI failed to generate structured output');
+      if (!output) {
+        throw new AIError('AI model returned an empty output response.');
+      }
+
+      return output;
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : JSON.stringify(err);
+      const isQuotaOrRateLimit =
+        errorMessage.includes('429') ||
+        errorMessage.includes('quota') ||
+        errorMessage.includes('RESOURCE_EXHAUSTED') ||
+        errorMessage.includes('rate limit');
+
+      console.error(
+        `\n❌ ===============================================================`,
+      );
+      if (isQuotaOrRateLimit) {
+        console.error(
+          `🚨 [AIService ERROR] GEMINI API RATE LIMIT / QUOTA EXCEEDED!`,
+        );
+        console.error(
+          `💡 Details: Your Google Generative AI API key has exceeded its free-tier RPM (Requests Per Minute) or daily token quota.`,
+        );
+      } else {
+        console.error(
+          `🚨 [AIService ERROR] Failed to extract entities via Gemini API:`,
+        );
+      }
+      console.error(`💥 Error Message: ${errorMessage}`);
+      if (err instanceof Error && err.stack) {
+        console.error(`📍 Stack Trace: ${err.stack}`);
+      }
+      console.error(
+        `===============================================================\n`,
+      );
+
+      throw new AIError(
+        `[AIService Extraction Failed]: ${errorMessage}`,
+        err,
+        isQuotaOrRateLimit,
+      );
     }
-
-    return output;
   }
 }

@@ -46,19 +46,21 @@ Before finishing any task or submitting changes in `/api`:
 api/
 ├── src/
 │   ├── db/                 # Database schema, Drizzle client, and migrations
+│   ├── middlewares/        # Hono middlewares (requireAuth session verification)
 │   ├── routes/             # Hono route handlers
 │   │   ├── ingest.ts       # POST /ingest (Receives social media links, runs scraping & AI extraction)
 │   │   ├── crumbs.ts       # GET/PATCH /crumbs (Inbox & saved food spots)
-│   │   └── guides.ts       # GET/POST /guides (Curated lists & travel guides)
+│   │   ├── guides.ts       # GET/POST /guides (Curated lists & travel guides)
+│   │   └── webhooks.ts     # POST /webhooks/apify (Apify scrape completion webhook receiver)
 │   ├── services/           # Reusable backend services
 │   │   ├── ai.ts           # Vercel AI SDK generateText (Output.object) + Gemini 3.7 Flash multimodal vision extraction
 │   │   ├── places.ts       # Place resolution & geocoding (Google Places / Mapbox)
-│   │   └── scraper.ts      # Social media scraper (Apify Instagram / TikTok with local fallback)
+│   │   └── scraper.ts      # Social media scraper (Apify Instagram / TikTok with async webhook callback)
 │   ├── types/              # Type definitions
 │   │   └── env.ts          # Cloudflare Worker Bindings (AppEnv, Bindings, IngestWorkflowParams)
 │   ├── workflows/          # Cloudflare Workflows durable background jobs
 │   │   └── ingestWorkflow.ts # IngestWorkflow (Scrape -> AI Extract -> Places Geocode -> Cache -> Persist)
-│   ├── auth.ts             # BetterAuth configuration with Drizzle adapter
+│   ├── auth.ts             # BetterAuth configuration with Drizzle adapter and bearer plugin
 │   └── index.ts            # Main application entrypoint, CORS, route mounting, AppType export for RPC
 ├── .dev.vars               # Local development environment secrets (gitignored)
 ├── .prettierrc             # Prettier styling configuration

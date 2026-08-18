@@ -4,6 +4,7 @@ import type { AppEnv } from './types/env';
 import { ingestRouter } from './routes/ingest';
 import { crumbsRouter } from './routes/crumbs';
 import { guidesRouter } from './routes/guides';
+import { webhooksRouter } from './routes/webhooks';
 import { IngestWorkflow } from './workflows/ingestWorkflow';
 import { getAuth } from './auth';
 
@@ -36,7 +37,8 @@ app.on(['POST', 'GET'], '/auth/*', (c) => {
 const _routes = app
   .route('/ingest', ingestRouter)
   .route('/crumbs', crumbsRouter)
-  .route('/guides', guidesRouter);
+  .route('/guides', guidesRouter)
+  .route('/webhooks', webhooksRouter);
 
 export default app;
 export { IngestWorkflow };

@@ -2,12 +2,22 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
 import * as schema from './schemas';
 
+// In-memory cache across requests within the same Cloudflare Worker isolate
+let cachedDb: ReturnType<typeof drizzle<typeof schema>> | null = null;
+let cachedUrl: string | null = null;
+
 /**
- * Creates a Drizzle ORM client configured for Cloudflare Workers / Neon serverless HTTP connection.
+ * Returns a cached Drizzle ORM client per Worker isolate, instantiating only once.
  */
-export function createDb(databaseUrl: string) {
+export function getDb(databaseUrl: string) {
+  if (cachedDb && cachedUrl === databaseUrl) {
+    return cachedDb;
+  }
+
   const sql = neon(databaseUrl);
-  return drizzle(sql, { schema });
+  cachedDb = drizzle(sql, { schema });
+  cachedUrl = databaseUrl;
+  return cachedDb;
 }
 
-export type DbClient = ReturnType<typeof createDb>;
+export type DbClient = ReturnType<typeof getDb>;

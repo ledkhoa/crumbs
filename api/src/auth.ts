@@ -1,7 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { bearer } from 'better-auth/plugins';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { createDb } from './db/client';
+import { getDb } from './db/client';
 import * as authSchema from './db/schemas/auth.table';
 
 export interface CreateAuthOptions {
@@ -24,7 +24,7 @@ export function getAuth(options: CreateAuthOptions) {
     return existing;
   }
 
-  const db = createDb(options.databaseUrl);
+  const db = getDb(options.databaseUrl);
 
   const auth = betterAuth({
     appName: 'Crumbs',
