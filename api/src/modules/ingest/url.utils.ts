@@ -12,8 +12,8 @@ export function parseSocialUrl(url: string): ParsedSocialUrl {
   const isTikTok = url.includes('tiktok.com');
 
   if (isInstagram) {
-    const isReel = url.includes('/reel/');
-    const postIdMatch = url.match(/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
+    const isReel = url.includes('/reel/') || url.includes('/reels/');
+    const postIdMatch = url.match(/(?:p|reels|reel|tv)\/([A-Za-z0-9_-]+)/);
     return {
       platform: 'instagram',
       platformPostId: postIdMatch ? postIdMatch[1] : null,

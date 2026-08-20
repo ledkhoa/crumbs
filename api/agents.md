@@ -34,10 +34,14 @@ Before finishing any task or submitting changes in `/api`:
   - Reserve comments exclusively for the **WHY**: non-obvious business rationale, external API workarounds/quirks, edge case handling, or architectural trade-offs.
   - Do not hardcode specific third-party model names or versions in comments/logs that can become stale.
 - **Type Safety & Native Inference**: Rely on TypeScript's native return type inference from async callbacks and functions. Avoid redundant manual type casting (`as SomeType`) when types are already preserved.
+- **Testing & Test-Driven Discipline**:
+  - Run `bun test` to ensure 100% of unit tests pass after every change.
+  - **Test Failure Protocol**: If an existing test fails, analyze and prompt the user with the exact failure reason. If the failure is expected due to an intentional business logic change, provide a clear justification before updating the test expectation.
+  - **Continuous Coverage**: ALWAYS write new unit tests (`*.test.ts`) whenever implementing new features, endpoints, algorithms, or bugfixes.
 - Run `bun run typecheck` (`tsc --noEmit`) to ensure zero TypeScript type errors.
-- Run `bun run lint` (`eslint .`) to catch syntax and static analysis issues.
+- Run `bun run lint` (`oxlint .`) to catch syntax and static analysis issues.
 - Run `bun run format` (`prettier . --write`) to format all modified code cleanly according to `.prettierrc`.
-- Or simply run `bun run check` which runs typecheck, lint, and format verification in sequence.
+- Or simply run `bun run check` which runs typecheck, lint, formatting, and unit tests (`bun test`) in sequence.
 
 ---
 
