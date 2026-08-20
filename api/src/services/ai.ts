@@ -103,7 +103,7 @@ export type PostExtractionResult = z.infer<typeof postExtractionSchema>;
 export class AIError extends Error {
   constructor(
     message: string,
-    public readonly originalError?: unknown,
+    public readonly cause?: unknown,
     public readonly isQuotaOrRateLimit: boolean = false,
   ) {
     super(message);

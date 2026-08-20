@@ -34,12 +34,31 @@ export class ScraperError extends Error {
   }
 }
 
+interface ApifyChildPost {
+  displayUrl?: string;
+  id?: string;
+  shortCode?: string;
+}
+
+interface ApifyDatasetItem {
+  caption?: string;
+  locationName?: string;
+  location?: string;
+  ownerUsername?: string;
+  username?: string;
+  authorMeta?: { name?: string; nickName?: string };
+  displayUrl?: string;
+  type?: string;
+  childPosts?: ApifyChildPost[];
+  images?: string[];
+}
+
 interface ApifyRunResponse {
   data?: {
-    id: string;
-    status:
+    id?: string;
+    defaultDatasetId?: string;
+    status?:
       'READY' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'TIMED-OUT' | 'ABORTED';
-    defaultDatasetId: string;
   };
 }
 
@@ -129,6 +148,7 @@ export class ScraperService {
       );
     }
 
+    // SAFETY: Apify start actor endpoint returns an object conforming to ApifyRunResponse shape
     const startData = (await startRes.json()) as ApifyRunResponse;
     const runId = startData.data?.id;
     const datasetId = startData.data?.defaultDatasetId;
@@ -144,7 +164,7 @@ export class ScraperService {
     return {
       runId,
       datasetId,
-      platform: platform as 'instagram' | 'tiktok',
+      platform,
       postType,
       platformPostId: platformPostId ?? undefined,
     };
@@ -175,6 +195,7 @@ export class ScraperService {
       );
     }
 
+    // SAFETY: Apify run status endpoint returns an object conforming to ApifyRunResponse shape
     const runStatus = (await statusRes.json()) as ApifyRunResponse;
     const status = runStatus.data?.status;
 
@@ -216,19 +237,8 @@ export class ScraperService {
       );
     }
 
-    const items = (await datasetRes.json()) as Array<{
-      caption?: string;
-      locationName?: string;
-      location?: string;
-      ownerUsername?: string;
-      username?: string;
-      authorMeta?: { name?: string; nickName?: string };
-      displayUrl?: string;
-      type?: string;
-      childPosts?: Array<{ displayUrl?: string; [key: string]: unknown }>;
-      images?: string[];
-      [key: string]: unknown;
-    }>;
+    // SAFETY: Apify dataset endpoint returns an array of scraped post records conforming to ApifyDatasetItem
+    const items = (await datasetRes.json()) as ApifyDatasetItem[];
 
     if (items && items.length > 0) {
       const item = items[0];

@@ -301,9 +301,11 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                     communityFavoriteDish:
                       cached.communityFavoriteDish ?? undefined,
                     reservationUrl: cached.reservationUrl ?? undefined,
+                    // SAFETY: reservationProvider in DB is constrained by schema to valid reservation provider literals
                     reservationProvider:
                       (cached.reservationProvider as PlaceDetails['reservationProvider']) ??
                       undefined,
+                    // SAFETY: regularOpeningHours is stored as JSON matching the hours array schema
                     regularOpeningHours:
                       (cached.regularOpeningHours as PlaceDetails['regularOpeningHours']) ??
                       undefined,
