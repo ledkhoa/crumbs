@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'bun:test';
-import { ScraperService, ScraperError, type FetchFn } from './scraper.service';
+import {
+  ScraperService,
+  ScraperError,
+  parseDatasetItem,
+} from './scraper.service';
 
 describe('ScraperService', () => {
   it('should throw ScraperError when initialized without APIFY_TOKEN', async () => {
@@ -9,23 +13,17 @@ describe('ScraperService', () => {
     ).rejects.toThrow(ScraperError);
   });
 
-  describe('fetchDatasetItems parser logic', () => {
-    it('should parse Instagram post items correctly from mock dataset', async () => {
-      const mockItems = [
-        {
-          caption: 'Best handmade pasta in NYC! @lilianewyork',
-          locationName: 'Lilia, Brooklyn',
-          ownerUsername: 'foodie_traveler',
-          displayUrl: 'https://cdn.instagram.com/pic1.jpg',
-          type: 'Post',
-        },
-      ];
+  describe('parseDatasetItem pure parser logic', () => {
+    it('should parse Instagram post items correctly from mock dataset', () => {
+      const mockItem = {
+        caption: 'Best handmade pasta in NYC! @lilianewyork',
+        locationName: 'Lilia, Brooklyn',
+        ownerUsername: 'foodie_traveler',
+        displayUrl: 'https://cdn.instagram.com/pic1.jpg',
+        type: 'Post',
+      };
 
-      const mockFetch: FetchFn = async () =>
-        new Response(JSON.stringify(mockItems), { status: 200 });
-
-      const service = new ScraperService('test_token', mockFetch);
-      const data = await service.fetchDatasetItems('dataset_123', {
+      const data = parseDatasetItem(mockItem, {
         platform: 'instagram',
         platformPostId: 'C_12345Abc',
       });
@@ -38,25 +36,19 @@ describe('ScraperService', () => {
       expect(data.mediaUrls?.[0]).toBe('https://cdn.instagram.com/pic1.jpg');
     });
 
-    it('should extract all carousel child post slide URLs', async () => {
-      const mockCarousel = [
-        {
-          caption: 'Top 3 Bakeries in Paris',
-          ownerUsername: 'parisfoodguide',
-          childPosts: [
-            { displayUrl: 'https://cdn.instagram.com/slide1.jpg' },
-            { displayUrl: 'https://cdn.instagram.com/slide2.jpg' },
-            { displayUrl: 'https://cdn.instagram.com/slide3.jpg' },
-          ],
-          type: 'Sidecar',
-        },
-      ];
+    it('should extract all carousel child post slide URLs', () => {
+      const mockCarousel = {
+        caption: 'Top 3 Bakeries in Paris',
+        ownerUsername: 'parisfoodguide',
+        childPosts: [
+          { displayUrl: 'https://cdn.instagram.com/slide1.jpg' },
+          { displayUrl: 'https://cdn.instagram.com/slide2.jpg' },
+          { displayUrl: 'https://cdn.instagram.com/slide3.jpg' },
+        ],
+        type: 'Sidecar',
+      };
 
-      const mockFetch: FetchFn = async () =>
-        new Response(JSON.stringify(mockCarousel), { status: 200 });
-
-      const service = new ScraperService('test_token', mockFetch);
-      const data = await service.fetchDatasetItems('dataset_carousel', {
+      const data = parseDatasetItem(mockCarousel, {
         platform: 'instagram',
       });
 
@@ -66,20 +58,14 @@ describe('ScraperService', () => {
       expect(data.mediaUrls?.[1]).toBe('https://cdn.instagram.com/slide2.jpg');
     });
 
-    it('should parse TikTok authorMeta and video displayUrl', async () => {
-      const mockTikTok = [
-        {
-          caption: 'Secret ramen spot in Shibuya Tokyo #ramen',
-          authorMeta: { name: 'tokyoeats', nickName: 'Tokyo Foodie' },
-          displayUrl: 'https://cdn.tiktok.com/cover.jpg',
-        },
-      ];
+    it('should parse TikTok authorMeta and video displayUrl', () => {
+      const mockTikTok = {
+        caption: 'Secret ramen spot in Shibuya Tokyo #ramen',
+        authorMeta: { name: 'tokyoeats', nickName: 'Tokyo Foodie' },
+        displayUrl: 'https://cdn.tiktok.com/cover.jpg',
+      };
 
-      const mockFetch: FetchFn = async () =>
-        new Response(JSON.stringify(mockTikTok), { status: 200 });
-
-      const service = new ScraperService('test_token', mockFetch);
-      const data = await service.fetchDatasetItems('dataset_tiktok', {
+      const data = parseDatasetItem(mockTikTok, {
         platform: 'tiktok',
       });
 
