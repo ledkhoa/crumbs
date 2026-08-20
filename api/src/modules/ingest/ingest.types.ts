@@ -1,5 +1,5 @@
-import type { ExtractedRestaurant } from '../services/ai';
-import type { PlaceDetails } from '../services/places';
+import type { ExtractedRestaurant } from './services/ai.service';
+import type { PlaceDetails } from './services/places.service';
 
 /**
  * An extracted restaurant entity combined with resolved Google Places metadata.

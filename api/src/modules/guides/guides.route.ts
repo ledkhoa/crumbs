@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import type { AppEnv } from '../types/env';
-import { requireAuth } from '../middlewares/auth';
+import type { AppEnv } from '../../core/types/env';
+import { requireAuth } from '../../core/auth/auth.middleware';
 
 const createGuideSchema = z.object({
   name: z.string().min(1, 'Guide name is required'),

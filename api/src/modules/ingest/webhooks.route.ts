@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { AppEnv } from '../types/env';
+import type { AppEnv } from '../../core/types/env';
 
 export const webhooksRouter = new Hono<AppEnv>();
 

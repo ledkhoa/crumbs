@@ -4,28 +4,28 @@ import {
   WorkflowEvent,
 } from 'cloudflare:workers';
 import { eq, and } from 'drizzle-orm';
-import type { Bindings, IngestWorkflowParams } from '../types/env';
+import type { Bindings, IngestWorkflowParams } from '../../core/types/env';
 import type {
   EnrichedRestaurant,
   MediaSnapshot,
   ProcessedCrumbPayload,
-} from '../types/crumb';
+} from './ingest.types';
 import {
   ScraperService,
   type ScraperJob,
   type ScrapedPostData,
   ScraperError,
-} from '../services/scraper';
-import { AIService, type PostExtractionResult } from '../services/ai';
-import { PlacesService, type PlaceDetails } from '../services/places';
-import { getDb } from '../db/client';
+} from './services/scraper.service';
+import { AIService, type PostExtractionResult } from './services/ai.service';
+import { PlacesService, type PlaceDetails } from './services/places.service';
+import { getDb } from '../../core/db/client';
 import {
   Posts,
   Restaurants,
   PostRestaurants,
   Crumbs,
   GuideCrumbs,
-} from '../db/schemas';
+} from '../../core/db/schemas';
 
 interface ApifyWebhookPayload {
   status?: string;

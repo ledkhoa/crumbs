@@ -1,8 +1,8 @@
 import { betterAuth } from 'better-auth';
 import { bearer } from 'better-auth/plugins';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { getDb } from './db/client';
-import * as authSchema from './db/schemas/auth.table';
+import { getDb } from '../db/client';
+import * as authSchema from '../db/schemas/auth.table';
 
 export interface CreateAuthOptions {
   databaseUrl: string;

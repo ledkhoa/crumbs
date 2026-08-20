@@ -46,31 +46,31 @@ Before finishing any task or submitting changes in `/api`:
 ```
 api/
 ├── src/
-│   ├── db/                 # Database schema, Drizzle client, and migrations
-│   ├── middlewares/        # Hono middlewares (requireAuth session verification)
-│   ├── routes/             # Hono route handlers
-│   │   ├── ingest.ts       # POST /ingest (Receives social media links, runs scraping & AI extraction)
-│   │   ├── crumbs.ts       # GET/PATCH /crumbs (Inbox & saved food spots)
-│   │   ├── guides.ts       # GET/POST /guides (Curated lists & travel guides)
-│   │   └── webhooks.ts     # POST /webhooks/apify (Apify scrape completion webhook receiver)
-│   ├── services/           # Reusable backend services
-│   │   ├── ai.ts           # Vercel AI SDK generateText (Output.object) + Gemini 3.7 Flash multimodal vision extraction
-│   │   ├── places.ts       # Place resolution & geocoding (Google Places / Mapbox)
-│   │   └── scraper.ts      # Social media scraper (Apify Instagram / TikTok with async webhook callback)
-│   ├── types/              # Type definitions
-│   │   └── env.ts          # Cloudflare Worker Bindings (AppEnv, Bindings, IngestWorkflowParams)
-│   ├── utils/              # Pure utility functions (url parser, formatters)
-│   │   └── url.ts          # Social URL parser (platform, platformPostId, postType)
-│   ├── workflows/          # Cloudflare Workflows durable background jobs
-│   │   └── ingestWorkflow.ts # IngestWorkflow (Scrape -> AI Extract -> Places Geocode -> Cache -> Persist)
-│   ├── auth.ts             # BetterAuth configuration with Drizzle adapter and bearer plugin
-│   └── index.ts            # Main application entrypoint, CORS, route mounting, AppType export for RPC
-├── .dev.vars               # Local development environment secrets (gitignored)
-├── .prettierrc             # Prettier styling configuration
-├── eslint.config.mjs       # Modern ESLint flat configuration (TypeScript + Prettier)
-├── package.json            # Scripts: dev, deploy, lint, format, typecheck, check, db:generate, db:migrate
-├── tsconfig.json           # Strict TypeScript configuration with Worker & Node types
-└── wrangler.jsonc          # Cloudflare Workers configuration (compatibility_flags: ["nodejs_compat"], workflows: [ingest-workflow])
+│   ├── core/                           # Shared infrastructure & utilities
+│   │   ├── auth/                       # BetterAuth client & requireAuth middleware
+│   │   ├── db/                         # Drizzle client, connection pool & relational schemas
+│   │   └── types/                      # Global environment bindings (AppEnv, Bindings)
+│   ├── modules/                        # Domain-driven product feature modules
+│   │   ├── ingest/                     # Social Link Processing Pipeline
+│   │   │   ├── ingest.route.ts         # POST /ingest, GET /ingest/:id
+│   │   │   ├── webhooks.route.ts       # POST /webhooks/apify
+│   │   │   ├── ingest.workflow.ts      # Cloudflare Workflows durable orchestrator
+│   │   │   ├── ingest.types.ts         # ScrapedPostData, ProcessedCrumbPayload
+│   │   │   ├── url.utils.ts            # Social URL parser (platform, platformPostId)
+│   │   │   └── services/               # External clients (ai.service, places.service, scraper.service)
+│   │   ├── crumbs/                     # User Saved Spots & Inbox Domain
+│   │   │   └── crumbs.route.ts         # GET /crumbs (Inbox review)
+│   │   ├── guides/                     # Curated Lists & Tasting Menus Domain
+│   │   │   └── guides.route.ts         # CRUD /guides, /tasting-menu, /clone
+│   │   └── crawl/                      # Food Crawl Sequencing Domain
+│   │       └── crawl.route.ts          # POST /crawl/sequence
+│   └── index.ts                        # Main Hono app & route composition
+├── .dev.vars                           # Local development environment secrets (gitignored)
+├── .prettierrc                         # Prettier styling configuration
+├── oxlint.config.ts                    # Oxlint configuration with anti-slop rules
+├── package.json                        # Scripts: dev, deploy, lint, format, typecheck, check, db:generate, db:migrate
+├── tsconfig.json                       # Strict TypeScript configuration with Worker & Node types
+└── wrangler.jsonc                      # Cloudflare Workers configuration (compatibility_flags: ["nodejs_compat"], workflows: [ingest-workflow])
 ```
 
 ---

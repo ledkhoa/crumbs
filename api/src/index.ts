@@ -1,12 +1,12 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import type { AppEnv } from './types/env';
-import { ingestRouter } from './routes/ingest';
-import { crumbsRouter } from './routes/crumbs';
-import { guidesRouter } from './routes/guides';
-import { webhooksRouter } from './routes/webhooks';
-import { IngestWorkflow } from './workflows/ingestWorkflow';
-import { getAuth } from './auth';
+import type { AppEnv } from './core/types/env';
+import { ingestRouter } from './modules/ingest/ingest.route';
+import { crumbsRouter } from './modules/crumbs/crumbs.route';
+import { guidesRouter } from './modules/guides/guides.route';
+import { webhooksRouter } from './modules/ingest/webhooks.route';
+import { IngestWorkflow } from './modules/ingest/ingest.workflow';
+import { getAuth } from './core/auth/auth';
 
 const app = new Hono<AppEnv>();
 
