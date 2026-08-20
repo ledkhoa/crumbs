@@ -1,7 +1,7 @@
 import { generateText, Output } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
-import type { ScrapedPostData } from './scraper';
+import type { ScrapedPostData } from './scraper.service';
 
 export const extractedRestaurantSchema = z.object({
   name: z.string().describe('The name of the restaurant, bar, bakery, or cafe'),

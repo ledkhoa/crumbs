@@ -1,6 +1,6 @@
 import { createMiddleware } from 'hono/factory';
 import type { AppEnv } from '../types/env';
-import { getAuth } from '../auth';
+import { getAuth } from './auth';
 
 /**
  * Middleware that verifies the active BetterAuth session and attaches user and session to context.

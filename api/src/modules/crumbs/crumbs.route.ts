@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import type { AppEnv } from '../types/env';
-import { requireAuth } from '../middlewares/auth';
+import type { AppEnv } from '../../core/types/env';
+import { requireAuth } from '../../core/auth/auth.middleware';
 
 export const crumbsRouter = new Hono<AppEnv>();
 

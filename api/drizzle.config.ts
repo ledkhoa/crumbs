@@ -30,8 +30,8 @@ function getDatabaseUrl(): string {
 }
 
 export default defineConfig({
-  schema: './src/db/schemas',
-  out: './src/db/migrations',
+  schema: './src/core/db/schemas',
+  out: './src/core/db/migrations',
   dialect: 'postgresql',
   dbCredentials: {
     url: getDatabaseUrl(),

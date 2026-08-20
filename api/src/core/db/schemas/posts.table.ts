@@ -7,7 +7,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { timestamps } from './constants';
-import type { MediaSnapshot } from '../../types/crumb';
+import type { MediaSnapshot } from '../../../modules/ingest/ingest.types';
 
 export const Posts = pgTable(
   'posts',

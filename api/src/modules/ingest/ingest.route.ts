@@ -2,12 +2,12 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
-import type { AppEnv } from '../types/env';
-import type { ProcessedCrumbPayload } from '../types/crumb';
-import { requireAuth } from '../middlewares/auth';
-import { parseSocialUrl } from '../utils/url';
-import { getDb } from '../db/client';
-import { Posts, Crumbs, GuideCrumbs } from '../db/schemas';
+import type { AppEnv } from '../../core/types/env';
+import type { ProcessedCrumbPayload } from './ingest.types';
+import { requireAuth } from '../../core/auth/auth.middleware';
+import { parseSocialUrl } from './url.utils';
+import { getDb } from '../../core/db/client';
+import { Posts, Crumbs, GuideCrumbs } from '../../core/db/schemas';
 
 const ingestSchema = z.object({
   url: z.url('Must be a valid social media URL (Instagram or TikTok)'),

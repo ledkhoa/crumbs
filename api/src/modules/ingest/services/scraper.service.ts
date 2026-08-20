@@ -1,4 +1,4 @@
-import { parseSocialUrl } from '../utils/url';
+import { parseSocialUrl } from '../url.utils';
 
 export interface ScrapedPostData {
   caption: string;
