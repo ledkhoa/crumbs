@@ -243,11 +243,14 @@ ingestRouter.get('/:instanceId', async (c) => {
     const instance = await c.env.INGEST_WORKFLOW.get(instanceId);
     const status = await instance.status();
 
+    // SAFETY: IngestWorkflow.run() returns a finalized ProcessedCrumbPayload as its output
+    const output = (status.output as ProcessedCrumbPayload) ?? null;
+
     return c.json({
       success: true,
       workflowId: instanceId,
       status: status.status,
-      output: (status.output as ProcessedCrumbPayload) ?? null,
+      output,
       error: status.error ?? null,
     });
   } catch (error: unknown) {

@@ -1,3 +1,8 @@
+export interface ReservationInfo {
+  reservationUrl?: string;
+  reservationProvider?: 'resy' | 'opentable' | 'sevenrooms' | 'tock' | 'custom';
+}
+
 export interface PlaceDetails {
   placeId?: string;
   name: string;
@@ -52,10 +57,7 @@ export function detectReservationProvider(
   explicitUrl?: string,
   restaurantName?: string,
   city?: string,
-): {
-  reservationUrl?: string;
-  reservationProvider?: 'resy' | 'opentable' | 'sevenrooms' | 'tock' | 'custom';
-} {
+): ReservationInfo {
   // 1. Explicit Direct URL (e.g. from creator caption)
   if (explicitUrl) {
     return {
@@ -122,27 +124,48 @@ export function detectReservationProvider(
 export function extractCommunityDishFromReviews(
   editorialSummary?: string,
   reviews?: Array<{
-    text?: { text?: string };
-    originalText?: { text?: string };
+    text?: { text?: string; languageCode?: string };
+    originalText?: { text?: string; languageCode?: string };
   }>,
 ): string | undefined {
   if (editorialSummary) {
     const dishMatch = editorialSummary.match(
-      /(?:famous for|known for|serves|specialty is|must-try|signature|popular for)\s+([^.,;]+)/i,
+      /(?:famous for|known for|signature|must-try|popular for|serves)\s+([A-Za-z\s'-]{4,40})(?:\.|,|$)/i,
     );
     if (dishMatch && dishMatch[1]) {
-      return dishMatch[1].trim().replace(/^their\s+/i, '');
+      const candidate = dishMatch[1].trim();
+      if (
+        !candidate.toLowerCase().includes('good food') &&
+        candidate.length < 40
+      ) {
+        return candidate;
+      }
     }
   }
 
   if (reviews && reviews.length > 0) {
     for (const review of reviews) {
-      const reviewText = review.text?.text || review.originalText?.text || '';
-      const reviewMatch = reviewText.match(
-        /(?:must order|must try|best dish was|get the|signature)\s+([A-Z][a-z]+(?:\s+[A-Za-z]+){1,3})/i,
-      );
-      if (reviewMatch && reviewMatch[1]) {
-        return reviewMatch[1].trim();
+      const content = review.text?.text || review.originalText?.text;
+      if (!content) continue;
+
+      const patterns = [
+        /(?:must order the|definitely get the|highlight was the|best)\s+([A-Za-z\s'-]{4,35})(?:\.|!|,|$)/i,
+        /(?:favorite dish was the|unreal|incredible)\s+([A-Za-z\s'-]{4,35})(?:\.|!|,|$)/i,
+      ];
+
+      for (const pattern of patterns) {
+        const match = content.match(pattern);
+        if (match && match[1]) {
+          const candidate = match[1].trim();
+          if (
+            !candidate.toLowerCase().includes('service') &&
+            !candidate.toLowerCase().includes('place') &&
+            !candidate.toLowerCase().includes('vibe') &&
+            candidate.length < 35
+          ) {
+            return candidate;
+          }
+        }
       }
     }
   }
@@ -215,6 +238,7 @@ export class PlacesService {
             `[PlacesService] Google Places API returned HTTP ${response.status}: ${errorText}`,
           );
         } else {
+          // SAFETY: Google Places API searchText endpoint returns a response matching GooglePlacesSearchResponse schema
           const data = (await response.json()) as GooglePlacesSearchResponse;
           if (data.places && data.places.length > 0) {
             const place = data.places[0];

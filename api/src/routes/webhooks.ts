@@ -27,6 +27,7 @@ webhooksRouter.post('/apify', async (c) => {
   }
 
   try {
+    // SAFETY: Webhook payload structure sent from Apify is parsed as partial ApifyWebhookPayload
     const payload = (await c.req.json().catch(() => ({}))) as {
       eventType?: string;
       eventData?: {
