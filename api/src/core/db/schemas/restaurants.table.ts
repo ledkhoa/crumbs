@@ -21,6 +21,7 @@ export const Restaurants = pgTable(
     name: varchar('name', { length: 255 }).notNull(),
     formattedAddress: text('formatted_address'),
     city: varchar('city', { length: 128 }),
+    neighborhood: varchar('neighborhood', { length: 128 }),
     state: varchar('state', { length: 128 }),
     country: varchar('country', { length: 128 }),
     latitude: doublePrecision('latitude'),
@@ -45,6 +46,7 @@ export const Restaurants = pgTable(
   (table) => [
     uniqueIndex('restaurants_google_place_id_uidx').on(table.googlePlaceId),
     index('restaurants_name_city_idx').on(table.name, table.city),
+    index('restaurants_neighborhood_idx').on(table.neighborhood),
     index('restaurants_coordinates_idx').on(table.latitude, table.longitude),
   ],
 );

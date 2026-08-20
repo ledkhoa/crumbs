@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
   detectReservationProvider,
   extractCommunityDishFromReviews,
+  extractNeighborhood,
 } from './places.service';
 
 describe('detectReservationProvider', () => {
@@ -125,5 +126,38 @@ describe('extractCommunityDishFromReviews', () => {
     ];
     const dish = extractCommunityDishFromReviews(undefined, reviews);
     expect(dish).toBeUndefined();
+  });
+});
+
+describe('extractNeighborhood', () => {
+  it('should extract neighborhood when neighborhood component exists', () => {
+    const components = [
+      { longText: 'West Village', types: ['neighborhood', 'political'] },
+      {
+        longText: 'Manhattan',
+        types: ['sublocality_level_1', 'sublocality', 'political'],
+      },
+      { longText: 'New York', types: ['locality', 'political'] },
+    ];
+    expect(extractNeighborhood(components)).toBe('West Village');
+  });
+
+  it('should fallback to sublocality when neighborhood is not available', () => {
+    const components = [
+      {
+        longText: 'Brooklyn',
+        types: ['sublocality_level_1', 'sublocality', 'political'],
+      },
+      { longText: 'New York', types: ['locality', 'political'] },
+    ];
+    expect(extractNeighborhood(components)).toBe('Brooklyn');
+  });
+
+  it('should return undefined when no neighborhood or sublocality exists', () => {
+    const components = [
+      { longText: 'New York', types: ['locality', 'political'] },
+      { longText: 'NY', types: ['administrative_area_level_1', 'political'] },
+    ];
+    expect(extractNeighborhood(components)).toBeUndefined();
   });
 });

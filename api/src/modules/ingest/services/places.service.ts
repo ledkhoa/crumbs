@@ -7,6 +7,7 @@ export interface PlaceDetails {
   placeId?: string;
   name: string;
   formattedAddress?: string;
+  neighborhood?: string;
   latitude?: number;
   longitude?: number;
   mapsUrl?: string;
@@ -22,11 +23,18 @@ export interface PlaceDetails {
   reservationProvider?: 'resy' | 'opentable' | 'sevenrooms' | 'tock' | 'custom';
 }
 
+export interface AddressComponent {
+  longText?: string;
+  shortText?: string;
+  types?: string[];
+}
+
 interface GooglePlacesSearchResponse {
   places?: Array<{
     id?: string;
     displayName?: { text?: string; languageCode?: string };
     formattedAddress?: string;
+    addressComponents?: AddressComponent[];
     location?: { latitude?: number; longitude?: number };
     rating?: number;
     userRatingCount?: number;
@@ -46,6 +54,31 @@ interface GooglePlacesSearchResponse {
     }>;
     photos?: Array<{ name?: string; widthPx?: number; heightPx?: number }>;
   }>;
+}
+
+/**
+ * Extracts a neighborhood with fallback to sublocality (e.g., Borough/District) from Google Places address components.
+ */
+export function extractNeighborhood(
+  components?: AddressComponent[],
+): string | undefined {
+  if (!components || components.length === 0) return undefined;
+
+  // 1. Direct neighborhood component (e.g., "West Village", "SoHo", "Shibuya")
+  const neighborhoodComp = components.find((c) =>
+    c.types?.includes('neighborhood'),
+  );
+  if (neighborhoodComp?.longText) return neighborhoodComp.longText;
+
+  // 2. Sublocality fallback (e.g., "Manhattan", "Brooklyn", "Shinjuku City")
+  const sublocalityComp = components.find(
+    (c) =>
+      c.types?.includes('sublocality_level_1') ||
+      c.types?.includes('sublocality'),
+  );
+  if (sublocalityComp?.longText) return sublocalityComp.longText;
+
+  return undefined;
 }
 
 /**
@@ -204,6 +237,7 @@ export class PlacesService {
           'places.id',
           'places.displayName',
           'places.formattedAddress',
+          'places.addressComponents',
           'places.location',
           'places.rating',
           'places.userRatingCount',
@@ -248,6 +282,7 @@ export class PlacesService {
               : undefined;
 
             const editorialSummary = place.editorialSummary?.text;
+            const neighborhood = extractNeighborhood(place.addressComponents);
             const reservationInfo = detectReservationProvider(
               place.websiteUri,
               explicitReservationProvider,
@@ -279,6 +314,7 @@ export class PlacesService {
               placeId: place.id,
               name: place.displayName?.text || name,
               formattedAddress: place.formattedAddress || address || city,
+              neighborhood,
               latitude: place.location?.latitude,
               longitude: place.location?.longitude,
               mapsUrl:
