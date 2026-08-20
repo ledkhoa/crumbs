@@ -130,7 +130,7 @@ export function extractCommunityDishFromReviews(
 ): string | undefined {
   if (editorialSummary) {
     const dishMatch = editorialSummary.match(
-      /(?:famous for|known for|signature|must-try|popular for|serves)\s+([A-Za-z\s'-]{4,40})(?:\.|,|$)/i,
+      /(?:famous for|known for|signature|must-try|popular for|serves)\s+([A-Za-z\s'-]{4,40}?)(?:\.|,|\band\b|$)/i,
     );
     if (dishMatch && dishMatch[1]) {
       const candidate = dishMatch[1].trim();
@@ -149,8 +149,8 @@ export function extractCommunityDishFromReviews(
       if (!content) continue;
 
       const patterns = [
-        /(?:must order the|definitely get the|highlight was the|best)\s+([A-Za-z\s'-]{4,35})(?:\.|!|,|$)/i,
-        /(?:favorite dish was the|unreal|incredible)\s+([A-Za-z\s'-]{4,35})(?:\.|!|,|$)/i,
+        /(?:must order(?: the)?|definitely get(?: the)?|highlight was(?: the)?|best)\s+([A-Za-z\s'-]{4,35})(?:\.|!|,|before|and|$)/i,
+        /(?:favorite dish was(?: the)?|unreal|incredible)\s+([A-Za-z\s'-]{4,35})(?:\.|!|,|before|and|$)/i,
       ];
 
       for (const pattern of patterns) {

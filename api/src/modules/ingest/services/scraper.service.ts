@@ -70,8 +70,16 @@ export interface StartScrapeOptions {
  * ScraperService manages social media content extraction from Instagram & TikTok.
  * Attaches dynamic Apify webhooks to seamlessly resume Cloudflare Workflows via step.waitForEvent().
  */
+export type FetchFn = (
+  input: string | URL | Request,
+  init?: RequestInit,
+) => Promise<Response>;
+
 export class ScraperService {
-  constructor(private token?: string) {}
+  constructor(
+    private token?: string,
+    private fetchFn: FetchFn = fetch,
+  ) {}
 
   /**
    * Dispatches an asynchronous Apify Actor run and configures optional webhook callback.
@@ -130,7 +138,7 @@ export class ScraperService {
       );
     }
 
-    const startRes = await fetch(
+    const startRes = await this.fetchFn(
       `https://api.apify.com/v2/acts/apify~instagram-scraper/runs?${queryParams.toString()}`,
       {
         method: 'POST',
@@ -182,7 +190,7 @@ export class ScraperService {
       throw new ScraperError('APIFY_TOKEN is missing', 'TOKEN_MISSING', false);
     }
 
-    const statusRes = await fetch(
+    const statusRes = await this.fetchFn(
       `https://api.apify.com/v2/acts/apify~instagram-scraper/runs/${runId}?token=${this.token}`,
     );
 
@@ -224,7 +232,7 @@ export class ScraperService {
       throw new ScraperError('APIFY_TOKEN is missing', 'TOKEN_MISSING', false);
     }
 
-    const datasetRes = await fetch(
+    const datasetRes = await this.fetchFn(
       `https://api.apify.com/v2/datasets/${datasetId}/items?token=${this.token}&clean=true`,
     );
 
