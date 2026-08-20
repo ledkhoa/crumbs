@@ -281,9 +281,16 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                   ),
                 });
 
-                if (cached && cached.latitude && cached.longitude) {
+                const SIX_MONTHS_MS = 180 * 24 * 60 * 60 * 1000;
+                const isFresh =
+                  cached &&
+                  cached.placesLastSyncedAt &&
+                  Date.now() - new Date(cached.placesLastSyncedAt).getTime() <
+                    SIX_MONTHS_MS;
+
+                if (cached && cached.latitude && cached.longitude && isFresh) {
                   console.log(
-                    `   ⚡ [Place ${index + 1}/${extraction.restaurants.length}] ${restaurant.name} (DB CACHE HIT - Skipped Google Places API)`,
+                    `   ⚡ [Place ${index + 1}/${extraction.restaurants.length}] ${restaurant.name} (DB CACHE HIT - Synced within 6 months, skipped Places API)`,
                   );
                   const cachedDetails: PlaceDetails = {
                     placeId: cached.googlePlaceId ?? undefined,
@@ -314,6 +321,12 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                     ...restaurant,
                     placeDetails: cachedDetails,
                   };
+                }
+
+                if (cached && !isFresh) {
+                  console.log(
+                    `   🔄 [Place ${index + 1}/${extraction.restaurants.length}] ${restaurant.name} (DB CACHE STALE - Last synced > 6 months ago, refreshing from Places API)`,
+                  );
                 }
               } catch (dbErr) {
                 console.warn(

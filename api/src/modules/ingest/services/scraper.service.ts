@@ -70,16 +70,52 @@ export interface StartScrapeOptions {
  * ScraperService manages social media content extraction from Instagram & TikTok.
  * Attaches dynamic Apify webhooks to seamlessly resume Cloudflare Workflows via step.waitForEvent().
  */
-export type FetchFn = (
-  input: string | URL | Request,
-  init?: RequestInit,
-) => Promise<Response>;
+/**
+ * Pure function to normalize an Apify dataset item into Crumbs domain ScrapedPostData.
+ */
+export function parseDatasetItem(
+  item: ApifyDatasetItem,
+  jobMeta: {
+    platform: 'instagram' | 'tiktok';
+    platformPostId?: string;
+  },
+): ScrapedPostData {
+  const authorUsername =
+    item.ownerUsername || item.authorMeta?.name || item.username || undefined;
+
+  const slideUrls =
+    item.childPosts && Array.isArray(item.childPosts)
+      ? item.childPosts
+          .map((child) => child.displayUrl)
+          .filter((url): url is string => Boolean(url))
+      : [];
+
+  const mediaUrls =
+    slideUrls.length > 0
+      ? slideUrls
+      : item.images && item.images.length > 0
+        ? item.images
+        : item.displayUrl
+          ? [item.displayUrl]
+          : [];
+
+  const postType: ScrapedPostData['postType'] =
+    slideUrls.length > 0 ? 'carousel' : item.type === 'Video' ? 'reel' : 'post';
+
+  return {
+    caption: item.caption || '',
+    locationName: item.locationName || item.location || '',
+    authorUsername,
+    mediaUrls,
+    platform: jobMeta.platform,
+    postType,
+    platformPostId: jobMeta.platformPostId,
+    rawMetadataJson: JSON.stringify(item),
+  };
+}
 
 export class ScraperService {
-  constructor(
-    private token?: string,
-    private fetchFn: FetchFn = fetch,
-  ) {}
+  constructor(private token?: string) {}
 
   /**
    * Dispatches an asynchronous Apify Actor run and configures optional webhook callback.
@@ -120,25 +156,17 @@ export class ScraperService {
     // If webhooks are supported in actor run payload
     const queryParams = new URLSearchParams({ token: this.token });
     if (options?.webhookUrl) {
-      queryParams.set(
-        'webhooks',
-        btoa(
-          JSON.stringify([
-            {
-              eventTypes: [
-                'ACTOR.RUN.SUCCEEDED',
-                'ACTOR.RUN.FAILED',
-                'ACTOR.RUN.TIMED_OUT',
-                'ACTOR.RUN.ABORTED',
-              ],
-              requestUrl: options.webhookUrl,
-            },
-          ]),
-        ),
-      );
+      const webhooksJson = JSON.stringify([
+        {
+          eventTypes: ['ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED'],
+          requestUrl: options.webhookUrl,
+        },
+      ]);
+      // Apify requires ad-hoc webhooks parameter in query string to be Base64 encoded
+      queryParams.set('webhooks', btoa(webhooksJson));
     }
 
-    const startRes = await this.fetchFn(
+    const startRes = await fetch(
       `https://api.apify.com/v2/acts/apify~instagram-scraper/runs?${queryParams.toString()}`,
       {
         method: 'POST',
@@ -190,7 +218,7 @@ export class ScraperService {
       throw new ScraperError('APIFY_TOKEN is missing', 'TOKEN_MISSING', false);
     }
 
-    const statusRes = await this.fetchFn(
+    const statusRes = await fetch(
       `https://api.apify.com/v2/acts/apify~instagram-scraper/runs/${runId}?token=${this.token}`,
     );
 
@@ -232,7 +260,7 @@ export class ScraperService {
       throw new ScraperError('APIFY_TOKEN is missing', 'TOKEN_MISSING', false);
     }
 
-    const datasetRes = await this.fetchFn(
+    const datasetRes = await fetch(
       `https://api.apify.com/v2/datasets/${datasetId}/items?token=${this.token}&clean=true`,
     );
 
@@ -249,47 +277,7 @@ export class ScraperService {
     const items = (await datasetRes.json()) as ApifyDatasetItem[];
 
     if (items && items.length > 0) {
-      const item = items[0];
-
-      const authorUsername =
-        item.ownerUsername ||
-        item.authorMeta?.name ||
-        item.username ||
-        undefined;
-
-      const slideUrls =
-        item.childPosts && Array.isArray(item.childPosts)
-          ? item.childPosts
-              .map((child) => child.displayUrl)
-              .filter((url): url is string => Boolean(url))
-          : [];
-
-      const mediaUrls =
-        slideUrls.length > 0
-          ? slideUrls
-          : item.images && item.images.length > 0
-            ? item.images
-            : item.displayUrl
-              ? [item.displayUrl]
-              : [];
-
-      const postType: ScrapedPostData['postType'] =
-        slideUrls.length > 0
-          ? 'carousel'
-          : item.type === 'Video'
-            ? 'reel'
-            : 'post';
-
-      return {
-        caption: item.caption || '',
-        locationName: item.locationName || item.location || '',
-        authorUsername,
-        mediaUrls,
-        platform: jobMeta.platform,
-        postType,
-        platformPostId: jobMeta.platformPostId,
-        rawMetadataJson: JSON.stringify(item),
-      };
+      return parseDatasetItem(items[0], jobMeta);
     }
 
     throw new ScraperError(
