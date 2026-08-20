@@ -24,6 +24,10 @@ export const PostRestaurants = pgTable(
       .$type<string[]>()
       .default([])
       .notNull(),
+    heroDish: text('hero_dish'),
+    vibeAnchor: text('vibe_anchor'),
+    courseCategory: text('course_category'),
+    walkInTips: text('walk_in_tips'),
     vibeTags: jsonb('vibe_tags').$type<string[]>().default([]).notNull(),
     creatorNotes: text('creator_notes'),
     ...timestamps,

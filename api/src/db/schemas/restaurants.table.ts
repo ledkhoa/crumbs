@@ -32,6 +32,10 @@ export const Restaurants = pgTable(
     mapsUrl: text('maps_url'),
     websiteUrl: text('website_url'),
     photoUrl: text('photo_url'),
+    editorialSummary: text('editorial_summary'),
+    communityFavoriteDish: text('community_favorite_dish'),
+    reservationUrl: text('reservation_url'),
+    reservationProvider: varchar('reservation_provider', { length: 64 }),
     regularOpeningHours: jsonb('regular_opening_hours'),
     placesLastSyncedAt: timestamp('places_last_synced_at', {
       withTimezone: true,

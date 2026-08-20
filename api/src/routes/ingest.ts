@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 import type { AppEnv } from '../types/env';
-import type { ProcessedCrumbPayload, EnrichedRestaurant } from '../types/crumb';
+import type { ProcessedCrumbPayload } from '../types/crumb';
 import { requireAuth } from '../middlewares/auth';
 import { parseSocialUrl } from '../utils/url';
 import { getDb } from '../db/client';
@@ -52,104 +52,122 @@ ingestRouter.post('/', zValidator('json', ingestSchema), async (c) => {
           },
         });
 
-        if (existingPost && existingPost.postRestaurants.length > 0) {
+        if (existingPost) {
           console.log(
-            `⚡ [Fast-Path Cache Hit] Post ${platformPostId} already in DB. Linking user crumb...`,
+            `⚡ [Fast-Path Cache Hit] Post ${platformPostId} already in DB (${existingPost.classification}). Returning instant cached result...`,
           );
 
-          const enrichedRestaurants: EnrichedRestaurant[] =
-            existingPost.postRestaurants.map((pr) => ({
-              name: pr.restaurant.name,
-              cuisine: pr.restaurant.cuisine ?? undefined,
-              address: pr.restaurant.formattedAddress ?? undefined,
-              city: pr.restaurant.city ?? undefined,
-              state: pr.restaurant.state ?? undefined,
-              country: pr.restaurant.country ?? undefined,
-              vibe: pr.vibeTags,
-              recommendedDishes: pr.recommendedDishes,
-              notes: pr.creatorNotes ?? undefined,
-              placeDetails: {
-                placeId: pr.restaurant.googlePlaceId ?? undefined,
-                name: pr.restaurant.name,
-                formattedAddress: pr.restaurant.formattedAddress ?? undefined,
-                latitude: pr.restaurant.latitude ?? undefined,
-                longitude: pr.restaurant.longitude ?? undefined,
-                mapsUrl: pr.restaurant.mapsUrl ?? undefined,
-                websiteUrl: pr.restaurant.websiteUrl ?? undefined,
-                rating: pr.restaurant.rating
-                  ? Number(pr.restaurant.rating)
-                  : undefined,
-                userRatingCount: pr.restaurant.userRatingCount ?? undefined,
-                priceLevel: pr.restaurant.priceLevel ?? undefined,
-                photoUrl: pr.restaurant.photoUrl ?? undefined,
-              },
-            }));
+          // Link User Crumbs (if restaurants were found)
+          const linkedCrumbs: Array<{
+            id: string;
+            userId: string;
+            restaurantId: string;
+            sourcePostId: string | null;
+            status: string;
+            userNotes: string | null;
+            userHeroDishOverride: string | null;
+          }> = [];
 
-          // Link User Crumbs
-          for (const pr of existingPost.postRestaurants) {
-            const [savedCrumb] = await db
-              .insert(Crumbs)
-              .values({
-                userId: user.id,
-                restaurantId: pr.restaurantId,
-                sourcePostId: existingPost.id,
-                status: guideId ? 'saved' : 'inbox',
-              })
-              .onConflictDoUpdate({
-                target: [Crumbs.userId, Crumbs.restaurantId],
-                set: {
-                  sourcePostId: existingPost.id,
-                  updatedAt: new Date(),
-                },
-              })
-              .returning();
-
-            if (guideId && savedCrumb) {
-              await db
-                .insert(GuideCrumbs)
+          if (
+            existingPost.postRestaurants &&
+            existingPost.postRestaurants.length > 0
+          ) {
+            for (const pr of existingPost.postRestaurants) {
+              const [savedCrumb] = await db
+                .insert(Crumbs)
                 .values({
-                  guideId,
-                  crumbId: savedCrumb.id,
-                  orderIndex: 0,
+                  userId: user.id,
+                  restaurantId: pr.restaurantId,
+                  sourcePostId: existingPost.id,
+                  status: guideId ? 'saved' : 'inbox',
                 })
-                .onConflictDoNothing();
+                .onConflictDoUpdate({
+                  target: [Crumbs.userId, Crumbs.restaurantId],
+                  set: {
+                    sourcePostId: existingPost.id,
+                    updatedAt: new Date(),
+                  },
+                })
+                .returning();
+
+              if (savedCrumb) {
+                linkedCrumbs.push({
+                  id: savedCrumb.id,
+                  userId: savedCrumb.userId,
+                  restaurantId: savedCrumb.restaurantId,
+                  sourcePostId: savedCrumb.sourcePostId,
+                  status: savedCrumb.status,
+                  userNotes: savedCrumb.userNotes,
+                  userHeroDishOverride: savedCrumb.userHeroDishOverride,
+                });
+
+                if (guideId) {
+                  await db
+                    .insert(GuideCrumbs)
+                    .values({
+                      guideId,
+                      crumbId: savedCrumb.id,
+                      orderIndex: 0,
+                    })
+                    .onConflictDoNothing();
+                }
+              }
             }
           }
 
-          const cachedOutput: ProcessedCrumbPayload = {
-            url: existingPost.originalUrl,
-            guideId: guideId ?? null,
-            userId: user.id,
-            platform:
-              existingPost.platform === 'instagram' ||
-              existingPost.platform === 'tiktok'
-                ? existingPost.platform
-                : 'unknown',
-            postType:
-              existingPost.postType === 'reel' ||
-              existingPost.postType === 'carousel' ||
-              existingPost.postType === 'post' ||
-              existingPost.postType === 'video'
-                ? existingPost.postType
-                : 'unknown',
+          // Structured per-table response payload
+          const postData = {
+            id: existingPost.id,
+            platform: existingPost.platform,
+            postType: existingPost.postType,
             platformPostId: existingPost.platformPostId,
+            authorUsername: existingPost.authorUsername ?? null,
+            originalUrl: existingPost.originalUrl,
             caption: existingPost.caption ?? '',
-            locationName: existingPost.locationName,
-            mediaUrls: existingPost.mediaUrls,
-            mediaSnapshot: existingPost.mediaSnapshot ?? {
-              originalUrl: existingPost.mediaUrls[0] ?? null,
-              r2Key: null,
-              status: 'pending_r2_setup',
-            },
-            classification:
-              existingPost.classification === 'restaurant_related' ||
-              existingPost.classification === 'travel_unrelated_to_restaurants'
-                ? existingPost.classification
-                : 'random_unrelated',
+            locationName: existingPost.locationName ?? null,
+            mediaUrls: existingPost.mediaUrls ?? [],
+            mediaSnapshot: existingPost.mediaSnapshot ?? null,
+            classification: existingPost.classification,
             summary: existingPost.summary ?? '',
-            restaurants: enrichedRestaurants,
-            processedAt: new Date().toISOString(),
           };
+
+          const restaurantsData = (existingPost.postRestaurants || []).map(
+            (pr) => ({
+              id: pr.restaurant.id,
+              googlePlaceId: pr.restaurant.googlePlaceId ?? null,
+              name: pr.restaurant.name,
+              formattedAddress: pr.restaurant.formattedAddress ?? null,
+              city: pr.restaurant.city ?? null,
+              state: pr.restaurant.state ?? null,
+              country: pr.restaurant.country ?? null,
+              latitude: pr.restaurant.latitude ?? null,
+              longitude: pr.restaurant.longitude ?? null,
+              cuisine: pr.restaurant.cuisine ?? null,
+              rating: pr.restaurant.rating
+                ? Number(pr.restaurant.rating)
+                : null,
+              userRatingCount: pr.restaurant.userRatingCount ?? null,
+              priceLevel: pr.restaurant.priceLevel ?? null,
+              mapsUrl: pr.restaurant.mapsUrl ?? null,
+              websiteUrl: pr.restaurant.websiteUrl ?? null,
+              photoUrl: pr.restaurant.photoUrl ?? null,
+              editorialSummary: pr.restaurant.editorialSummary ?? null,
+              communityFavoriteDish:
+                pr.restaurant.communityFavoriteDish ?? null,
+              reservationUrl: pr.restaurant.reservationUrl ?? null,
+              reservationProvider: pr.restaurant.reservationProvider ?? null,
+              regularOpeningHours: pr.restaurant.regularOpeningHours ?? null,
+              postAttribution: {
+                heroDish: pr.heroDish ?? null,
+                vibeAnchor: pr.vibeAnchor ?? null,
+                courseCategory: pr.courseCategory ?? null,
+                walkInTips: pr.walkInTips ?? null,
+                vibeTags: pr.vibeTags ?? [],
+                recommendedDishes: pr.recommendedDishes ?? [],
+                creatorNotes: pr.creatorNotes ?? null,
+              },
+            }),
+          );
 
           return c.json(
             {
@@ -157,9 +175,16 @@ ingestRouter.post('/', zValidator('json', ingestSchema), async (c) => {
               workflowId: `cached_${existingPost.id}`,
               status: 'complete',
               cached: true,
-              output: cachedOutput,
+              data: {
+                post: postData,
+                restaurants: restaurantsData,
+                crumbs: linkedCrumbs,
+              },
               message:
-                'Instant cache hit: Post already processed and linked to user',
+                existingPost.postRestaurants &&
+                existingPost.postRestaurants.length > 0
+                  ? 'Instant cache hit: Post already processed and linked to user'
+                  : 'Instant cache hit: Post already analyzed (no food spots found)',
             },
             200,
           );

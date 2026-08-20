@@ -3,6 +3,7 @@ import { parseSocialUrl } from '../utils/url';
 export interface ScrapedPostData {
   caption: string;
   locationName?: string;
+  authorUsername?: string;
   mediaUrls?: string[];
   platform: 'instagram' | 'tiktok' | 'unknown';
   postType: 'reel' | 'carousel' | 'post' | 'video' | 'unknown';
@@ -219,6 +220,9 @@ export class ScraperService {
       caption?: string;
       locationName?: string;
       location?: string;
+      ownerUsername?: string;
+      username?: string;
+      authorMeta?: { name?: string; nickName?: string };
       displayUrl?: string;
       type?: string;
       childPosts?: Array<{ displayUrl?: string; [key: string]: unknown }>;
@@ -228,6 +232,12 @@ export class ScraperService {
 
     if (items && items.length > 0) {
       const item = items[0];
+
+      const authorUsername =
+        item.ownerUsername ||
+        item.authorMeta?.name ||
+        item.username ||
+        undefined;
 
       const slideUrls =
         item.childPosts && Array.isArray(item.childPosts)
@@ -255,6 +265,7 @@ export class ScraperService {
       return {
         caption: item.caption || '',
         locationName: item.locationName || item.location || '',
+        authorUsername,
         mediaUrls,
         platform: jobMeta.platform,
         postType,

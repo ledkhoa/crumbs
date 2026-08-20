@@ -25,10 +25,15 @@ app.get('/', (c) => {
 
 // BetterAuth authentication handler
 app.on(['POST', 'GET'], '/auth/*', (c) => {
+  const trustedOrigins = c.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   const auth = getAuth({
     databaseUrl: c.env.DATABASE_URL || '',
     secret: c.env.BETTER_AUTH_SECRET,
     baseURL: c.env.BETTER_AUTH_URL,
+    trustedOrigins,
   });
   return auth.handler(c.req.raw);
 });

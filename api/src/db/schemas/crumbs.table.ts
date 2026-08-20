@@ -26,6 +26,7 @@ export const Crumbs = pgTable(
     }),
     status: varchar('status', { length: 32 }).default('inbox').notNull(),
     userNotes: text('user_notes'),
+    userHeroDishOverride: text('user_hero_dish_override'),
     ...timestamps,
   },
   (table) => [
