@@ -14,6 +14,7 @@ export type Bindings = {
   DATABASE_URL?: string;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
+  BETTER_AUTH_TRUSTED_ORIGINS?: string;
   API_BASE_URL?: string;
   APIFY_WEBHOOK_SECRET?: string;
   ENVIRONMENT?: string;

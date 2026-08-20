@@ -8,6 +8,7 @@ export interface CreateAuthOptions {
   databaseUrl: string;
   secret?: string;
   baseURL?: string;
+  trustedOrigins?: string[];
 }
 
 // In-memory cache across requests within the same Cloudflare Worker isolate
@@ -18,7 +19,11 @@ const authCache = new Map<string, any>();
  * Returns a cached BetterAuth instance per Worker isolate, creating one only when not yet initialized.
  */
 export function getAuth(options: CreateAuthOptions) {
-  const cacheKey = `${options.databaseUrl}::${options.baseURL || ''}`;
+  const trustedOrigins = Array.from(
+    new Set(['https://hoppscotch.io', ...(options.trustedOrigins || [])]),
+  );
+
+  const cacheKey = `${options.databaseUrl}::${options.baseURL || ''}::${trustedOrigins.join(',')}`;
   const existing = authCache.get(cacheKey);
   if (existing) {
     return existing;
@@ -31,6 +36,7 @@ export function getAuth(options: CreateAuthOptions) {
     basePath: '/auth',
     secret: options.secret || 'crumbs-dev-secret-change-in-production',
     baseURL: options.baseURL || 'http://localhost:8787',
+    trustedOrigins,
     database: drizzleAdapter(db, {
       provider: 'pg',
       schema: {

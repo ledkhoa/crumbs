@@ -27,6 +27,7 @@ export interface ProcessedCrumbPayload {
   platform: 'instagram' | 'tiktok' | 'unknown';
   postType: 'reel' | 'carousel' | 'post' | 'video' | 'unknown';
   platformPostId: string | null;
+  authorUsername?: string | null;
   caption: string;
   locationName: string | null;
   mediaUrls: string[];

@@ -239,7 +239,7 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                 name: r.name,
                 cuisine: r.cuisine,
                 dishes: r.recommendedDishes,
-                vibes: r.vibe,
+                vibes: r.vibeTags,
               })),
             },
             null,
@@ -297,6 +297,16 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                     userRatingCount: cached.userRatingCount ?? undefined,
                     priceLevel: cached.priceLevel ?? undefined,
                     photoUrl: cached.photoUrl ?? undefined,
+                    editorialSummary: cached.editorialSummary ?? undefined,
+                    communityFavoriteDish:
+                      cached.communityFavoriteDish ?? undefined,
+                    reservationUrl: cached.reservationUrl ?? undefined,
+                    reservationProvider:
+                      (cached.reservationProvider as PlaceDetails['reservationProvider']) ??
+                      undefined,
+                    regularOpeningHours:
+                      (cached.regularOpeningHours as PlaceDetails['regularOpeningHours']) ??
+                      undefined,
                   };
                   return {
                     ...restaurant,
@@ -315,12 +325,23 @@ export class IngestWorkflow extends WorkflowEntrypoint<
               restaurant.name,
               restaurant.city,
               restaurant.address,
+              Boolean(restaurant.heroDish),
+              restaurant.reservationProvider,
+              restaurant.reservationUrl,
             );
 
             console.log(
               `   📍 [Place ${index + 1}/${extraction.restaurants.length}] ${restaurant.name}:`,
               JSON.stringify(
                 {
+                  heroDish:
+                    restaurant.heroDish || 'None (Using Places Fallback)',
+                  vibeAnchor: restaurant.vibeAnchor || 'N/A',
+                  courseCategory: restaurant.courseCategory || 'N/A',
+                  communityFavoriteDish:
+                    placeDetails.communityFavoriteDish || 'N/A',
+                  reservationProvider:
+                    placeDetails.reservationProvider || 'None',
                   formattedAddress: placeDetails.formattedAddress,
                   coordinates:
                     placeDetails.latitude && placeDetails.longitude
@@ -381,6 +402,7 @@ export class IngestWorkflow extends WorkflowEntrypoint<
           platform: scrapedData?.platform ?? 'unknown',
           postType: scrapedData?.postType ?? 'unknown',
           platformPostId: scrapedData?.platformPostId ?? null,
+          authorUsername: scrapedData?.authorUsername ?? null,
           caption: scrapedData?.caption ?? '',
           locationName: scrapedData?.locationName ?? null,
           mediaUrls: scrapedData?.mediaUrls ?? [],
@@ -406,6 +428,7 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                 platformPostId:
                   result.platformPostId ||
                   `post_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+                authorUsername: result.authorUsername,
                 originalUrl: result.url,
                 caption: result.caption,
                 locationName: result.locationName,
@@ -418,6 +441,7 @@ export class IngestWorkflow extends WorkflowEntrypoint<
               .onConflictDoUpdate({
                 target: [Posts.platform, Posts.platformPostId],
                 set: {
+                  authorUsername: result.authorUsername,
                   caption: result.caption,
                   locationName: result.locationName,
                   mediaUrls: result.mediaUrls,
@@ -454,6 +478,13 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                     mapsUrl: item.placeDetails.mapsUrl,
                     websiteUrl: item.placeDetails.websiteUrl,
                     photoUrl: item.placeDetails.photoUrl,
+                    editorialSummary: item.placeDetails.editorialSummary,
+                    communityFavoriteDish:
+                      item.placeDetails.communityFavoriteDish,
+                    reservationUrl: item.placeDetails.reservationUrl,
+                    reservationProvider: item.placeDetails.reservationProvider,
+                    regularOpeningHours:
+                      item.placeDetails.regularOpeningHours ?? null,
                     placesLastSyncedAt: new Date(),
                   })
                   .onConflictDoUpdate({
@@ -471,6 +502,14 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                       mapsUrl: item.placeDetails.mapsUrl,
                       websiteUrl: item.placeDetails.websiteUrl,
                       photoUrl: item.placeDetails.photoUrl,
+                      editorialSummary: item.placeDetails.editorialSummary,
+                      communityFavoriteDish:
+                        item.placeDetails.communityFavoriteDish,
+                      reservationUrl: item.placeDetails.reservationUrl,
+                      reservationProvider:
+                        item.placeDetails.reservationProvider,
+                      regularOpeningHours:
+                        item.placeDetails.regularOpeningHours ?? null,
                       placesLastSyncedAt: new Date(),
                       updatedAt: new Date(),
                     },
@@ -500,8 +539,12 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                   .values({
                     postId: savedPost.id,
                     restaurantId: restaurantRecord.id,
+                    heroDish: item.heroDish,
+                    vibeAnchor: item.vibeAnchor,
+                    courseCategory: item.courseCategory,
+                    walkInTips: item.walkInTips,
                     recommendedDishes: item.recommendedDishes || [],
-                    vibeTags: item.vibe || [],
+                    vibeTags: item.vibeTags || [],
                     creatorNotes: item.notes,
                   })
                   .onConflictDoUpdate({
@@ -510,8 +553,12 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                       PostRestaurants.restaurantId,
                     ],
                     set: {
+                      heroDish: item.heroDish,
+                      vibeAnchor: item.vibeAnchor,
+                      courseCategory: item.courseCategory,
+                      walkInTips: item.walkInTips,
                       recommendedDishes: item.recommendedDishes || [],
-                      vibeTags: item.vibe || [],
+                      vibeTags: item.vibeTags || [],
                       creatorNotes: item.notes,
                     },
                   });

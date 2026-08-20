@@ -9,7 +9,7 @@ export const extractedRestaurantSchema = z.object({
     .string()
     .optional()
     .describe(
-      'Type of cuisine or food served (e.g. Italian, Japanese, Bakery, Specialty Coffee)',
+      'Type of cuisine or food served (e.g. Italian, Japanese, French Bakery, Specialty Coffee)',
     ),
   address: z
     .string()
@@ -20,22 +20,61 @@ export const extractedRestaurantSchema = z.object({
   city: z.string().optional().describe('City where the restaurant is located'),
   state: z.string().optional().describe('State, province, or region'),
   country: z.string().optional().describe('Country'),
-  vibe: z
-    .array(z.string())
-    .optional()
-    .describe(
-      "Vibe tags (e.g. 'Cozy', 'Date Night', 'Late Night', 'Dimly Lit', 'Lively', 'Scenic Views', 'Rooftop')",
-    ),
-  recommendedDishes: z
-    .array(z.string())
-    .optional()
-    .describe('List of signature or recommended dishes mentioned or shown'),
-  notes: z
+  heroDish: z
     .string()
     .optional()
     .describe(
-      "Key context, highlights, or tips (e.g. 'Walk-in only', 'Make reservation 30 days ahead')",
+      'The single primary, signature, viral, or must-order dish highlighted for this spot (e.g. "Truffle Cacio e Pepe", "Pistachio Escargot Croissant"). Null/empty if no specific dish is featured.',
     ),
+  vibeAnchor: z
+    .string()
+    .optional()
+    .describe(
+      'A concise, evocative 3-8 word sensory atmosphere description (e.g. "Low-lit vinyl listening bar with natural orange wines", "Sun-drenched patio with homemade sourdough").',
+    ),
+  courseCategory: z
+    .enum([
+      'aperitif',
+      'main',
+      'dessert',
+      'cafe_bakery',
+      'cocktail_bar',
+      'snack',
+    ])
+    .optional()
+    .describe(
+      'Dining course classification for food crawl sequencing. aperitif = pre-dinner drinks/small bites; main = full dinner/lunch; dessert = sweets/gelato; cafe_bakery = breakfast/coffee/pastries; cocktail_bar = late night drinks; snack = street food/quick bite.',
+    ),
+  walkInTips: z
+    .string()
+    .optional()
+    .describe(
+      'Tactical walk-in or reservation advice mentioned by creator (e.g. "Arrive 15 mins before 5 PM opening", "Book Resy 30 days ahead at midnight", "Bar seating is walk-in only").',
+    ),
+  reservationProvider: z
+    .enum(['resy', 'opentable', 'sevenrooms', 'tock', 'custom'])
+    .optional()
+    .describe(
+      'Reservation platform if explicitly mentioned in caption or text (resy, opentable, sevenrooms, tock, custom)',
+    ),
+  reservationUrl: z
+    .string()
+    .optional()
+    .describe('Direct reservation link if found in caption or metadata'),
+  vibeTags: z
+    .array(z.string())
+    .default([])
+    .describe(
+      "3 to 6 standardized vibe & search filter tags representing mood, crowd, and dining occasion (e.g. ['Date Night', 'Dimly Lit', 'Natural Wine', 'Outdoor Patio', 'Late Night', 'Aesthetic Cafe', 'Lively & Loud', 'Solo Dining', 'Scenic Views', 'Hidden Gem'])",
+    ),
+  recommendedDishes: z
+    .array(z.string())
+    .default([])
+    .describe('List of all signature or recommended dishes mentioned or shown'),
+  notes: z
+    .string()
+    .optional()
+    .describe('Any additional context or highlights mentioned by the creator.'),
 });
 
 export const postExtractionSchema = z.object({
@@ -45,13 +84,16 @@ export const postExtractionSchema = z.object({
       'travel_unrelated_to_restaurants',
       'random_unrelated',
     ])
-    .describe('Categorize the post content'),
-  summary: z.string().describe('Brief 1-sentence summary of the post content'),
+    .describe(
+      'Classification: restaurant_related if it highlights food, dining, drinks, bakeries, or cafes; travel_unrelated_to_restaurants if travel/hotel/scenery without restaurants; random_unrelated otherwise.',
+    ),
+  summary: z
+    .string()
+    .describe('A punchy 1-2 sentence editorial overview of the post curation.'),
   restaurants: z
     .array(extractedRestaurantSchema)
-    .default([])
     .describe(
-      "List of restaurants/food spots extracted from the post. Leave empty if classification is not 'restaurant_related'",
+      'List of distinct restaurant/food spot entities extracted from the post. Empty if unrelated.',
     ),
 });
 
@@ -61,8 +103,8 @@ export type PostExtractionResult = z.infer<typeof postExtractionSchema>;
 export class AIError extends Error {
   constructor(
     message: string,
-    public originalError?: unknown,
-    public isQuotaOrRateLimit: boolean = false,
+    public readonly originalError?: unknown,
+    public readonly isQuotaOrRateLimit: boolean = false,
   ) {
     super(message);
     this.name = 'AIError';
@@ -82,7 +124,7 @@ export class AIService {
   }
 
   /**
-   * Parses scraped social media content and visual image slides/thumbnails,
+   * Analyzes social media post content (caption + slide/video frames)
    * returning structured restaurant entities with high precision.
    */
   async extract(scrapedData: ScrapedPostData): Promise<PostExtractionResult> {
@@ -101,28 +143,51 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
 
     type MessageContentPart =
       | { type: 'text'; text: string }
-      | { type: 'file'; data: URL; mediaType: string };
+      | { type: 'image'; image: ArrayBuffer; mimeType: string };
 
     const content: MessageContentPart[] = [{ type: 'text', text: promptText }];
 
-    for (const url of mediaUrls.slice(0, 10)) {
-      try {
-        content.push({
-          type: 'file',
-          data: new URL(url),
-          mediaType: 'image/jpeg',
+    // Concurrently fetch up to 5 image slides safely with strict 4s timeouts (skip any that fail)
+    if (mediaUrls.length > 0) {
+      const fetchPromises = mediaUrls.slice(0, 5).map(async (url) => {
+        const imageRes = await fetch(url, {
+          signal: AbortSignal.timeout(4000),
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+          },
         });
-      } catch (err) {
-        console.warn(`[AIService] Skipping invalid media URL: ${url}`, err);
+        if (!imageRes.ok) return null;
+        const buffer = await imageRes.arrayBuffer();
+        if (buffer.byteLength === 0 || buffer.byteLength > 4 * 1024 * 1024) {
+          return null;
+        }
+        const mimeType =
+          imageRes.headers.get('content-type')?.split(';')[0] || 'image/jpeg';
+        return { buffer, mimeType };
+      });
+
+      const results = await Promise.allSettled(fetchPromises);
+      for (const res of results) {
+        if (res.status === 'fulfilled' && res.value) {
+          content.push({
+            type: 'image',
+            image: res.value.buffer,
+            mimeType: res.value.mimeType,
+          });
+        }
       }
     }
 
+    const systemPrompt =
+      "You are an expert food, vibe, and travel curator for Crumbs ('Spotify for Cravings'). Extract structured restaurant recommendations with extreme taste and precision.\n\nCRITICAL EXTRACTION GUIDELINES:\n1. HERO DISH: Extract the single most celebrated, viral, or signature dish mentioned or shown (e.g. 'Spicy Rigatoni Vodka', 'Pistachio Croissant'). If no specific item is called out, leave heroDish empty.\n2. VIBE ANCHOR: Craft a vivid, sensory 3-to-8 word mood description that captures the unique atmosphere (e.g. 'Low-lit vinyl listening bar with orange wine', 'Charming sunlit courtyard with handmade pasta'). Avoid generic terms like 'Good food'.\n3. VIBE TAGS: Always synthesize 3 to 6 high-intent search filter tags representing the mood, crowd, aesthetic, and dining occasion (e.g. ['Date Night', 'Dimly Lit', 'Natural Wine', 'Vinyl Bar', 'Outdoor Patio', 'Solo Dining', 'Late Night', 'Aesthetic Cafe', 'Scenic Views', 'Hidden Gem']). Never leave vibeTags empty.\n4. COURSE CATEGORY: Classify the meal role: 'aperitif' (drinks + light snacks), 'main' (full meal), 'dessert' (bakeries, ice cream, sweets), 'cafe_bakery' (morning coffee, pastries), 'cocktail_bar' (late night drinks), or 'snack' (quick bites/street food).\n5. WALK-IN & RESERVATION TIPS: Extract any reservation windows, line-up warnings, or walk-in tricks (e.g. 'Book Resy 30 days ahead'). If Resy, OpenTable, SevenRooms, or Tock is mentioned, identify the reservationProvider.\n6. MULTI-SPOT POSTS: When carousel slides or numbered lists appear, thoroughly inspect every slide image and graphic text to extract each distinct restaurant.";
+
     try {
+      // First attempt: with loaded images (if any succeeded)
       const { output } = await generateText({
-        model: this.google('gemini-2.5-flash'),
+        model: this.google('gemini-3.7-flash'),
         output: Output.object({ schema: postExtractionSchema }),
-        system:
-          "You are an expert food & lifestyle curator for Crumbs ('Spotify for Cravings'). Extract structured restaurant details, signature hero dishes, and vibe tags with high precision. When images or carousel slides are attached, carefully inspect all graphic text, titles, numbered lists, and photos to extract every featured restaurant, cafe, bar, or bakery individually.",
+        system: systemPrompt,
         messages: [
           {
             role: 'user',
@@ -137,6 +202,36 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
 
       return output;
     } catch (err: unknown) {
+      // If the multimodal call failed and images were attached, fall back immediately to text-only
+      const hasImagesAttached = content.length > 1;
+      if (hasImagesAttached) {
+        console.warn(
+          `[AIService] Multimodal extraction failed or timed out. Falling back to text-only extraction...`,
+        );
+        try {
+          const { output: fallbackOutput } = await generateText({
+            model: this.google('gemini-2.5-flash-lite'),
+            output: Output.object({ schema: postExtractionSchema }),
+            system: systemPrompt,
+            messages: [
+              {
+                role: 'user',
+                content: [{ type: 'text', text: promptText }],
+              },
+            ],
+          });
+
+          if (fallbackOutput) {
+            return fallbackOutput;
+          }
+        } catch (fallbackErr) {
+          console.error(
+            `[AIService] Fallback text-only extraction also failed:`,
+            fallbackErr,
+          );
+        }
+      }
+
       const errorMessage =
         err instanceof Error ? err.message : JSON.stringify(err);
       const isQuotaOrRateLimit =

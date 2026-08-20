@@ -19,6 +19,7 @@ export const Posts = pgTable(
     originalUrl: text('original_url').notNull(),
     caption: text('caption'),
     locationName: varchar('location_name', { length: 255 }),
+    authorUsername: varchar('author_username', { length: 128 }),
     mediaUrls: jsonb('media_urls').$type<string[]>().default([]).notNull(),
     mediaSnapshot: jsonb('media_snapshot').$type<MediaSnapshot>(),
     classification: varchar('classification', { length: 64 }).notNull(),

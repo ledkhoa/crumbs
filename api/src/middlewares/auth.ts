@@ -7,10 +7,15 @@ import { getAuth } from '../auth';
  * Rejects unauthenticated requests with 401 Unauthorized.
  */
 export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
+  const trustedOrigins = c.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   const auth = getAuth({
     databaseUrl: c.env.DATABASE_URL || '',
     secret: c.env.BETTER_AUTH_SECRET,
     baseURL: c.env.BETTER_AUTH_URL,
+    trustedOrigins,
   });
 
   const session = await auth.api.getSession({

@@ -15,12 +15,13 @@
 
 ## Mistakes & Failure Log
 
-| Date       | Mistake / Issue                                                                  | Root Cause & Prevention Rule                                                                                                                 |
-| :--------- | :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-08-15 | Used deprecated `z.string().url()` instead of `z.url()` (Zod)                    | Always use modern Zod top-level `z.url()` schema instead of the deprecated `z.string().url()`.                                               |
-| 2026-08-15 | Attempted to auto-run `git commit` without explicit request                      | Never run `git commit` automatically unless the user explicitly asks to commit changes.                                                      |
-| 2026-08-15 | Used deprecated `generateObject()` instead of `generateText({ output: Output })` | In Vercel AI SDK, always use `generateText({ output: Output.object({ schema }) })` for structured extraction instead of `generateObject()`.  |
-| 2026-08-16 | Claimed `gemini-3.7-flash` was nonexistent                                       | Always verify current available Google models via `/v1beta/models`. `gemini-3.7-flash` is active and supported in the Gemini model registry. |
+| Date       | Mistake / Issue                                                                                             | Root Cause & Prevention Rule                                                                                                                             |
+| :--------- | :---------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-15 | Used deprecated `z.string().url()` instead of `z.url()` (Zod)                                               | Always use modern Zod top-level `z.url()` schema instead of the deprecated `z.string().url()`.                                                           |
+| 2026-08-15 | Attempted to auto-run `git commit` without explicit request                                                 | Never run `git commit` automatically unless the user explicitly asks to commit changes.                                                                  |
+| 2026-08-15 | Used deprecated `generateObject()` instead of `generateText({ output: Output })`                            | In Vercel AI SDK, always use `generateText({ output: Output.object({ schema }) })` for structured extraction instead of `generateObject()`.              |
+| 2026-08-16 | Claimed `gemini-3.7-flash` was nonexistent                                                                  | Always verify current available Google models via `/v1beta/models`. `gemini-3.7-flash` is active and supported in the Gemini model registry.             |
+| 2026-08-18 | Vercel AI SDK `{ type: 'file', data: new URL() }` hung with `Network connection lost` on Cloudflare Workers | When passing images to Vercel AI SDK on Workers, fetch them as `ArrayBuffer` beforehand with timeouts; remote URLs cause socket resets on edge isolates. |
 
 ---
 
