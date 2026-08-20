@@ -22,6 +22,7 @@
 | 2026-08-15 | Used deprecated `generateObject()` instead of `generateText({ output: Output })`                            | In Vercel AI SDK, always use `generateText({ output: Output.object({ schema }) })` for structured extraction instead of `generateObject()`.              |
 | 2026-08-16 | Claimed `gemini-3.7-flash` was nonexistent                                                                  | Always verify current available Google models via `/v1beta/models`. `gemini-3.7-flash` is active and supported in the Gemini model registry.             |
 | 2026-08-18 | Vercel AI SDK `{ type: 'file', data: new URL() }` hung with `Network connection lost` on Cloudflare Workers | When passing images to Vercel AI SDK on Workers, fetch them as `ArrayBuffer` beforehand with timeouts; remote URLs cause socket resets on edge isolates. |
+| 2026-08-20 | Used `z.string().url()` in guides.route.ts instead of `z.url()`                                             | Must strictly use top-level `z.url()` for URL validation across all route schemas without falling back to string chaining.                               |
 
 ---
 
