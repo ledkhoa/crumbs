@@ -7,6 +7,7 @@ Consult [`mobile/DESIGN.md`](./DESIGN.md) for all design system guidelines, UI t
 ## Stack
 
 - **Runtime**: Expo SDK 57+, Expo Router v57 (file-based routing with typed routes)
+- **Native UI Primitives**: `@expo/ui` (Universal, SwiftUI, Jetpack Compose)
 - **Styling**: React Native `StyleSheet.create` — no external CSS-in-JS libs
 - **State**: Zustand (persisted via MMKV) for client state; TanStack Query v5 for server state
 - **Forms**: TanStack Form + Zod v4 validation
@@ -19,6 +20,25 @@ Consult [`mobile/DESIGN.md`](./DESIGN.md) for all design system guidelines, UI t
 - Prefer `StyleSheet.create` at the bottom of the file.
 - Keep screens thin; extract business logic into `src/hooks/` or `src/utils/`.
 - Use `@/` path alias for all imports (`@/components/...`, `@/theme/...`, `@/utils/...`, etc.).
+
+## Native UI & Documentation Protocol (@expo/ui)
+
+**Always prefer `@expo/ui` native primitives** over writing custom native bridge code or installing heavy third-party community modules:
+
+1. **Component Tiers**:
+   - **Universal (`@expo/ui`)**: Cross-platform primitives (`BottomSheet`, `Button`, `Checkbox`, `Collapsible`, `FieldGroup`, `Icon`, `List`, `Picker`, `Switch`, `TextInput`, `Slider`).
+   - **SwiftUI (`@expo/ui/swift-ui`)**: iOS native SwiftUI primitives (`ContextMenu`, `SwipeActions`, `Menu`, `Form`, `Section`, `Popover`, `Gauge`, `VStack`, `HStack`, `ZStack`).
+   - **Jetpack Compose (`@expo/ui/jetpack-compose`)**: Android native Material 3 primitives (`ModalBottomSheet`, `AlertDialog`, `FloatingActionButton`, `NavigationBar`, `PullToRefreshBox`, `Surface`, `Chip`, `Snackbar`).
+
+2. **Fetching Expo Documentation (Agent Instruction)**:
+   - **Never guess API props** for Expo SDK 57+ components.
+   - All Expo documentation is available directly as Markdown by appending `.md` to the URL.
+   - **Main UI Index**: [`https://docs.expo.dev/versions/latest/sdk/ui.md`](https://docs.expo.dev/versions/latest/sdk/ui.md)
+   - **Universal Docs**: `https://docs.expo.dev/versions/latest/sdk/ui/universal/<component>.md` (e.g. `bottomsheet.md`, `picker.md`)
+   - **SwiftUI Docs**: `https://docs.expo.dev/versions/latest/sdk/ui/swift-ui/<component>.md` (e.g. `contextmenu.md`, `swipeactions.md`)
+   - **Jetpack Compose Docs**: `https://docs.expo.dev/versions/latest/sdk/ui/jetpack-compose/<component>.md` (e.g. `bottomsheet.md`, `alertdialog.md`)
+   - **Full Sitemap**: [`https://docs.expo.dev/llms.txt`](https://docs.expo.dev/llms.txt)
+   - When introducing or editing an `@expo/ui` or Expo SDK component, always fetch and read the exact `.md` documentation beforehand using `read_url_content`.
 
 ## Theme & Token Enforcement
 
@@ -43,9 +63,5 @@ Consult [`mobile/DESIGN.md`](./DESIGN.md) for all design system guidelines, UI t
 
 ## Cross-Platform
 
-- Prefer platform-native behaviors: SF Symbols on iOS, Material Icons on Android via `expo-symbols`.
+- Prefer platform-native behaviors: SF Symbols on iOS, Material Icons on Android via `expo-symbols` or `@expo/ui` `Icon`.
 - Use `Platform.OS` checks only where platform behavior genuinely diverges (e.g., `KeyboardAvoidingView` behavior, serif display font).
-
-## Expo Version Notice
-
-Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before writing any code.
