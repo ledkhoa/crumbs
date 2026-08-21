@@ -1,17 +1,12 @@
-import { Text, View, StyleSheet } from 'react-native';
+import { Redirect } from 'expo-router';
+import { useSessionStore } from '@/store/session';
 
 export default function Index() {
-  return (
-    <View style={styles.container}>
-      <Text>Edit src/app/index.tsx to edit this screen.</Text>
-    </View>
-  );
-}
+  const token = useSessionStore((state) => state.token);
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+  if (!token) {
+    return <Redirect href="/(auth)/sign-in" />;
+  }
+
+  return <Redirect href="/(tabs)/(home)" />;
+}
