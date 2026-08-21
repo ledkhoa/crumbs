@@ -27,11 +27,24 @@ Consult [`mobile/DESIGN.md`](./DESIGN.md) for all design system guidelines, UI t
 - **Single source of truth**: All color values live exclusively in `src/theme/tokens.ts`.
 - **Spacing & radii**: Always use `Theme.spacing.*` and `Theme.radii.*` tokens. Avoid magic numbers for padding, margin, gap, and border radius.
 
+## Mandatory Haptic Feedback Pattern
+
+**Every user interaction implemented in the mobile app must trigger appropriate tactile feedback** using `@/utils/haptics`:
+
+| Trigger / Action          | Method                | When to Use                                                                                                   |
+| :------------------------ | :-------------------- | :------------------------------------------------------------------------------------------------------------ |
+| **Standard Tap**          | `haptics.tap()`       | Tapping cards, chips, secondary buttons, filters, list items, icon buttons                                    |
+| **Primary Action**        | `haptics.primary()`   | Pressing high-intent primary CTA buttons (`[ Save Crumb ]`, `[ Create Guide ]`, `[ Book ]`, `[ Decide Now ]`) |
+| **Destructive Action**    | `haptics.heavy()`     | Confirming deletions, removing spots, signing out                                                             |
+| **Discrete Selection**    | `haptics.selection()` | Tab switching, checkbox/switch toggles, emoji pickers, segmented controls                                     |
+| **Async Success**         | `haptics.success()`   | Successful API completion (guide created, spot saved, authenticated)                                          |
+| **Async Error / Failure** | `haptics.error()`     | Validation errors, network failures, auth rejection                                                           |
+| **Warning / Prompt**      | `haptics.warning()`   | Alert dialogs, unsaved changes confirmation                                                                   |
+
 ## Cross-Platform
 
 - Prefer platform-native behaviors: SF Symbols on iOS, Material Icons on Android via `expo-symbols`.
 - Use `Platform.OS` checks only where platform behavior genuinely diverges (e.g., `KeyboardAvoidingView` behavior, serif display font).
-- Use `expo-haptics` for tactile feedback on user actions.
 
 ## Expo Version Notice
 

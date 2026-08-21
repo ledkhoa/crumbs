@@ -236,13 +236,29 @@ export const radii = {
 
 ---
 
-# 8. Platform Adaptation Matrix
+# 8. Haptic Feedback Pattern
+
+Every tactile user interaction in the mobile app triggers purposeful haptic feedback using `@/utils/haptics`:
+
+| Trigger / Action          | Method                | When to Use                                                                                                   |
+| :------------------------ | :-------------------- | :------------------------------------------------------------------------------------------------------------ |
+| **Standard Tap**          | `haptics.tap()`       | Tapping cards, chips, secondary buttons, filters, list rows, icon buttons                                     |
+| **Primary Action**        | `haptics.primary()`   | Pressing high-intent primary CTA buttons (`[ Save Crumb ]`, `[ Create Guide ]`, `[ Book ]`, `[ Decide Now ]`) |
+| **Destructive Action**    | `haptics.heavy()`     | Confirming deletions, removing spots, signing out                                                             |
+| **Discrete Selection**    | `haptics.selection()` | Tab switching, checkbox/switch toggles, emoji pickers, segmented controls                                     |
+| **Async Success**         | `haptics.success()`   | Successful API completion (guide created, spot saved, authenticated)                                          |
+| **Async Error / Failure** | `haptics.error()`     | Validation errors, network failures, auth rejection                                                           |
+| **Warning / Prompt**      | `haptics.warning()`   | Alert dialogs, unsaved changes confirmation                                                                   |
+
+---
+
+# 9. Platform Adaptation Matrix
 
 | Feature / Element      | iOS                                                               | Android                                        |
 | :--------------------- | :---------------------------------------------------------------- | :--------------------------------------------- |
 | **Surfaces**           | Liquid Glass (`expo-glass-effect` / `expo-blur`)                  | Material 3 Tonal Elevation                     |
 | **Tabs**               | `NativeTabs` (`expo-router/unstable-native-tabs`) with SF Symbols | `NativeTabs` with Material Icons               |
-| **Haptics / Feedback** | `expo-haptics` impact & notification feedback                     | Material touch ripple & state layer            |
+| **Haptics / Feedback** | iOS tactile haptics via `haptics.*` (`expo-haptics`)              | Android haptics + touch ripple & state layer   |
 | **Bottom Sheets**      | UIKit presentation detents (`.height`, `.medium`, `.large`)       | Material `ModalBottomSheet`                    |
 | **Display Font**       | `Georgia`                                                         | `serif`                                        |
 | **Back Action**        | Interactive edge swipe gesture                                    | Predictive back gesture + hardware back button |

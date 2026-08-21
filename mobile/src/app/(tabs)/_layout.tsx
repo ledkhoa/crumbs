@@ -1,5 +1,5 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import * as Haptics from 'expo-haptics';
+import { haptics } from '@/utils/haptics';
 
 export default function TabLayout() {
   return (
@@ -7,7 +7,7 @@ export default function TabLayout() {
       minimizeBehavior="onScrollDown"
       screenListeners={{
         tabPress: () => {
-          Haptics.selectionAsync();
+          haptics.selection();
         },
       }}
     >

@@ -8,13 +8,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useForm } from '@tanstack/react-form';
 import { z } from 'zod';
-import * as Haptics from 'expo-haptics';
+import { haptics } from '@/utils/haptics';
 import { useSessionStore } from '@/store/session';
 import { apiRequest } from '@/utils/api-client';
 import { Theme } from '@/theme/tokens';
@@ -64,11 +63,11 @@ export default function SignUpScreen() {
             token: response.token,
             user: response.user,
           });
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          haptics.success();
           router.replace('/(tabs)/(home)');
         }
       } catch (err: any) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        haptics.error();
         setAuthError(
           err.message || 'Failed to create account. Please try again.',
         );
@@ -82,10 +81,7 @@ export default function SignUpScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
+        <View style={styles.scrollContent}>
           {/* Header Brand */}
           <View style={styles.header}>
             <Text style={styles.logoIcon}>🍞</Text>
@@ -173,7 +169,10 @@ export default function SignUpScreen() {
                     style={styles.input}
                   />
                   <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
+                    onPress={() => {
+                      setShowPassword(!showPassword);
+                      haptics.selection();
+                    }}
                     style={styles.eyeButton}
                   >
                     <Text>{showPassword ? '👁️' : '🙈'}</Text>
@@ -194,7 +193,7 @@ export default function SignUpScreen() {
                   style={styles.checkboxContainer}
                   onPress={() => {
                     field.handleChange(!field.state.value);
-                    Haptics.selectionAsync();
+                    haptics.selection();
                   }}
                   activeOpacity={0.7}
                 >
@@ -224,7 +223,10 @@ export default function SignUpScreen() {
                     styles.primaryButton,
                     isSubmitting && styles.buttonDisabled,
                   ]}
-                  onPress={() => form.handleSubmit()}
+                  onPress={() => {
+                    haptics.primary();
+                    form.handleSubmit();
+                  }}
                   disabled={isSubmitting}
                   activeOpacity={0.8}
                 >
@@ -240,7 +242,10 @@ export default function SignUpScreen() {
             {/* Switch to Sign In */}
             <TouchableOpacity
               style={styles.footerToggle}
-              onPress={() => router.back()}
+              onPress={() => {
+                haptics.tap();
+                router.back();
+              }}
             >
               <Text style={styles.footerText}>
                 Already have an account?{' '}
@@ -248,7 +253,7 @@ export default function SignUpScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
