@@ -7,13 +7,17 @@ export const Theme = {
 
     background: '#F7F4EF',
     canvas: '#1E1915',
-    cardBackground: 'rgba(247, 244, 239, 0.85)',
-    inputBackground: 'rgba(242, 236, 228, 0.75)',
-    inputBorder: 'rgba(216, 207, 196, 0.8)',
+    cardBackground: '#FFFFFF',
+    inputBackground: '#F0EAE1',
+    inputBorder: '#D8CEBF',
 
-    // Translucent overlays for the bottom-sheet glass card aesthetic
-    cardBorder: 'rgba(255, 255, 255, 0.4)',
-    grabHandle: 'rgba(255, 255, 255, 0.8)',
+    // Card borders with clear contrast against #F7F4EF background
+    cardBorder: '#DDD5CA',
+    grabHandle: '#C5B9A8',
+
+    // Switch tokens for high-contrast on/off states
+    switchTrackOff: '#CDC2B2',
+    switchThumbOff: '#FFFFFF',
 
     text: '#1A1715',
     textMuted: '#736B63',

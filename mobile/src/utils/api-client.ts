@@ -1,3 +1,5 @@
+import { hc } from 'hono/client';
+import type { AppType } from '@api/app';
 import Constants from 'expo-constants';
 import { useSessionStore } from '@/store/session';
 
@@ -16,10 +18,29 @@ export const getApiBaseUrl = (): string => {
   return 'http://localhost:8787';
 };
 
+/**
+ * End-to-end type-safe Hono RPC client for Crumbs API.
+ *
+ * Dynamically provides the Authorization Bearer token from Zustand session state.
+ */
+export const apiClient = hc<AppType>(getApiBaseUrl(), {
+  headers: () => {
+    const token = useSessionStore.getState().token;
+    const h: Record<string, string> = {};
+    if (token) {
+      h.Authorization = `Bearer ${token}`;
+    }
+    return h;
+  },
+});
+
 export interface RequestOptions extends RequestInit {
   requiresAuth?: boolean;
 }
 
+/**
+ * Universal raw fetch helper for external routes (e.g. BetterAuth endpoints).
+ */
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
