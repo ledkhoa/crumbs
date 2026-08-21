@@ -1,30 +1,35 @@
 export const Theme = {
   colors: {
-    // Brand Terracotta
-    terracotta: '#C45B3E',
-    terracottaDark: '#A84B31',
-    terracottaLight: '#E89078',
+    primary: '#C45B3E',
+    primaryPressed: '#A84B31',
+    primaryLight: '#E89078',
+    onPrimary: '#FFFFFF',
 
-    // Backgrounds & Surfaces
     background: '#F7F4EF',
+    canvas: '#1E1915',
     cardBackground: 'rgba(247, 244, 239, 0.85)',
     inputBackground: 'rgba(242, 236, 228, 0.75)',
     inputBorder: 'rgba(216, 207, 196, 0.8)',
 
-    // Typography
-    charcoal: '#1A1715',
-    muted: '#736B63',
-    lightMuted: '#9E958C',
+    // Translucent overlays for the bottom-sheet glass card aesthetic
+    cardBorder: 'rgba(255, 255, 255, 0.4)',
+    grabHandle: 'rgba(255, 255, 255, 0.8)',
 
-    // Social / Buttons
+    text: '#1A1715',
+    textMuted: '#736B63',
+    textSubtle: '#9E958C',
+
     appleButton: '#1C1917',
     googleButton: '#F7F4EF',
     googleBorder: '#DDD5CA',
 
-    // Accents
-    sage: '#7C9070',
-    gold: '#DFB064',
+    success: '#7C9070',
+    accent: '#DFB064',
     error: '#DC2626',
+    errorBackground: 'rgba(220, 38, 38, 0.1)',
+    errorBorder: 'rgba(220, 38, 38, 0.2)',
+
+    shadow: '#000000',
   },
   spacing: {
     xs: 4,

@@ -29,12 +29,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: Theme.colors.charcoal,
+    color: Theme.colors.text,
     marginBottom: Theme.spacing.sm,
   },
   subtitle: {
     fontSize: 14,
-    color: Theme.colors.muted,
+    color: Theme.colors.textMuted,
     textAlign: 'center',
   },
 });

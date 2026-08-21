@@ -109,7 +109,7 @@ export default function SignInScreen() {
                     onBlur={field.handleBlur}
                     onChangeText={field.handleChange}
                     placeholder="Email"
-                    placeholderTextColor={Theme.colors.muted}
+                    placeholderTextColor={Theme.colors.textMuted}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -134,7 +134,7 @@ export default function SignInScreen() {
                     onBlur={field.handleBlur}
                     onChangeText={field.handleChange}
                     placeholder="Password"
-                    placeholderTextColor={Theme.colors.muted}
+                    placeholderTextColor={Theme.colors.textMuted}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -178,7 +178,7 @@ export default function SignInScreen() {
                   activeOpacity={0.8}
                 >
                   {isSubmitting ? (
-                    <ActivityIndicator color="#FFF" />
+                    <ActivityIndicator color={Theme.colors.onPrimary} />
                   ) : (
                     <Text style={styles.primaryButtonText}>Sign in</Text>
                   )}
@@ -206,7 +206,7 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1E1915',
+    backgroundColor: Theme.colors.canvas,
   },
   flex: {
     flex: 1,
@@ -234,12 +234,14 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.colors.cardBackground,
     borderTopLeftRadius: Theme.radii.sheet,
     borderTopRightRadius: Theme.radii.sheet,
+    borderBottomLeftRadius: Theme.radii.sheet,
+    borderBottomRightRadius: Theme.radii.sheet,
     paddingHorizontal: Theme.spacing.lg,
     paddingTop: Theme.spacing.md,
     paddingBottom: Theme.spacing.xxl,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    shadowColor: '#000',
+    borderColor: Theme.colors.cardBorder,
+    shadowColor: Theme.colors.shadow,
     shadowOffset: { width: 0, height: -10 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
@@ -248,7 +250,7 @@ const styles = StyleSheet.create({
   grabHandle: {
     width: 44,
     height: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: Theme.colors.grabHandle,
     borderRadius: Theme.radii.pill,
     alignSelf: 'center',
     marginBottom: Theme.spacing.md,
@@ -257,17 +259,17 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    color: Theme.colors.charcoal,
+    color: Theme.colors.text,
     marginBottom: Theme.spacing.xs,
   },
   subtitle: {
     fontSize: 14,
-    color: Theme.colors.muted,
+    color: Theme.colors.textMuted,
     marginBottom: Theme.spacing.lg,
   },
   errorContainer: {
-    backgroundColor: 'rgba(220, 38, 38, 0.1)',
-    borderColor: 'rgba(220, 38, 38, 0.2)',
+    backgroundColor: Theme.colors.errorBackground,
+    borderColor: Theme.colors.errorBorder,
     borderWidth: 1,
     padding: Theme.spacing.sm,
     borderRadius: Theme.radii.md,
@@ -296,7 +298,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    color: Theme.colors.charcoal,
+    color: Theme.colors.text,
   },
   eyeButton: {
     padding: Theme.spacing.xs,
@@ -314,16 +316,16 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 13,
-    color: Theme.colors.muted,
+    color: Theme.colors.textMuted,
     fontWeight: '500',
   },
   primaryButton: {
-    backgroundColor: Theme.colors.terracotta,
+    backgroundColor: Theme.colors.primary,
     height: 52,
     borderRadius: Theme.radii.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Theme.colors.terracotta,
+    shadowColor: Theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -334,7 +336,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   primaryButtonText: {
-    color: '#FFF',
+    color: Theme.colors.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -344,10 +346,10 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: Theme.colors.muted,
+    color: Theme.colors.textMuted,
   },
   footerHighlight: {
     fontWeight: '600',
-    color: Theme.colors.terracotta,
+    color: Theme.colors.primary,
   },
 });
