@@ -20,7 +20,13 @@ const authCache = new Map<string, any>();
  */
 export function getAuth(options: CreateAuthOptions) {
   const trustedOrigins = Array.from(
-    new Set(['https://hoppscotch.io', ...(options.trustedOrigins || [])]),
+    new Set([
+      'https://hoppscotch.io',
+      'exp://',
+      'http://localhost:8787',
+      'http://localhost:8081',
+      ...(options.trustedOrigins || []),
+    ]),
   );
 
   const cacheKey = `${options.databaseUrl}::${options.baseURL || ''}::${trustedOrigins.join(',')}`;
@@ -35,8 +41,13 @@ export function getAuth(options: CreateAuthOptions) {
     appName: 'Crumbs',
     basePath: '/auth',
     secret: options.secret || 'crumbs-dev-secret-change-in-production',
-    baseURL: options.baseURL || 'http://localhost:8787',
-    trustedOrigins,
+    trustedOrigins: [
+      ...trustedOrigins,
+      'http://localhost:*',
+      'http://127.0.0.1:*',
+      'http://192.168.*:*',
+      'http://10.*:*',
+    ],
     database: drizzleAdapter(db, {
       provider: 'pg',
       schema: {

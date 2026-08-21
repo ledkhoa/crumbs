@@ -30,9 +30,10 @@ In addition to these global rules, always consult and follow the domain-specific
 
 ## Mistakes & Failure Log
 
-| Date       | Mistake / Issue                                            | Root Cause & Prevention Rule                                                            |
-| :--------- | :--------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
-| 2026-08-15 | Attempted to auto-run `git commit` without explicit request | Never run `git commit` automatically unless the user explicitly asks to commit changes. |
+| Date       | Mistake / Issue                                                                    | Root Cause & Prevention Rule                                                                                                            |
+| :--------- | :--------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-15 | Attempted to auto-run `git commit` without explicit request                         | Never run `git commit` automatically unless the user explicitly asks to commit changes.                                                 |
+| 2026-08-21 | Hardcoded specific third-party library names into product & design docs prematurely | Keep high-level architecture docs platform-agnostic; avoid hardcoding specific npm/third-party package names until docs are provided. |
 
 ---
 
