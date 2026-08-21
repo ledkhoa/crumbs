@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useForm } from '@tanstack/react-form';
@@ -68,145 +68,145 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
+      <KeyboardAwareScrollView
+        bottomOffset={24}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.scrollContent}>
-          {/* Header Brand */}
-          <View style={styles.header}>
-            <Text style={styles.logoIcon}>🍞</Text>
-            <Text style={styles.logoText}>Crumbs</Text>
-          </View>
+        {/* Header Brand */}
+        <View style={styles.header}>
+          <Text style={styles.logoIcon}>🍞</Text>
+          <Text style={styles.logoText}>Crumbs</Text>
+        </View>
 
-          {/* Form Card */}
-          <View style={styles.card}>
-            {/* Grab Handle */}
-            <View style={styles.grabHandle} />
+        {/* Form Card */}
+        <View style={styles.card}>
+          {/* Grab Handle */}
+          <View style={styles.grabHandle} />
 
-            <Text style={styles.title}>Welcome back</Text>
-            <Text style={styles.subtitle}>
-              Your next favorite place is waiting.
-            </Text>
+          <Text style={styles.title}>Welcome back</Text>
+          <Text style={styles.subtitle}>
+            Your next favorite place is waiting.
+          </Text>
 
-            {authError && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{authError}</Text>
+          {authError && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{authError}</Text>
+            </View>
+          )}
+
+          {/* Email Input */}
+          <form.Field name="email">
+            {(field) => (
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputIcon}>✉️</Text>
+                <TextInput
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChangeText={field.handleChange}
+                  placeholder="Email"
+                  placeholderTextColor={Theme.colors.textMuted}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={styles.input}
+                />
+                {field.state.meta.errors[0] && (
+                  <Text style={styles.fieldError}>
+                    {field.state.meta.errors[0].message}
+                  </Text>
+                )}
               </View>
             )}
+          </form.Field>
 
-            {/* Email Input */}
-            <form.Field name="email">
-              {(field) => (
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputIcon}>✉️</Text>
-                  <TextInput
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChangeText={field.handleChange}
-                    placeholder="Email"
-                    placeholderTextColor={Theme.colors.textMuted}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    style={styles.input}
-                  />
-                  {field.state.meta.errors[0] && (
-                    <Text style={styles.fieldError}>
-                      {field.state.meta.errors[0].message}
-                    </Text>
-                  )}
-                </View>
-              )}
-            </form.Field>
-
-            {/* Password Input */}
-            <form.Field name="password">
-              {(field) => (
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputIcon}>🔒</Text>
-                  <TextInput
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChangeText={field.handleChange}
-                    placeholder="Password"
-                    placeholderTextColor={Theme.colors.textMuted}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    style={styles.input}
-                  />
-                  <TouchableOpacity
-                    onPress={() => {
-                      setShowPassword(!showPassword);
-                      haptics.selection();
-                    }}
-                    style={styles.eyeButton}
-                  >
-                    <Text>{showPassword ? '👁️' : '🙈'}</Text>
-                  </TouchableOpacity>
-                  {field.state.meta.errors[0] && (
-                    <Text style={styles.fieldError}>
-                      {field.state.meta.errors[0].message}
-                    </Text>
-                  )}
-                </View>
-              )}
-            </form.Field>
-
-            {/* Forgot password link */}
-            <TouchableOpacity
-              style={styles.forgotPassword}
-              onPress={() => haptics.tap()}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-            </TouchableOpacity>
-
-            {/* Submit Button */}
-            <form.Subscribe
-              selector={(state) => ({
-                canSubmit: state.canSubmit,
-                isSubmitting: state.isSubmitting,
-              })}
-            >
-              {({ isSubmitting }) => (
+          {/* Password Input */}
+          <form.Field name="password">
+            {(field) => (
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputIcon}>🔒</Text>
+                <TextInput
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChangeText={field.handleChange}
+                  placeholder="Password"
+                  placeholderTextColor={Theme.colors.textMuted}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={styles.input}
+                />
                 <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    isSubmitting && styles.buttonDisabled,
-                  ]}
                   onPress={() => {
-                    haptics.primary();
-                    form.handleSubmit();
+                    setShowPassword(!showPassword);
+                    haptics.selection();
                   }}
-                  disabled={isSubmitting}
-                  activeOpacity={0.8}
+                  style={styles.eyeButton}
                 >
-                  {isSubmitting ? (
-                    <ActivityIndicator color={Theme.colors.onPrimary} />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>Sign in</Text>
-                  )}
+                  <Text>{showPassword ? '👁️' : '🙈'}</Text>
                 </TouchableOpacity>
-              )}
-            </form.Subscribe>
+                {field.state.meta.errors[0] && (
+                  <Text style={styles.fieldError}>
+                    {field.state.meta.errors[0].message}
+                  </Text>
+                )}
+              </View>
+            )}
+          </form.Field>
 
-            {/* Switch to Sign Up */}
-            <TouchableOpacity
-              style={styles.footerToggle}
-              onPress={() => {
-                haptics.tap();
-                router.push('/(auth)/sign-up');
-              }}
-            >
-              <Text style={styles.footerText}>
-                New to Crumbs?{' '}
-                <Text style={styles.footerHighlight}>Create account</Text>
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* Forgot password link */}
+          <TouchableOpacity
+            style={styles.forgotPassword}
+            onPress={() => haptics.tap()}
+          >
+            <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+          </TouchableOpacity>
+
+          {/* Submit Button */}
+          <form.Subscribe
+            selector={(state) => ({
+              canSubmit: state.canSubmit,
+              isSubmitting: state.isSubmitting,
+            })}
+          >
+            {({ isSubmitting }) => (
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  isSubmitting && styles.buttonDisabled,
+                ]}
+                onPress={() => {
+                  haptics.primary();
+                  form.handleSubmit();
+                }}
+                disabled={isSubmitting}
+                activeOpacity={0.8}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color={Theme.colors.onPrimary} />
+                ) : (
+                  <Text style={styles.primaryButtonText}>Sign in</Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </form.Subscribe>
+
+          {/* Switch to Sign Up */}
+          <TouchableOpacity
+            style={styles.footerToggle}
+            onPress={() => {
+              haptics.tap();
+              router.push('/(auth)/sign-up');
+            }}
+          >
+            <Text style={styles.footerText}>
+              New to Crumbs?{' '}
+              <Text style={styles.footerHighlight}>Create account</Text>
+            </Text>
+          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

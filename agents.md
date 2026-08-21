@@ -34,6 +34,7 @@ In addition to these global rules, always consult and follow the domain-specific
 | :--------- | :--------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-08-15 | Attempted to auto-run `git commit` without explicit request                         | Never run `git commit` automatically unless the user explicitly asks to commit changes.                                                 |
 | 2026-08-21 | Hardcoded specific third-party library names into product & design docs prematurely | Keep high-level architecture docs platform-agnostic; avoid hardcoding specific npm/third-party package names until docs are provided. |
+| 2026-08-21 | Used RN Modal instead of `@expo/ui` BottomSheet and standard `KeyboardAvoidingView` | Always use `@expo/ui` `BottomSheet` for bottom sheets and `react-native-keyboard-controller` (`KeyboardAwareScrollView`) for all keyboard-managed views. |
 
 ---
 

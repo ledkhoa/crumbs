@@ -14,74 +14,73 @@ const createGuideSchema = z.object({
   isPublic: z.boolean().optional().default(false),
 });
 
-export const guidesRouter = new Hono<AppEnv>();
+export const guidesRouter = new Hono<AppEnv>()
+  .use('*', requireAuth)
+  /**
+   * GET /guides
+   * Returns all guides created by the authenticated user with crumbCount and thumbnail previews.
+   */
+  .get('/', async (c) => {
+    const user = c.get('user');
+    const db = getDb(c.env.DATABASE_URL || '');
 
-// Protect all guides endpoints with authentication
-guidesRouter.use('*', requireAuth);
+    const guides = await GuidesRepository.listUserGuides(db, user.id);
 
-/**
- * GET /guides
- * Returns all guides created by the authenticated user with crumbCount and thumbnail previews.
- */
-guidesRouter.get('/', async (c) => {
-  const user = c.get('user');
-  const db = getDb(c.env.DATABASE_URL || '');
-
-  const guides = await GuidesRepository.listUserGuides(db, user.id);
-
-  return c.json({
-    success: true,
-    guides,
-    total: guides.length,
-  });
-});
-
-/**
- * POST /guides
- * Creates a new curated guide for the authenticated user.
- */
-guidesRouter.post('/', zValidator('json', createGuideSchema), async (c) => {
-  const data = c.req.valid('json');
-  const user = c.get('user');
-  const db = getDb(c.env.DATABASE_URL || '');
-
-  const guide = await GuidesRepository.create(db, user.id, data);
-
-  return c.json(
-    {
+    return c.json({
       success: true,
-      guide: {
-        ...guide,
-        crumbCount: 0,
-      },
-    },
-    201,
-  );
-});
+      guides,
+      total: guides.length,
+    });
+  })
+  /**
+   * POST /guides
+   * Creates a new curated guide for the authenticated user.
+   */
+  .post('/', zValidator('json', createGuideSchema), async (c) => {
+    const data = c.req.valid('json');
+    const user = c.get('user');
+    const db = getDb(c.env.DATABASE_URL || '');
 
-/**
- * GET /guides/:id
- * Returns a full detailed guide with all ordered crumbs, restaurants, hero dishes, and creator attribution.
- */
-guidesRouter.get('/:id', async (c) => {
-  const user = c.get('user');
-  const guideId = c.req.param('id');
-  const db = getDb(c.env.DATABASE_URL || '');
+    const guide = await GuidesRepository.create(db, user.id, data);
 
-  const guide = await GuidesRepository.getByIdWithCrumbs(db, guideId, user.id);
-
-  if (!guide) {
     return c.json(
       {
-        success: false,
-        error: 'Guide not found or private',
+        success: true,
+        guide: {
+          ...guide,
+          crumbCount: 0,
+        },
       },
-      404,
+      201,
     );
-  }
+  })
+  /**
+   * GET /guides/:id
+   * Returns a full detailed guide with all ordered crumbs, restaurants, hero dishes, and creator attribution.
+   */
+  .get('/:id', async (c) => {
+    const user = c.get('user');
+    const guideId = c.req.param('id');
+    const db = getDb(c.env.DATABASE_URL || '');
 
-  return c.json({
-    success: true,
-    guide,
+    const guide = await GuidesRepository.getByIdWithCrumbs(
+      db,
+      guideId,
+      user.id,
+    );
+
+    if (!guide) {
+      return c.json(
+        {
+          success: false,
+          error: 'Guide not found or private',
+        },
+        404,
+      );
+    }
+
+    return c.json({
+      success: true,
+      guide,
+    });
   });
-});
