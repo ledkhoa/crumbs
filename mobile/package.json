@@ -6,7 +6,7 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo run:android",
+    "android": "expo run:android --device",
     "ios": "expo run:ios --device",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
@@ -30,6 +30,7 @@
     "expo-image": "~57.0.3",
     "expo-linking": "~57.0.7",
     "expo-router": "~57.0.15",
+    "expo-share-intent": "^8.0.1",
     "expo-splash-screen": "~57.0.7",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.2",
@@ -52,6 +53,7 @@
   },
   "devDependencies": {
     "@oxlint/plugins": "^1.79.0",
+    "@types/bun": "^1.4.0",
     "@types/react": "~19.2.2",
     "oxlint": "^1.79.0",
     "prettier": "^3.9.6",

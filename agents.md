@@ -35,10 +35,15 @@ In addition to these global rules, always consult and follow the domain-specific
 | 2026-08-15 | Attempted to auto-run `git commit` without explicit request                         | Never run `git commit` automatically unless the user explicitly asks to commit changes.                                                 |
 | 2026-08-21 | Hardcoded specific third-party library names into product & design docs prematurely | Keep high-level architecture docs platform-agnostic; avoid hardcoding specific npm/third-party package names until docs are provided. |
 | 2026-08-21 | Used RN Modal instead of `@expo/ui` BottomSheet and standard `KeyboardAvoidingView` | Always use `@expo/ui` `BottomSheet` for bottom sheets and `react-native-keyboard-controller` (`KeyboardAwareScrollView`) for all keyboard-managed views. |
+| 2026-08-22 | Used "spot" / "spots" in UI copy instead of canonical product terminology "crumbs" | Always verify UI copy, entity naming, and user-facing text against `docs/app_terminology.md`. Saved dining places are strictly called **crumbs** (never "spots"). |
 
 ---
 
 ## Universal Code Standards
+
+- **App Terminology & Glossary Discipline**:
+  - Always verify UI copy, model field names, and user-facing text against [`docs/app_terminology.md`](file:///Users/khoa/Documents/crumbs/docs/app_terminology.md).
+  - Saved dining establishments are strictly called **crumbs** (singular: *crumb*, plural: *crumbs*). Collections are called **guides**. The interactive map is the **Cravings Map** / **Crumb Trail**. Never use "spot" or "spots" in user-facing UI.
 
 - **Comments Philosophy (Explain the WHY, Not the WHAT or HOW)**:
   - Code must be clear, idiomatic, and self-documenting. Never add comments that simply restate what the code does.

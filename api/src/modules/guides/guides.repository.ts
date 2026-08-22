@@ -200,4 +200,48 @@ export class GuidesRepository {
       crumbs: resolvedCrumbs,
     };
   }
+
+  /**
+   * Links a crumb to a guide.
+   */
+  static async addCrumb(
+    db: DbInstance,
+    guideId: string,
+    crumbId: string,
+    orderIndex = 0,
+  ) {
+    const [linked] = await db
+      .insert(GuideCrumbs)
+      .values({
+        guideId,
+        crumbId,
+        orderIndex,
+      })
+      .onConflictDoNothing()
+      .returning();
+    return linked;
+  }
+
+  /**
+   * Links multiple crumbs to a guide in a single batch.
+   */
+  static async addCrumbsBatch(
+    db: DbInstance,
+    guideId: string,
+    crumbIds: string[],
+  ) {
+    if (crumbIds.length === 0) return [];
+
+    const records = crumbIds.map((crumbId, index) => ({
+      guideId,
+      crumbId,
+      orderIndex: index,
+    }));
+
+    return db
+      .insert(GuideCrumbs)
+      .values(records)
+      .onConflictDoNothing()
+      .returning();
+  }
 }

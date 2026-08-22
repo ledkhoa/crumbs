@@ -77,3 +77,51 @@ export function useCreateGuideMutation() {
     },
   });
 }
+
+export interface AddCrumbsToGuideInput {
+  guideId: string;
+  crumbId?: string;
+  crumbIds?: string[];
+}
+
+/**
+ * Hook to link one or more crumbs to a guide with cache invalidation and haptics.
+ */
+export function useAddCrumbToGuideMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      guideId,
+      crumbId,
+      crumbIds,
+    }: AddCrumbsToGuideInput) => {
+      const res = await apiClient.guides[':id'].crumbs.$post({
+        param: { id: guideId },
+        json: {
+          crumbId,
+          crumbIds,
+        },
+      });
+
+      if (!res.ok) {
+        // SAFETY: Server error response contains error message
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error || `HTTP error ${res.status}`);
+      }
+
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      haptics.success();
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.guides.all });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.guides.detail(variables.guideId),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.crumbs.all });
+    },
+    onError: () => {
+      haptics.error();
+    },
+  });
+}

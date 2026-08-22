@@ -81,4 +81,27 @@ describe('Guides Route HTTP & Auth Validation', () => {
 
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
+
+  it('should reject unauthenticated POST /guides/:id/crumbs with 401/400', async () => {
+    const req = new Request('http://localhost/guides/test-guide-id/crumbs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        crumbId: 'crumb-123',
+      }),
+    });
+
+    const res = await testApp.request(
+      req,
+      {},
+      {
+        DATABASE_URL: 'postgresql://postgres:password@localhost:5432/testdb',
+        INGEST_WORKFLOW: mockWorkflow,
+      },
+    );
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
 });

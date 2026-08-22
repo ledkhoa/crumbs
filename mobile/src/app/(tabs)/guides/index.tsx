@@ -93,8 +93,8 @@ export default function GuidesScreen() {
           </View>
           <Text style={styles.emptyTitle}>No guides created yet</Text>
           <Text style={styles.emptySubtitle}>
-            Group your favorite spots into themed itineraries like "Soho Date
-            Nights" or "Tokyo Bakery Crawl".
+            Group your favorite crumbs into themed itineraries like "Soho Date
+            Nights" or "Tokyo Ramen Crawl".
           </Text>
           <TouchableOpacity
             style={styles.emptyActionButton}
