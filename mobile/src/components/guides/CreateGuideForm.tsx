@@ -2,10 +2,8 @@ import { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   Platform,
   ScrollView,
   Switch,
@@ -16,6 +14,10 @@ import { z } from 'zod';
 import { Theme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { useCreateGuideMutation } from '@/hooks/useGuides';
+import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
+import { Button } from '@/components/ui/Button';
+import { Heading, MutedText } from '@/components/ui/Typography';
 
 const createGuideSchema = z.object({
   name: z.string().min(1, 'Guide name is required').max(255),
@@ -90,10 +92,10 @@ export function CreateGuideForm({ onCancel, onSuccess }: CreateGuideFormProps) {
     >
       {/* Form Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Create New Guide</Text>
-        <Text style={styles.headerSubtitle}>
+        <Heading style={styles.headerTitle}>Create New Guide</Heading>
+        <MutedText style={styles.headerSubtitle}>
           Curate a list for date nights, trips, or weekend cravings.
-        </Text>
+        </MutedText>
       </View>
 
       {errorMsg && (
@@ -141,46 +143,29 @@ export function CreateGuideForm({ onCancel, onSuccess }: CreateGuideFormProps) {
       {/* Guide Name Input */}
       <form.Field name="name">
         {(field) => (
-          <View style={styles.fieldSection}>
-            <Text style={styles.fieldLabel}>Guide Name</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                value={field.state.value}
-                onBlur={field.handleBlur}
-                onChangeText={field.handleChange}
-                placeholder="e.g. West Village Date Nights, Tokyo 2026"
-                placeholderTextColor={Theme.colors.textSubtle}
-                autoCapitalize="words"
-                style={styles.input}
-              />
-            </View>
-            {field.state.meta.errors[0] && (
-              <Text style={styles.fieldError}>
-                {field.state.meta.errors[0].message}
-              </Text>
-            )}
-          </View>
+          <Input
+            label="Guide Name"
+            value={field.state.value}
+            onBlur={field.handleBlur}
+            onChangeText={field.handleChange}
+            placeholder="e.g. West Village Date Nights, Tokyo 2026"
+            autoCapitalize="words"
+            error={field.state.meta.errors[0]?.message}
+          />
         )}
       </form.Field>
 
       {/* Description Input */}
       <form.Field name="description">
         {(field) => (
-          <View style={styles.fieldSection}>
-            <Text style={styles.fieldLabel}>Description (Optional)</Text>
-            <View style={[styles.inputContainer, styles.textAreaContainer]}>
-              <TextInput
-                value={field.state.value}
-                onBlur={field.handleBlur}
-                onChangeText={field.handleChange}
-                placeholder="Short note about the vibe, neighborhood, or theme"
-                placeholderTextColor={Theme.colors.textSubtle}
-                multiline
-                numberOfLines={3}
-                style={[styles.input, styles.textArea]}
-              />
-            </View>
-          </View>
+          <Textarea
+            label="Description (Optional)"
+            value={field.state.value}
+            onBlur={field.handleBlur}
+            onChangeText={field.handleChange}
+            placeholder="Short note about the vibe, neighborhood, or theme"
+            numberOfLines={3}
+          />
         )}
       </form.Field>
 
@@ -225,37 +210,26 @@ export function CreateGuideForm({ onCancel, onSuccess }: CreateGuideFormProps) {
       >
         {({ isSubmitting }) => (
           <View style={styles.actionRow}>
-            <TouchableOpacity
+            <Button
+              variant="secondary"
+              size="lg"
               style={styles.cancelButton}
               onPress={handleCancel}
               disabled={isSubmitting}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel guide creation"
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
+              Cancel
+            </Button>
 
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                isSubmitting && styles.buttonDisabled,
-              ]}
-              onPress={() => {
-                haptics.primary();
-                form.handleSubmit();
-              }}
+            <Button
+              variant="primary"
+              size="lg"
+              style={styles.submitButton}
+              onPress={() => form.handleSubmit()}
+              loading={isSubmitting}
               disabled={isSubmitting}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel="Submit and create guide"
             >
-              {isSubmitting ? (
-                <ActivityIndicator color={Theme.colors.onPrimary} />
-              ) : (
-                <Text style={styles.submitButtonText}>Create Guide</Text>
-              )}
-            </TouchableOpacity>
+              Create Guide
+            </Button>
           </View>
         )}
       </form.Subscribe>
@@ -271,15 +245,10 @@ const styles = StyleSheet.create({
     marginBottom: Theme.spacing.lg,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    color: Theme.colors.text,
     marginBottom: Theme.spacing.xs,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: Theme.colors.textMuted,
   },
   errorContainer: {
     backgroundColor: Theme.colors.errorBackground,
@@ -325,32 +294,6 @@ const styles = StyleSheet.create({
   emojiText: {
     fontSize: 22,
   },
-  inputContainer: {
-    backgroundColor: Theme.colors.inputBackground,
-    borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
-    borderRadius: Theme.radii.lg,
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Platform.OS === 'ios' ? 14 : 6,
-  },
-  textAreaContainer: {
-    paddingVertical: Theme.spacing.sm,
-    minHeight: 80,
-  },
-  input: {
-    fontSize: 15,
-    color: Theme.colors.text,
-  },
-  textArea: {
-    minHeight: 60,
-    textAlignVertical: 'top',
-  },
-  fieldError: {
-    color: Theme.colors.error,
-    fontSize: 12,
-    marginTop: 4,
-    marginLeft: 2,
-  },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -379,38 +322,8 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    height: 52,
-    borderRadius: Theme.radii.lg,
-    backgroundColor: Theme.colors.inputBackground,
-    borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Theme.colors.text,
   },
   submitButton: {
     flex: 2,
-    height: 52,
-    borderRadius: Theme.radii.lg,
-    backgroundColor: Theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Theme.colors.onPrimary,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
   },
 });

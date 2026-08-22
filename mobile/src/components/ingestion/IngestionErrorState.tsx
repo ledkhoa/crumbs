@@ -1,13 +1,9 @@
 import { useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Theme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
+import { Button } from '@/components/ui/Button';
+import { Heading } from '@/components/ui/Typography';
 
 export interface IngestionErrorStateProps {
   type: 'unrelated' | 'error';
@@ -32,21 +28,6 @@ export function IngestionErrorState({
 
   const isUnrelated = type === 'unrelated';
 
-  const handleRetry = () => {
-    haptics.primary();
-    onRetry?.();
-  };
-
-  const handleSearchManually = () => {
-    haptics.tap();
-    onSearchManually();
-  };
-
-  const handleDismiss = () => {
-    haptics.tap();
-    onDismiss();
-  };
-
   return (
     <View style={styles.container}>
       {/* Icon Badge */}
@@ -60,9 +41,9 @@ export function IngestionErrorState({
       </View>
 
       {/* Header Info */}
-      <Text style={styles.title}>
+      <Heading style={styles.title}>
         {isUnrelated ? 'Scenic Post Detected 🌴' : "Couldn't Capture Crumb 🍞"}
-      </Text>
+      </Heading>
 
       <Text style={styles.description}>
         {isUnrelated
@@ -84,38 +65,28 @@ export function IngestionErrorState({
       {/* Action Buttons */}
       <View style={styles.buttonGroup}>
         {!isUnrelated && onRetry && (
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={handleRetry}
-            activeOpacity={0.85}
+          <Button
+            variant="primary"
+            size="lg"
+            onPress={onRetry}
+            leftIcon={<Text>🔄 </Text>}
           >
-            <Text style={styles.primaryButtonText}>🔄 Try Ingesting Again</Text>
-          </TouchableOpacity>
+            Try Ingesting Again
+          </Button>
         )}
 
-        <TouchableOpacity
-          style={isUnrelated ? styles.primaryButton : styles.secondaryButton}
-          onPress={handleSearchManually}
-          activeOpacity={0.85}
+        <Button
+          variant={isUnrelated ? 'primary' : 'secondary'}
+          size={isUnrelated ? 'lg' : 'md'}
+          onPress={onSearchManually}
+          leftIcon={<Text>🔍 </Text>}
         >
-          <Text
-            style={
-              isUnrelated
-                ? styles.primaryButtonText
-                : styles.secondaryButtonText
-            }
-          >
-            🔍 Search Place Manually
-          </Text>
-        </TouchableOpacity>
+          Search Place Manually
+        </Button>
 
-        <TouchableOpacity
-          style={styles.dismissButton}
-          onPress={handleDismiss}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.dismissButtonText}>Dismiss</Text>
-        </TouchableOpacity>
+        <Button variant="ghost" size="sm" onPress={onDismiss}>
+          Dismiss
+        </Button>
       </View>
     </View>
   );
@@ -151,9 +122,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    color: Theme.colors.text,
     marginBottom: Theme.spacing.xs,
     textAlign: 'center',
   },
@@ -190,46 +158,5 @@ const styles = StyleSheet.create({
   buttonGroup: {
     width: '100%',
     gap: Theme.spacing.sm,
-  },
-  primaryButton: {
-    height: 52,
-    borderRadius: Theme.radii.lg,
-    backgroundColor: Theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  primaryButtonText: {
-    color: Theme.colors.onPrimary,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    height: 48,
-    borderRadius: Theme.radii.lg,
-    backgroundColor: Theme.colors.inputBackground,
-    borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryButtonText: {
-    color: Theme.colors.text,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  dismissButton: {
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dismissButtonText: {
-    color: Theme.colors.textMuted,
-    fontSize: 14,
-    fontWeight: '500',
   },
 });

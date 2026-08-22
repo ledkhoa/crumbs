@@ -6,7 +6,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  TouchableOpacity,
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -21,6 +20,9 @@ import { CrumbsPickerCarousel } from './CrumbsPickerCarousel';
 import { GuidePickerView } from './GuidePickerView';
 import { CreateGuideForm } from '@/components/guides/CreateGuideForm';
 import { IngestionErrorState } from './IngestionErrorState';
+import { GrabHandle } from '@/components/ui/GrabHandle';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 import type { UnifiedRestaurantSpot } from '@/types/ingest';
 
 export interface IngestionOverlaySheetProps {
@@ -187,7 +189,7 @@ export function IngestionOverlaySheet({
 
         <View style={styles.sheetContent}>
           {/* Grab Handle */}
-          <View style={styles.grabHandle} />
+          <GrabHandle />
 
           {/* VIEW 1: PREVIEW / PROGRESS / ERROR */}
           {sheetView === 'preview' && (
@@ -207,25 +209,23 @@ export function IngestionOverlaySheet({
 
                   {/* Actions while processing */}
                   <View style={styles.progressActions}>
-                    <TouchableOpacity
-                      style={styles.secondaryProgressButton}
+                    <Button
+                      variant="secondary"
+                      size="md"
                       onPress={handleRunInBackground}
-                      activeOpacity={0.8}
+                      style={styles.secondaryProgressButton}
                     >
-                      <Text style={styles.secondaryProgressButtonText}>
-                        Run in Background
-                      </Text>
-                    </TouchableOpacity>
+                      Run in Background
+                    </Button>
 
-                    <TouchableOpacity
-                      style={styles.cancelProgressButton}
+                    <Button
+                      variant="outline"
+                      size="md"
                       onPress={handleClose}
-                      activeOpacity={0.8}
+                      style={styles.cancelProgressButton}
                     >
-                      <Text style={styles.cancelProgressButtonText}>
-                        Cancel
-                      </Text>
-                    </TouchableOpacity>
+                      Cancel
+                    </Button>
                   </View>
                 </View>
               )}
@@ -241,28 +241,37 @@ export function IngestionOverlaySheet({
                       <View style={styles.headerTopRow}>
                         {/* Creator Attribution */}
                         {result.authorUsername ? (
-                          <View style={styles.authorBadge}>
-                            <Text style={styles.authorText} numberOfLines={1}>
-                              @{result.authorUsername} 📸
-                            </Text>
-                          </View>
+                          <Badge
+                            variant="default"
+                            corner="pill"
+                            label={`@${result.authorUsername} 📸`}
+                            style={styles.authorBadge}
+                            textStyle={styles.authorText}
+                          />
                         ) : (
-                          <View style={styles.platformBadge}>
-                            <Text style={styles.platformBadgeText}>
-                              {parsedUrl.platform === 'tiktok'
+                          <Badge
+                            variant="default"
+                            corner="pill"
+                            label={
+                              parsedUrl.platform === 'tiktok'
                                 ? 'TikTok'
-                                : 'Instagram'}
-                            </Text>
-                          </View>
+                                : 'Instagram'
+                            }
+                            style={styles.platformBadge}
+                            textStyle={styles.platformBadgeText}
+                          />
                         )}
 
                         {/* Crumb Counter Pill */}
-                        <View style={styles.crumbCountBadge}>
-                          <Text style={styles.crumbCountText}>
-                            {result.spots.length}{' '}
-                            {result.spots.length === 1 ? 'Crumb' : 'Crumbs'}
-                          </Text>
-                        </View>
+                        <Badge
+                          variant="secondary"
+                          corner="pill"
+                          label={`${result.spots.length} ${
+                            result.spots.length === 1 ? 'Crumb' : 'Crumbs'
+                          }`}
+                          style={styles.crumbCountBadge}
+                          textStyle={styles.crumbCountText}
+                        />
                       </View>
 
                       {/* Short Post Summary */}
@@ -291,36 +300,31 @@ export function IngestionOverlaySheet({
 
                         {/* Single Crumb Action Buttons */}
                         <View style={styles.singleButtonGroup}>
-                          <TouchableOpacity
-                            style={styles.primaryButton}
+                          <Button
+                            variant="primary"
+                            size="lg"
                             onPress={() =>
                               handleSingleAddToGuide(result.spots[0])
                             }
-                            activeOpacity={0.85}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Add ${result.spots[0].name} to Guide`}
+                            leftIcon={<Text>🗺️ </Text>}
+                            style={styles.primaryButton}
                           >
-                            <Text style={styles.primaryButtonText}>
-                              🗺️ Add Crumb to Guide
-                            </Text>
-                          </TouchableOpacity>
+                            Add Crumb to Guide
+                          </Button>
 
-                          <TouchableOpacity
-                            style={styles.secondaryButton}
+                          <Button
+                            variant="secondary"
+                            size="lg"
                             onPress={() => {
-                              haptics.tap();
                               onNavigateToInbox(
                                 result.spots[0]?.crumbId || result.spots[0]?.id,
                               );
                             }}
-                            activeOpacity={0.85}
-                            accessibilityRole="button"
-                            accessibilityLabel={`View ${result.spots[0].name} in Inbox`}
+                            leftIcon={<Text>📥 </Text>}
+                            style={styles.secondaryButton}
                           >
-                            <Text style={styles.secondaryButtonText}>
-                              📥 View in Inbox
-                            </Text>
-                          </TouchableOpacity>
+                            View in Inbox
+                          </Button>
                         </View>
                       </View>
                     ) : null}
