@@ -1,9 +1,11 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { eq, and } from 'drizzle-orm';
 import type { AppEnv } from '../../core/types/env';
 import { requireAuth } from '../../core/auth/auth.middleware';
 import { getDb } from '../../core/db/client';
+import { Guides } from '../../core/db/schemas';
 import { GuidesRepository } from './guides.repository';
 
 const createGuideSchema = z.object({
@@ -83,4 +85,58 @@ export const guidesRouter = new Hono<AppEnv>()
       success: true,
       guide,
     });
-  });
+  })
+  /**
+   * POST /guides/:id/crumbs
+   * Links one or more crumbs to an existing user guide.
+   */
+  .post(
+    '/:id/crumbs',
+    zValidator(
+      'json',
+      z
+        .object({
+          crumbId: z.string().optional(),
+          crumbIds: z.array(z.string()).optional(),
+        })
+        .refine(
+          (data) =>
+            Boolean(
+              data.crumbId || (data.crumbIds && data.crumbIds.length > 0),
+            ),
+          { message: 'Either crumbId or crumbIds must be provided' },
+        ),
+    ),
+    async (c) => {
+      const user = c.get('user');
+      const guideId = c.req.param('id');
+      const { crumbId, crumbIds } = c.req.valid('json');
+      const db = getDb(c.env.DATABASE_URL || '');
+
+      const guide = await db.query.Guides.findFirst({
+        where: and(eq(Guides.id, guideId), eq(Guides.userId, user.id)),
+      });
+
+      if (!guide) {
+        return c.json(
+          {
+            success: false,
+            error: 'Guide not found or private',
+          },
+          404,
+        );
+      }
+
+      const targetIds = [...(crumbId ? [crumbId] : []), ...(crumbIds || [])];
+
+      await GuidesRepository.addCrumbsBatch(db, guideId, targetIds);
+
+      return c.json({
+        success: true,
+        message:
+          targetIds.length === 1
+            ? 'Crumb added to guide successfully'
+            : `${targetIds.length} crumbs added to guide successfully`,
+      });
+    },
+  );

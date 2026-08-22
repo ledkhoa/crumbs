@@ -22,6 +22,16 @@ Consult [`mobile/DESIGN.md`](./DESIGN.md) for all design system guidelines, UI t
 - Keep screens thin; extract business logic into `src/hooks/` or `src/utils/`.
 - Use `@/` path alias for all imports (`@/components/...`, `@/theme/...`, `@/utils/...`, etc.).
 
+## App Terminology Discipline (Single Source of Truth)
+
+**All user-facing copy, labels, components, and placeholders must strictly conform to [`docs/app_terminology.md`](../docs/app_terminology.md)**:
+
+1. **Crumbs (NOT "spots")**: A saved dining establishment or food bookmark is strictly a **crumb** (plural: **crumbs**). Never use "spot" or "spots".
+2. **Guides**: A curated collection of crumbs is a **guide** (plural: **guides**).
+3. **Cravings Map / Crumb Trail**: The interactive map view.
+4. **Hero Dish**: Standout signature dish extracted from video/caption.
+5. **Vibe Tags**: Atmospheric tags (e.g. "Date Night", "Dimly Lit").
+
 ## Keyboard Management Protocol (react-native-keyboard-controller)
 
 **All keyboard handling across the mobile app must use `react-native-keyboard-controller`**:
@@ -53,6 +63,32 @@ Consult [`mobile/DESIGN.md`](./DESIGN.md) for all design system guidelines, UI t
    - **Jetpack Compose Docs**: `https://docs.expo.dev/versions/latest/sdk/ui/jetpack-compose/<component>.md` (e.g. `bottomsheet.md`, `alertdialog.md`)
    - **Full Sitemap**: [`https://docs.expo.dev/llms.txt`](https://docs.expo.dev/llms.txt)
    - When introducing or editing an `@expo/ui` or Expo SDK component, always fetch and read the exact `.md` documentation beforehand using `read_url_content`.
+
+## Reusable UI Component First Protocol (@/components/ui)
+
+**All screens, features, and modal sheets must strictly build on top of our shared shadcn-inspired UI component library located at `src/components/ui/`**:
+
+1. **Check UI Primitives First**:
+   - **Never** hand-roll custom `TouchableOpacity` buttons with ad-hoc background colors or padding. Always use `<Button variant="..." size="...">` from `@/components/ui/Button`.
+   - **Never** hand-roll standalone card containers with custom borders and shadows. Always use `<Card>`, `<CardHeader>`, `<CardTitle>`, `<CardDescription>`, and `<CardContent>` from `@/components/ui/Card`.
+   - **Never** hand-roll tags, category chips, rating badges, or dish pills. Always use `<Badge variant="..." corner="...">` from `@/components/ui/Badge`.
+   - **Never** hand-roll form inputs or description textareas. Always use `<Input>` and `<Textarea>` from `@/components/ui/Input` and `@/components/ui/Textarea`.
+   - **Never** hand-roll search bars with custom clear buttons. Always use `<SearchInput>` from `@/components/ui/SearchInput`.
+   - **Never** hand-roll custom checkboxes or select toggles. Always use `<Checkbox>` from `@/components/ui/Checkbox`.
+   - **Never** hand-roll empty/error state layouts with emoji circles. Always use `<EmptyState emoji="..." title="..." description="..." action={...} />` from `@/components/ui/EmptyState`.
+   - **Never** hand-roll bottom sheet grab handles. Always use `<GrabHandle />` from `@/components/ui/GrabHandle`.
+   - **Never** hand-roll serif display titles or labels. Always use `<Heading>`, `<Subheading>`, `<Text>`, `<MutedText>`, and `<Label>` from `@/components/ui/Typography`.
+
+2. **Identify & Promote Reusables**:
+   - Whenever you write or refactor a UI component that appears in $\ge 2$ places (or has high potential for reuse across future screens), **immediately promote it into `@/components/ui/`** as a parameterized, polymorphic primitive rather than creating screen-specific duplicates.
+   - All primitives in `@/components/ui/` must:
+     - Export through the barrel [`src/components/ui/index.ts`](./src/components/ui/index.ts).
+     - Strictly reference design tokens from `Theme` (`@/theme/tokens`).
+     - Support `StyleProp<ViewStyle>` / `StyleProp<TextStyle>` overrides.
+     - Integrate standard tactile haptic feedback (`@/utils/haptics`).
+
+3. **Zero Duplicate StyleSheets**:
+   - Screen-level `StyleSheet.create` must only handle screen layout geometry and spacing. Avoid copy-pasting button colors, card radii, input borders, and badge styling into screen-level styles.
 
 ## Theme & Token Enforcement
 

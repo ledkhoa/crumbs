@@ -1,13 +1,13 @@
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Theme } from '@/theme/tokens';
-import { haptics } from '@/utils/haptics';
+import {
+  Card,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
 
 export interface GuideSummary {
   id: string;
@@ -28,22 +28,13 @@ interface GuideCardProps {
 }
 
 export function GuideCard({ guide, onPress }: GuideCardProps) {
-  const handlePress = () => {
-    haptics.tap();
-    onPress?.(guide);
-  };
-
   const thumbnails = guide.coverThumbnails || [];
   const hasCoverImage = Boolean(guide.coverImageUrl);
   const count = hasCoverImage ? 1 : thumbnails.length;
   const extraCount = thumbnails.length > 4 ? thumbnails.length - 4 : 0;
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={handlePress}
-      activeOpacity={0.88}
-    >
+    <Card style={styles.card} onPress={() => onPress?.(guide)}>
       {/* Dynamic Cover Visual Area */}
       <View style={styles.mediaContainer}>
         {hasCoverImage ? (
@@ -156,50 +147,43 @@ export function GuideCard({ guide, onPress }: GuideCardProps) {
         )}
 
         {/* Floating Emoji Badge */}
-        <View style={styles.emojiBadge}>
-          <Text style={styles.emojiText}>{guide.emojiIcon || '🗺️'}</Text>
-        </View>
+        <Badge
+          variant="secondary"
+          corner="pill"
+          style={styles.emojiBadge}
+          label={guide.emojiIcon || '🗺️'}
+          textStyle={styles.emojiText}
+        />
 
-        {/* Spot Count Pill */}
-        <View style={styles.spotCountPill}>
-          <Text style={styles.spotCountText}>
-            {guide.crumbCount} {guide.crumbCount === 1 ? 'crumb' : 'crumbs'}
-          </Text>
-        </View>
+        {/* Crumb Count Pill */}
+        <Badge
+          variant="secondary"
+          corner="pill"
+          style={styles.crumbCountPill}
+          label={`${guide.crumbCount} ${guide.crumbCount === 1 ? 'crumb' : 'crumbs'}`}
+        />
       </View>
 
       {/* Guide Info */}
-      <View style={styles.contentContainer}>
-        <Text style={styles.title} numberOfLines={1}>
-          {guide.name}
-        </Text>
+      <CardContent style={styles.contentContainer}>
+        <CardTitle numberOfLines={1}>{guide.name}</CardTitle>
         {guide.description ? (
-          <Text style={styles.description} numberOfLines={2}>
+          <CardDescription numberOfLines={2}>
             {guide.description}
-          </Text>
+          </CardDescription>
         ) : (
           <Text style={styles.metaPlaceholder}>
             {guide.isPublic ? 'Public guide' : 'Personal guide'}
           </Text>
         )}
-      </View>
-    </TouchableOpacity>
+      </CardContent>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Theme.colors.cardBackground,
-    borderRadius: Theme.radii.xl,
-    borderWidth: 1.5,
-    borderColor: Theme.colors.cardBorder,
     marginBottom: Theme.spacing.md,
-    overflow: 'hidden',
-    shadowColor: Theme.colors.shadow,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 3,
   },
   mediaContainer: {
     height: 180,
@@ -293,59 +277,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: Theme.spacing.sm,
     left: Theme.spacing.sm,
-    backgroundColor: Theme.colors.cardBackground,
-    borderRadius: Theme.radii.pill,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: Theme.spacing.xs,
-    borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
-    shadowColor: Theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   emojiText: {
     fontSize: 16,
   },
-  spotCountPill: {
+  crumbCountPill: {
     position: 'absolute',
     top: Theme.spacing.sm,
     right: Theme.spacing.sm,
-    backgroundColor: Theme.colors.cardBackground,
-    borderRadius: Theme.radii.pill,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: Theme.spacing.xs,
-    borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
-    shadowColor: Theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  spotCountText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Theme.colors.text,
   },
   contentContainer: {
     padding: Theme.spacing.md,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    color: Theme.colors.text,
-    marginBottom: Theme.spacing.xs,
-  },
-  description: {
-    fontSize: 14,
-    color: Theme.colors.textMuted,
-    lineHeight: 20,
-  },
   metaPlaceholder: {
     fontSize: 13,
     color: Theme.colors.textSubtle,
+    marginTop: 2,
   },
 });

@@ -3,6 +3,7 @@ import {
   detectReservationProvider,
   extractCommunityDishFromReviews,
   extractNeighborhood,
+  sanitizeHeroDish,
 } from './places.service';
 
 describe('detectReservationProvider', () => {
@@ -99,6 +100,34 @@ describe('detectReservationProvider', () => {
   });
 });
 
+describe('sanitizeHeroDish', () => {
+  it('should reject conversational fragments and sentiment clauses', () => {
+    expect(sanitizeHeroDish("i've had in a while")).toBeUndefined();
+    expect(sanitizeHeroDish("best meal I've had in a while")).toBeUndefined();
+    expect(sanitizeHeroDish('so good')).toBeUndefined();
+    expect(sanitizeHeroDish('must try')).toBeUndefined();
+    expect(sanitizeHeroDish('good food')).toBeUndefined();
+    expect(sanitizeHeroDish('great service')).toBeUndefined();
+    expect(sanitizeHeroDish('vibes')).toBeUndefined();
+    expect(sanitizeHeroDish('everything')).toBeUndefined();
+  });
+
+  it('should clean and strip trailing conversational clauses from valid dishes', () => {
+    expect(sanitizeHeroDish('the spicy rigatoni vodka')).toBe(
+      'spicy rigatoni vodka',
+    );
+    expect(sanitizeHeroDish('Truffle Cacio e Pepe')).toBe(
+      'Truffle Cacio e Pepe',
+    );
+    expect(sanitizeHeroDish("Pistachio Croissant I've had in a while")).toBe(
+      'Pistachio Croissant',
+    );
+    expect(sanitizeHeroDish('Matcha Basque Cheesecake in my life')).toBe(
+      'Matcha Basque Cheesecake',
+    );
+  });
+});
+
 describe('extractCommunityDishFromReviews', () => {
   it('should extract signature dish from editorialSummary', () => {
     const summary =
@@ -118,6 +147,15 @@ describe('extractCommunityDishFromReviews', () => {
     ];
     const dish = extractCommunityDishFromReviews(undefined, reviews);
     expect(dish).toBe('pistachio croissant');
+  });
+
+  it('should reject conversational fragment reviews like "i\'ve had in a while"', () => {
+    const reviews = [
+      { text: { text: "Hands down the best food I've had in a while." } },
+      { text: { text: "Best meal I've had in a while!" } },
+    ];
+    const dish = extractCommunityDishFromReviews(undefined, reviews);
+    expect(dish).toBeUndefined();
   });
 
   it('should ignore generic feedback in reviews', () => {

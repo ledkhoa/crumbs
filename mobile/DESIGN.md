@@ -179,60 +179,22 @@ export const radii = {
 
 ---
 
-# 7. Core UI Components & Patterns
+# 7. Core UI Components & Library (`src/components/ui/`)
 
-## 1. Buttons
+All screens and features compose UI using the shared primitives in `@/components/ui`:
 
-### Primary CTA (Terracotta)
-
-- Background: `Theme.colors.primary` (`#C45B3E`), pressed: `Theme.colors.primaryPressed` (`#A84B31`)
-- Label: `Theme.colors.onPrimary` (`#FFFFFF`), 16pt semi-bold
-- Height: 52pt, Radius: `Theme.radii.lg` (18pt)
-- Haptic feedback on press (`Haptics.NotificationFeedbackType.Success` or `Haptics.selectionAsync()`)
-- Activity indicator inherits `Theme.colors.onPrimary`
-
-### Secondary / Outlined Button
-
-- Background: `transparent` or `Theme.colors.background`
-- Border: 1px solid `Theme.colors.inputBorder`
-- Label: `Theme.colors.text`
-
----
-
-## 2. Inputs & Form Fields
-
-- Height: 48–52pt, Radius: `Theme.radii.lg` (18pt)
-- Background: `Theme.colors.inputBackground`
-- Border: 1px `Theme.colors.inputBorder` (transitions to 2px `Theme.colors.primary` on focus)
-- Placeholder: `Theme.colors.textMuted`
-- Text: `Theme.colors.text`
-- Leading emoji/icon + optional trailing toggle (e.g. password visibility `👁️`/`🙈`)
-
----
-
-## 3. The Crumb Card (Saved Spot)
-
-- **Hero Aspect**: 16:9 or 4:3 food/venue photography
-- **Hero Dish Badge**: Pill overlaid on photo (_"The Must-Order: Truffle Gnocchi"_) using `Theme.colors.cardBackground`
-- **Social Credit**: Creator attribution badge (_"Saved from @nycfoodie"_)
-- **Metadata**: Restaurant name (Serif), neighborhood, status pill (`Open until 11 PM` in `Theme.colors.success`), vibe tags
-- **Action Row**: One-tap transactional buttons (`[ 🍷 Book on Resy ]`, `[ 🍽️ Book on OpenTable ]`, `[ 🗺️ Open in Maps ]`)
-
----
-
-## 4. Draggable Bottom Sheet & Living Map
-
-- **Map Canvas**: Warm cartography styled to blend with the Linen/Buttercream palette
-- **Sheet**: Translucent bottom sheet with `Theme.radii.sheet` (36pt) top corners and a tactile pill grab handle (`Theme.colors.grabHandle`)
-- **Ergonomics**: Floating control capsule in the bottom thumb zone for search (`🔍`), location switcher (`📍 Soho ▾`), and decision engine (`🎲 Decide For Me`)
-
----
-
-## 5. Auth Experience (Sign In / Sign Up)
-
-- **Backdrop**: Deep espresso canvas (`Theme.colors.canvas`) with Crumbs bread icon (`🍞`) and serif brand wordmark
-- **Card**: Bottom-anchored glass card (`Theme.colors.cardBackground`) with grab handle and serif header
-- **Validation**: TanStack Form + Zod v4 with inline error alerts styled via `Theme.colors.errorBackground` and `Theme.colors.errorBorder`
+| Component         | Export                        | Description & Key Props                                                                                                                                                                                                                                                                                                                               |
+| :---------------- | :---------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`Button`**      | `@/components/ui/Button`      | Polymorphic tactile CTA button.<br>• `variant`: `'primary' \| 'secondary' \| 'outline' \| 'ghost' \| 'destructive'`<br>• `size`: `'sm' (36pt) \| 'md' (46pt) \| 'lg' (52pt) \| 'icon' (44pt)`<br>• `loading`: Displays spinner matching variant text color<br>• `leftIcon` / `rightIcon`<br>• `haptic`: `'primary' \| 'tap' \| 'selection' \| 'none'` |
+| **`Card`**        | `@/components/ui/Card`        | Compound container with organic radii and elevation.<br>• `<Card variant="default                                                                                                                                                                                                                                                                     | flat | outline" onPress={...}>`<br>• `<CardHeader>`, `<CardTitle serif={true}>`<br>• `<CardDescription numberOfLines={...}>`<br>• `<CardContent>`, `<CardFooter>` |
+| **`Badge`**       | `@/components/ui/Badge`       | Sensory vibe chips, hero dish badges, and status pills.<br>• `variant`: `'default' \| 'secondary' \| 'primary' \| 'hero' \| 'accent' \| 'success' \| 'error' \| 'outline'`<br>• `corner`: `'pill' (999pt) \| 'rounded' (8pt)`<br>• `size`: `'sm' \| 'md'`<br>• `icon` / `label`                                                                       |
+| **`Input`**       | `@/components/ui/Input`       | Single-line form input with focused border transitions.<br>• `label`, `error`<br>• `leftIcon` / `rightIcon` (e.g. password visibility toggle)                                                                                                                                                                                                         |
+| **`Textarea`**    | `@/components/ui/Textarea`    | Multi-line textarea for guide descriptions, notes, and reviews.<br>• `label`, `error`, `minHeight` (default: 80pt)                                                                                                                                                                                                                                    |
+| **`SearchInput`** | `@/components/ui/SearchInput` | Dedicated search bar with integrated `🔍` icon and clear `✕` button.<br>• `value`, `onChangeText`, `onClear`                                                                                                                                                                                                                                          |
+| **`Checkbox`**    | `@/components/ui/Checkbox`    | Circular selection indicator with checkmark and haptics.<br>• `checked`, `onToggle`, `size`                                                                                                                                                                                                                                                           |
+| **`EmptyState`**  | `@/components/ui/EmptyState`  | Empty/error feedback view.<br>• `emoji` (or `icon`), `title` (Georgia serif), `description`, `action` CTA slot                                                                                                                                                                                                                                        |
+| **`GrabHandle`**  | `@/components/ui/GrabHandle`  | Tactile bottom sheet indicator pill (`Theme.colors.grabHandle`).                                                                                                                                                                                                                                                                                      |
+| **`Typography`**  | `@/components/ui/Typography`  | Semantic typography primitives.<br>• `<Heading>` (`Georgia` on iOS / `serif` on Android)<br>• `<Subheading>`, `<Text>`, `<MutedText>`, `<Label>`                                                                                                                                                                                                      |
 
 ---
 

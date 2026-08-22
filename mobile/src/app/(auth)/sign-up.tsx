@@ -2,10 +2,8 @@ import { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   Platform,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -17,6 +15,11 @@ import { haptics } from '@/utils/haptics';
 import { useSessionStore } from '@/store/session';
 import { apiRequest } from '@/utils/api-client';
 import { Theme } from '@/theme/tokens';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { GrabHandle } from '@/components/ui/GrabHandle';
+import { Heading, MutedText } from '@/components/ui/Typography';
 
 const signUpSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -90,14 +93,13 @@ export default function SignUpScreen() {
         </View>
 
         {/* Form Card */}
-        <View style={styles.card}>
-          {/* Grab Handle */}
-          <View style={styles.grabHandle} />
+        <Card style={styles.card}>
+          <GrabHandle />
 
-          <Text style={styles.title}>Create your account</Text>
-          <Text style={styles.subtitle}>
+          <Heading style={styles.title}>Create your account</Heading>
+          <MutedText style={styles.subtitle}>
             Turn every craving into a place worth going.
-          </Text>
+          </MutedText>
 
           {authError && (
             <View style={styles.errorContainer}>
@@ -108,82 +110,60 @@ export default function SignUpScreen() {
           {/* Name Input */}
           <form.Field name="name">
             {(field) => (
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputIcon}>👤</Text>
-                <TextInput
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChangeText={field.handleChange}
-                  placeholder="Name"
-                  placeholderTextColor={Theme.colors.textMuted}
-                  autoCapitalize="words"
-                  style={styles.input}
-                />
-                {field.state.meta.errors[0] && (
-                  <Text style={styles.fieldError}>
-                    {field.state.meta.errors[0].message}
-                  </Text>
-                )}
-              </View>
+              <Input
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChangeText={field.handleChange}
+                placeholder="Name"
+                autoCapitalize="words"
+                leftIcon={<Text style={styles.inputIcon}>👤</Text>}
+                error={field.state.meta.errors[0]?.message}
+              />
             )}
           </form.Field>
 
           {/* Email Input */}
           <form.Field name="email">
             {(field) => (
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputIcon}>✉️</Text>
-                <TextInput
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChangeText={field.handleChange}
-                  placeholder="Email"
-                  placeholderTextColor={Theme.colors.textMuted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  style={styles.input}
-                />
-                {field.state.meta.errors[0] && (
-                  <Text style={styles.fieldError}>
-                    {field.state.meta.errors[0].message}
-                  </Text>
-                )}
-              </View>
+              <Input
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChangeText={field.handleChange}
+                placeholder="Email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                leftIcon={<Text style={styles.inputIcon}>✉️</Text>}
+                error={field.state.meta.errors[0]?.message}
+              />
             )}
           </form.Field>
 
           {/* Password Input */}
           <form.Field name="password">
             {(field) => (
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputIcon}>🔒</Text>
-                <TextInput
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChangeText={field.handleChange}
-                  placeholder="Password"
-                  placeholderTextColor={Theme.colors.textMuted}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  style={styles.input}
-                />
-                <TouchableOpacity
-                  onPress={() => {
-                    setShowPassword(!showPassword);
-                    haptics.selection();
-                  }}
-                  style={styles.eyeButton}
-                >
-                  <Text>{showPassword ? '👁️' : '🙈'}</Text>
-                </TouchableOpacity>
-                {field.state.meta.errors[0] && (
-                  <Text style={styles.fieldError}>
-                    {field.state.meta.errors[0].message}
-                  </Text>
-                )}
-              </View>
+              <Input
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChangeText={field.handleChange}
+                placeholder="Password"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                leftIcon={<Text style={styles.inputIcon}>🔒</Text>}
+                rightIcon={
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowPassword(!showPassword);
+                      haptics.selection();
+                    }}
+                    style={styles.eyeButton}
+                  >
+                    <Text>{showPassword ? '👁️' : '🙈'}</Text>
+                  </TouchableOpacity>
+                }
+                error={field.state.meta.errors[0]?.message}
+              />
             )}
           </form.Field>
 
@@ -219,24 +199,16 @@ export default function SignUpScreen() {
             })}
           >
             {({ isSubmitting }) => (
-              <TouchableOpacity
-                style={[
-                  styles.primaryButton,
-                  isSubmitting && styles.buttonDisabled,
-                ]}
-                onPress={() => {
-                  haptics.primary();
-                  form.handleSubmit();
-                }}
+              <Button
+                variant="primary"
+                size="lg"
+                onPress={() => form.handleSubmit()}
+                loading={isSubmitting}
                 disabled={isSubmitting}
-                activeOpacity={0.8}
+                style={styles.primaryButton}
               >
-                {isSubmitting ? (
-                  <ActivityIndicator color={Theme.colors.onPrimary} />
-                ) : (
-                  <Text style={styles.primaryButtonText}>Create account</Text>
-                )}
-              </TouchableOpacity>
+                Create account
+              </Button>
             )}
           </form.Subscribe>
 
@@ -253,7 +225,7 @@ export default function SignUpScreen() {
               <Text style={styles.footerHighlight}>Sign in</Text>
             </Text>
           </TouchableOpacity>
-        </View>
+        </Card>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
@@ -264,17 +236,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Theme.colors.canvas,
   },
-  flex: {
-    flex: 1,
-  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'space-between',
   },
   header: {
     alignItems: 'center',
-    paddingTop: Theme.spacing.lg,
-    paddingBottom: Theme.spacing.md,
+    paddingTop: Theme.spacing.xl,
+    paddingBottom: Theme.spacing.lg,
   },
   logoIcon: {
     fontSize: 42,
@@ -287,7 +256,6 @@ const styles = StyleSheet.create({
     color: Theme.colors.background,
   },
   card: {
-    backgroundColor: Theme.colors.cardBackground,
     borderTopLeftRadius: Theme.radii.sheet,
     borderTopRightRadius: Theme.radii.sheet,
     borderBottomLeftRadius: Theme.radii.sheet,
@@ -295,32 +263,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Theme.spacing.lg,
     paddingTop: Theme.spacing.md,
     paddingBottom: Theme.spacing.xxl,
-    borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
-    shadowColor: Theme.colors.shadow,
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  grabHandle: {
-    width: 44,
-    height: 5,
-    backgroundColor: Theme.colors.grabHandle,
-    borderRadius: Theme.radii.pill,
-    alignSelf: 'center',
-    marginBottom: Theme.spacing.md,
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    color: Theme.colors.text,
     marginBottom: Theme.spacing.xs,
   },
   subtitle: {
     fontSize: 14,
-    color: Theme.colors.textMuted,
     marginBottom: Theme.spacing.lg,
   },
   errorContainer: {
@@ -336,35 +285,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Theme.colors.inputBackground,
-    borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
-    borderRadius: Theme.radii.lg,
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Platform.OS === 'ios' ? 14 : 6,
-    marginBottom: Theme.spacing.md,
-  },
   inputIcon: {
     fontSize: 16,
-    marginRight: Theme.spacing.sm,
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    color: Theme.colors.text,
   },
   eyeButton: {
     padding: Theme.spacing.xs,
-  },
-  fieldError: {
-    position: 'absolute',
-    bottom: -18,
-    left: Theme.spacing.md,
-    color: Theme.colors.error,
-    fontSize: 11,
   },
   checkboxContainer: {
     flexDirection: 'row',
@@ -381,29 +306,11 @@ const styles = StyleSheet.create({
     color: Theme.colors.textMuted,
   },
   termsUnderline: {
-    color: Theme.colors.text,
     textDecorationLine: 'underline',
+    color: Theme.colors.text,
   },
   primaryButton: {
-    backgroundColor: Theme.colors.primary,
-    height: 52,
-    borderRadius: Theme.radii.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: Theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 4,
     marginBottom: Theme.spacing.md,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: Theme.colors.onPrimary,
-    fontSize: 16,
-    fontWeight: '600',
   },
   footerToggle: {
     alignItems: 'center',
