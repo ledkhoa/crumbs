@@ -1,14 +1,11 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Theme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { formatPriceLevel } from '@/utils/price';
+import { Card, CardTitle, CardContent } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Checkbox } from '@/components/ui/Checkbox';
 import type { UnifiedRestaurantSpot } from '@/types/ingest';
 
 export interface IngestionCrumbCardProps {
@@ -56,7 +53,7 @@ export function IngestionCrumbCard({
   ];
 
   const content = (
-    <View style={cardStyle}>
+    <Card style={cardStyle}>
       {/* 16:9 Hero Photography */}
       <View style={styles.photoContainer}>
         {crumb.photoUrl ? (
@@ -78,41 +75,39 @@ export function IngestionCrumbCard({
         {/* Subtle Selection Checkbox Pill (Multi-Crumb Mode) */}
         {selectable && (
           <View style={styles.checkboxWrapper}>
-            <View
-              style={[
-                styles.checkboxCircle,
-                selected
-                  ? styles.checkboxCircleSelected
-                  : styles.checkboxCircleUnselected,
-              ]}
-            >
-              {selected ? (
-                <Text style={styles.checkboxCheckmark}>✓</Text>
-              ) : null}
-            </View>
+            <Checkbox
+              checked={selected}
+              onToggle={() => onToggleSelect?.(crumb)}
+              accessibilityLabel={`${crumb.name} selection`}
+            />
           </View>
         )}
 
         {/* Overlaid Hero Dish Pill */}
         {crumb.heroDish && (
-          <View style={styles.heroDishPill}>
-            <Text style={styles.heroDishEmoji}>🍝</Text>
-            <Text style={styles.heroDishText} numberOfLines={1}>
-              MUST-ORDER: {crumb.heroDish.toUpperCase()}
-            </Text>
-          </View>
+          <Badge
+            variant="hero"
+            corner="pill"
+            style={styles.heroDishPill}
+            icon={<Text style={styles.heroDishEmoji}>🍝</Text>}
+            label={`MUST-ORDER: ${crumb.heroDish.toUpperCase()}`}
+          />
         )}
       </View>
 
       {/* Crumb Details Body */}
-      <View style={styles.cardBody}>
+      <CardContent style={styles.cardBody}>
         {/* Title and Rating Row */}
         <View style={styles.titleRow}>
-          <Text style={styles.restaurantTitle} numberOfLines={2}>
+          <CardTitle style={styles.restaurantTitle} numberOfLines={2}>
             {crumb.name}
-          </Text>
+          </CardTitle>
           {(formattedPrice || crumb.rating != null) && (
-            <View style={styles.ratingBadge}>
+            <Badge
+              variant="default"
+              corner="rounded"
+              style={styles.ratingBadge}
+            >
               {formattedPrice && (
                 <Text style={styles.priceText}>{formattedPrice} · </Text>
               )}
@@ -121,7 +116,7 @@ export function IngestionCrumbCard({
                   {crumb.rating.toFixed(1)} ★
                 </Text>
               ) : null}
-            </View>
+            </Badge>
           )}
         </View>
 
@@ -143,9 +138,14 @@ export function IngestionCrumbCard({
         {crumb.vibeTags && crumb.vibeTags.length > 0 && (
           <View style={styles.vibeTagsRow}>
             {crumb.vibeTags.slice(0, 4).map((tag, idx) => (
-              <View key={`${tag}-${idx}`} style={styles.vibeTagChip}>
-                <Text style={styles.vibeTagText}>{tag}</Text>
-              </View>
+              <Badge
+                key={`${tag}-${idx}`}
+                variant="default"
+                corner="pill"
+                label={tag}
+                style={styles.vibeTagChip}
+                textStyle={styles.vibeTagText}
+              />
             ))}
           </View>
         )}
@@ -160,8 +160,8 @@ export function IngestionCrumbCard({
             </Text>
           </View>
         )}
-      </View>
-    </View>
+      </CardContent>
+    </Card>
   );
 
   if (selectable) {
@@ -184,16 +184,6 @@ export function IngestionCrumbCard({
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    backgroundColor: Theme.colors.cardBackground,
-    borderRadius: Theme.radii.xl,
-    borderWidth: 1.5,
-    borderColor: Theme.colors.cardBorder,
-    overflow: 'hidden',
-    shadowColor: Theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
   },
   cardUnselected: {
     opacity: 0.6,
@@ -229,63 +219,15 @@ const styles = StyleSheet.create({
     right: Theme.spacing.sm,
     zIndex: 10,
   },
-  checkboxCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: Theme.radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  checkboxCircleSelected: {
-    backgroundColor: Theme.colors.primary,
-    borderWidth: 1.5,
-    borderColor: Theme.colors.cardBackground,
-  },
-  checkboxCircleUnselected: {
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.7)',
-  },
-  checkboxCheckmark: {
-    color: Theme.colors.onPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-    marginTop: Platform.OS === 'ios' ? -1 : 0,
-  },
   heroDishPill: {
     position: 'absolute',
     bottom: Theme.spacing.sm,
     left: Theme.spacing.sm,
     right: Theme.spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Theme.colors.cardBackground,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: Theme.spacing.xs + 2,
-    borderRadius: Theme.radii.pill,
-    borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
-    shadowColor: Theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 2,
   },
   heroDishEmoji: {
     fontSize: 14,
-    marginRight: 6,
-  },
-  heroDishText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Theme.colors.primary,
-    letterSpacing: 0.3,
-    flex: 1,
+    marginRight: 2,
   },
   cardBody: {
     padding: Theme.spacing.md,
@@ -300,17 +242,10 @@ const styles = StyleSheet.create({
   restaurantTitle: {
     flex: 1,
     fontSize: 20,
-    fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    color: Theme.colors.text,
   },
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Theme.colors.inputBackground,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: Theme.spacing.xs,
-    borderRadius: Theme.radii.sm,
     marginTop: 2,
   },
   priceText: {
@@ -350,17 +285,11 @@ const styles = StyleSheet.create({
     marginBottom: Theme.spacing.sm,
   },
   vibeTagChip: {
-    backgroundColor: Theme.colors.inputBackground,
-    paddingHorizontal: Theme.spacing.sm,
     paddingVertical: 4,
-    borderRadius: Theme.radii.pill,
-    borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
   },
   vibeTagText: {
     fontSize: 11,
     fontWeight: '600',
-    color: Theme.colors.text,
   },
   walkInBox: {
     flexDirection: 'row',

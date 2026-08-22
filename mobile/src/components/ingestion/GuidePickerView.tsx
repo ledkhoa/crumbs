@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -12,6 +11,8 @@ import {
 import { Theme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { useGuidesQuery } from '@/hooks/useGuides';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export interface GuidePickerViewProps {
   restaurantName?: string;
@@ -63,11 +64,6 @@ export function GuidePickerView({
     }
   };
 
-  const handleClearSearch = () => {
-    haptics.tap();
-    setSearchQuery('');
-  };
-
   return (
     <View style={styles.container}>
       {/* Top Navigation Row */}
@@ -99,30 +95,12 @@ export function GuidePickerView({
       </View>
 
       {/* Search Input Bar */}
-      <View style={styles.searchBarContainer}>
-        <Text style={styles.searchIcon}>🔍</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search your guides..."
-          placeholderTextColor={Theme.colors.textSubtle}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          autoCapitalize="none"
-          autoCorrect={false}
-          clearButtonMode="never"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity
-            style={styles.clearSearchButton}
-            onPress={handleClearSearch}
-            accessibilityRole="button"
-            accessibilityLabel="Clear search text"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Text style={styles.clearSearchText}>✕</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <SearchInput
+        placeholder="Search your guides..."
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        containerStyle={styles.searchBarContainer}
+      />
 
       {/* Create New Guide Action Row */}
       <TouchableOpacity
@@ -205,22 +183,17 @@ export function GuidePickerView({
           })}
         </ScrollView>
       ) : searchQuery.trim().length > 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>🔍</Text>
-          <Text style={styles.emptyTitle}>No Matching Guides</Text>
-          <Text style={styles.emptySubtitle}>
-            No guides found matching “{searchQuery}”. Tap Create New Guide above
-            to make one!
-          </Text>
-        </View>
+        <EmptyState
+          emoji="🔍"
+          title="No Matching Guides"
+          description={`No guides found matching “${searchQuery}”. Tap Create New Guide above to make one!`}
+        />
       ) : (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>🗺️</Text>
-          <Text style={styles.emptyTitle}>No Guides Yet</Text>
-          <Text style={styles.emptySubtitle}>
-            Create your first guide to organize your favorite crumbs!
-          </Text>
-        </View>
+        <EmptyState
+          emoji="🗺️"
+          title="No Guides Yet"
+          description="Create your first guide to organize your favorite crumbs!"
+        />
       )}
     </View>
   );
@@ -260,34 +233,7 @@ const styles = StyleSheet.create({
     color: Theme.colors.textMuted,
   },
   searchBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Theme.colors.inputBackground,
-    borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
-    borderRadius: Theme.radii.lg,
-    paddingHorizontal: Theme.spacing.md,
-    height: 44,
     marginBottom: Theme.spacing.md,
-  },
-  searchIcon: {
-    fontSize: 14,
-    marginRight: Theme.spacing.sm,
-    opacity: 0.6,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: Theme.colors.text,
-    paddingVertical: 0,
-  },
-  clearSearchButton: {
-    padding: Theme.spacing.xs,
-  },
-  clearSearchText: {
-    fontSize: 13,
-    color: Theme.colors.textMuted,
-    fontWeight: '700',
   },
   createGuideRow: {
     flexDirection: 'row',
@@ -384,25 +330,5 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 13,
     color: Theme.colors.textMuted,
-  },
-  emptyContainer: {
-    paddingVertical: Theme.spacing.xl,
-    alignItems: 'center',
-  },
-  emptyEmoji: {
-    fontSize: 40,
-    marginBottom: Theme.spacing.sm,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Theme.colors.text,
-    marginBottom: 4,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    color: Theme.colors.textMuted,
-    textAlign: 'center',
-    paddingHorizontal: Theme.spacing.xl,
   },
 });

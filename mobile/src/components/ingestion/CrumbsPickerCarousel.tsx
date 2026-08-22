@@ -5,12 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
-  TouchableOpacity,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
 import { Theme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
+import { Button } from '@/components/ui/Button';
 import { IngestionCrumbCard } from './IngestionCrumbCard';
 import type { UnifiedRestaurantSpot } from '@/types/ingest';
 
@@ -57,12 +57,10 @@ export function CrumbsPickerCarousel({
 
   const handleAddSelected = () => {
     if (selectedCount === 0) return;
-    haptics.primary();
     onAddSelectedToGuide(selectedCrumbs);
   };
 
   const handleViewAll = () => {
-    haptics.tap();
     onViewInInbox();
   };
 
@@ -118,35 +116,28 @@ export function CrumbsPickerCarousel({
 
       {/* Bulk Action Buttons with Live Selected Count */}
       <View style={styles.bulkActions}>
-        <TouchableOpacity
-          style={[
-            styles.primaryBulkButton,
-            selectedCount === 0 && styles.disabledButton,
-          ]}
+        <Button
+          variant="primary"
+          size="lg"
           onPress={handleAddSelected}
           disabled={selectedCount === 0}
-          activeOpacity={0.85}
-          accessibilityRole="button"
+          leftIcon={selectedCount > 0 ? <Text>🗺️ </Text> : undefined}
           accessibilityLabel={`Add ${selectedCount} ${selectedCount === 1 ? 'Crumb' : 'Crumbs'} to Guide`}
         >
-          <Text style={styles.primaryBulkButtonText}>
-            {selectedCount > 0
-              ? `🗺️ Add ${selectedCount} ${selectedCount === 1 ? 'Crumb' : 'Crumbs'} to Guide`
-              : 'Select Crumbs to Add'}
-          </Text>
-        </TouchableOpacity>
+          {selectedCount > 0
+            ? `Add ${selectedCount} ${selectedCount === 1 ? 'Crumb' : 'Crumbs'} to Guide`
+            : 'Select Crumbs to Add'}
+        </Button>
 
-        <TouchableOpacity
-          style={styles.secondaryBulkButton}
+        <Button
+          variant="secondary"
+          size="lg"
           onPress={handleViewAll}
-          activeOpacity={0.85}
-          accessibilityRole="button"
+          leftIcon={<Text>📥 </Text>}
           accessibilityLabel="View All in Inbox"
         >
-          <Text style={styles.secondaryBulkButtonText}>
-            📥 View All in Inbox
-          </Text>
-        </TouchableOpacity>
+          View All in Inbox
+        </Button>
       </View>
     </View>
   );

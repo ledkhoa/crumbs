@@ -2,10 +2,8 @@ import { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   Platform,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -17,6 +15,11 @@ import { haptics } from '@/utils/haptics';
 import { useSessionStore } from '@/store/session';
 import { apiRequest } from '@/utils/api-client';
 import { Theme } from '@/theme/tokens';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { GrabHandle } from '@/components/ui/GrabHandle';
+import { Heading, MutedText } from '@/components/ui/Typography';
 
 const signInSchema = z.object({
   email: z.email('Please enter a valid email address'),
@@ -81,14 +84,13 @@ export default function SignInScreen() {
         </View>
 
         {/* Form Card */}
-        <View style={styles.card}>
-          {/* Grab Handle */}
-          <View style={styles.grabHandle} />
+        <Card style={styles.card}>
+          <GrabHandle />
 
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>
+          <Heading style={styles.title}>Welcome back</Heading>
+          <MutedText style={styles.subtitle}>
             Your next favorite place is waiting.
-          </Text>
+          </MutedText>
 
           {authError && (
             <View style={styles.errorContainer}>
@@ -99,59 +101,45 @@ export default function SignInScreen() {
           {/* Email Input */}
           <form.Field name="email">
             {(field) => (
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputIcon}>✉️</Text>
-                <TextInput
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChangeText={field.handleChange}
-                  placeholder="Email"
-                  placeholderTextColor={Theme.colors.textMuted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  style={styles.input}
-                />
-                {field.state.meta.errors[0] && (
-                  <Text style={styles.fieldError}>
-                    {field.state.meta.errors[0].message}
-                  </Text>
-                )}
-              </View>
+              <Input
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChangeText={field.handleChange}
+                placeholder="Email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                leftIcon={<Text style={styles.inputIcon}>✉️</Text>}
+                error={field.state.meta.errors[0]?.message}
+              />
             )}
           </form.Field>
 
           {/* Password Input */}
           <form.Field name="password">
             {(field) => (
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputIcon}>🔒</Text>
-                <TextInput
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChangeText={field.handleChange}
-                  placeholder="Password"
-                  placeholderTextColor={Theme.colors.textMuted}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  style={styles.input}
-                />
-                <TouchableOpacity
-                  onPress={() => {
-                    setShowPassword(!showPassword);
-                    haptics.selection();
-                  }}
-                  style={styles.eyeButton}
-                >
-                  <Text>{showPassword ? '👁️' : '🙈'}</Text>
-                </TouchableOpacity>
-                {field.state.meta.errors[0] && (
-                  <Text style={styles.fieldError}>
-                    {field.state.meta.errors[0].message}
-                  </Text>
-                )}
-              </View>
+              <Input
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChangeText={field.handleChange}
+                placeholder="Password"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                leftIcon={<Text style={styles.inputIcon}>🔒</Text>}
+                rightIcon={
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowPassword(!showPassword);
+                      haptics.selection();
+                    }}
+                    style={styles.eyeButton}
+                  >
+                    <Text>{showPassword ? '👁️' : '🙈'}</Text>
+                  </TouchableOpacity>
+                }
+                error={field.state.meta.errors[0]?.message}
+              />
             )}
           </form.Field>
 
@@ -171,24 +159,16 @@ export default function SignInScreen() {
             })}
           >
             {({ isSubmitting }) => (
-              <TouchableOpacity
-                style={[
-                  styles.primaryButton,
-                  isSubmitting && styles.buttonDisabled,
-                ]}
-                onPress={() => {
-                  haptics.primary();
-                  form.handleSubmit();
-                }}
+              <Button
+                variant="primary"
+                size="lg"
+                onPress={() => form.handleSubmit()}
+                loading={isSubmitting}
                 disabled={isSubmitting}
-                activeOpacity={0.8}
+                style={styles.primaryButton}
               >
-                {isSubmitting ? (
-                  <ActivityIndicator color={Theme.colors.onPrimary} />
-                ) : (
-                  <Text style={styles.primaryButtonText}>Sign in</Text>
-                )}
-              </TouchableOpacity>
+                Sign in
+              </Button>
             )}
           </form.Subscribe>
 
@@ -205,7 +185,7 @@ export default function SignInScreen() {
               <Text style={styles.footerHighlight}>Create account</Text>
             </Text>
           </TouchableOpacity>
-        </View>
+        </Card>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
@@ -215,9 +195,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Theme.colors.canvas,
-  },
-  flex: {
-    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
@@ -239,7 +216,6 @@ const styles = StyleSheet.create({
     color: Theme.colors.background,
   },
   card: {
-    backgroundColor: Theme.colors.cardBackground,
     borderTopLeftRadius: Theme.radii.sheet,
     borderTopRightRadius: Theme.radii.sheet,
     borderBottomLeftRadius: Theme.radii.sheet,
@@ -247,32 +223,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Theme.spacing.lg,
     paddingTop: Theme.spacing.md,
     paddingBottom: Theme.spacing.xxl,
-    borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
-    shadowColor: Theme.colors.shadow,
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  grabHandle: {
-    width: 44,
-    height: 5,
-    backgroundColor: Theme.colors.grabHandle,
-    borderRadius: Theme.radii.pill,
-    alignSelf: 'center',
-    marginBottom: Theme.spacing.md,
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    color: Theme.colors.text,
     marginBottom: Theme.spacing.xs,
   },
   subtitle: {
     fontSize: 14,
-    color: Theme.colors.textMuted,
     marginBottom: Theme.spacing.lg,
   },
   errorContainer: {
@@ -288,35 +245,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Theme.colors.inputBackground,
-    borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
-    borderRadius: Theme.radii.lg,
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Platform.OS === 'ios' ? 14 : 6,
-    marginBottom: Theme.spacing.md,
-  },
   inputIcon: {
     fontSize: 16,
-    marginRight: Theme.spacing.sm,
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    color: Theme.colors.text,
   },
   eyeButton: {
     padding: Theme.spacing.xs,
-  },
-  fieldError: {
-    position: 'absolute',
-    bottom: -18,
-    left: Theme.spacing.md,
-    color: Theme.colors.error,
-    fontSize: 11,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
@@ -328,25 +261,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   primaryButton: {
-    backgroundColor: Theme.colors.primary,
-    height: 52,
-    borderRadius: Theme.radii.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: Theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 4,
     marginBottom: Theme.spacing.md,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: Theme.colors.onPrimary,
-    fontSize: 16,
-    fontWeight: '600',
   },
   footerToggle: {
     alignItems: 'center',
