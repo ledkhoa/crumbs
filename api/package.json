@@ -24,7 +24,7 @@
     "apify-client": "^2.25.0",
     "better-auth": "^1.6.29",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.13.2",
+    "hono": "4.13.3",
     "oxlint": "^1.79.0",
     "zod": "^4.4.3"
   },
