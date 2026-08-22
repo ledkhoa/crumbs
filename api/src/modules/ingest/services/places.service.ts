@@ -152,6 +152,126 @@ export function detectReservationProvider(
 }
 
 /**
+ * Normalizes Google Places API (New) PriceLevel enums to standard dollar sign format ($, $$, $$$, $$$$, Free).
+ */
+export function formatPriceLevel(
+  priceLevel?: string | number | null,
+): string | undefined {
+  if (priceLevel == null || priceLevel === '') return undefined;
+
+  const normalized = String(priceLevel).trim().toUpperCase();
+
+  switch (normalized) {
+    case 'PRICE_LEVEL_FREE':
+    case 'FREE':
+    case '0':
+      return 'Free';
+
+    case 'PRICE_LEVEL_INEXPENSIVE':
+    case 'INEXPENSIVE':
+    case 'CHEAP':
+    case '1':
+    case '$':
+      return '$';
+
+    case 'PRICE_LEVEL_MODERATE':
+    case 'MODERATE':
+    case 'MEDIUM':
+    case '2':
+    case '$$':
+      return '$$';
+
+    case 'PRICE_LEVEL_EXPENSIVE':
+    case 'EXPENSIVE':
+    case '3':
+    case '$$$':
+      return '$$$';
+
+    case 'PRICE_LEVEL_VERY_EXPENSIVE':
+    case 'VERY_EXPENSIVE':
+    case '4':
+    case '$$$$':
+      return '$$$$';
+
+    default:
+      if (/^\$+$/.test(normalized)) {
+        return normalized;
+      }
+      return undefined;
+  }
+}
+
+/**
+ * Sanitizes and validates a candidate hero dish string, stripping trailing conversational clauses
+ * and rejecting non-food sentiment phrases (e.g. "i've had in a while", "best food ever").
+ */
+export function sanitizeHeroDish(
+  candidate?: string | null,
+): string | undefined {
+  if (!candidate) return undefined;
+
+  const cleaned = candidate
+    .trim()
+    // Remove leading/trailing quotes and punctuation
+    .replace(/^["'“‘\s]+|["'”’\s]+$/g, '')
+    // Strip leading articles and superlatives ("the", "a", "an", "best", "our", "their")
+    .replace(/^(?:the|a|an|our|their|best)\s+/i, '')
+    // Strip trailing conversational relative clauses ("I've had in a while", "we ever had", "in my life", "in NYC")
+    .replace(
+      /(?:\s+(?:i've|we've|you've|i have|we have|they|i|we)\s+(?:had|eaten|tried|tasted|experienced|seen|ordered).*)$/i,
+      '',
+    )
+    .replace(
+      /(?:\s+in\s+(?:a\s+while|my\s+life|the\s+city|the\s+world|town|nyc|years|recent\s+memory).*)$/i,
+      '',
+    )
+    .replace(
+      /(?:\s+(?:ever|so\s+far|hands\s+down|to\s+die\s+for|on\s+earth).*)$/i,
+      '',
+    )
+    .trim();
+
+  // If candidate is too short or too long
+  if (cleaned.length < 3 || cleaned.length > 45) {
+    return undefined;
+  }
+
+  const lower = cleaned.toLowerCase();
+
+  // Reject conversational pronouns, verbs, and generic non-dish junk
+  const invalidPhrases = [
+    /^i've\b/,
+    /^we've\b/,
+    /^you've\b/,
+    /^it's\b/,
+    /^there's\b/,
+    /^had\b/,
+    /^have\b/,
+    /^was\b/,
+    /^is\b/,
+    /^so\s+good\b/,
+    /^must\s+try\b/,
+    /^must\s+order\b/,
+    /^best\b/,
+    /^in\s+a\s+while\b/,
+    /\b(?:food|meal|dinner|lunch|breakfast|brunch|service|vibe|vibes|ambiance|atmosphere|experience|place|spot|restaurant)\b/,
+    /^everything\b/,
+    /^something\b/,
+    /^nothing\b/,
+    /^one\s+of\s+the\b/,
+    /^all\s+the\s+dishes\b/,
+  ];
+
+  for (const pattern of invalidPhrases) {
+    if (pattern.test(lower)) {
+      return undefined;
+    }
+  }
+
+  return cleaned;
+}
+
+/**
  * Extracts a community favorite dish from editorial summaries or review excerpts (Tier 2 Fallback).
  */
 export function extractCommunityDishFromReviews(
@@ -163,15 +283,12 @@ export function extractCommunityDishFromReviews(
 ): string | undefined {
   if (editorialSummary) {
     const dishMatch = editorialSummary.match(
-      /(?:famous for|known for|signature|must-try|popular for|serves)\s+([A-Za-z\s'-]{4,40}?)(?:\.|,|\band\b|$)/i,
+      /(?:famous for(?: their| the)?|known for(?: their| the)?|signature|must-try|popular for|serves)\s+([A-Za-z\s'-]{3,40}?)(?:\.|,|\band\b|;|$)/i,
     );
     if (dishMatch && dishMatch[1]) {
-      const candidate = dishMatch[1].trim();
-      if (
-        !candidate.toLowerCase().includes('good food') &&
-        candidate.length < 40
-      ) {
-        return candidate;
+      const sanitized = sanitizeHeroDish(dishMatch[1]);
+      if (sanitized) {
+        return sanitized;
       }
     }
   }
@@ -182,21 +299,16 @@ export function extractCommunityDishFromReviews(
       if (!content) continue;
 
       const patterns = [
-        /(?:must order(?: the)?|definitely get(?: the)?|highlight was(?: the)?|best)\s+([A-Za-z\s'-]{4,35})(?:\.|!|,|before|and|$)/i,
-        /(?:favorite dish was(?: the)?|unreal|incredible)\s+([A-Za-z\s'-]{4,35})(?:\.|!|,|before|and|$)/i,
+        /(?:must order(?: the)?|definitely get(?: the)?|highlight was(?: the)?|signature dish is(?: the)?|favorite dish is(?: the)?|favorite dish was(?: the)?)\s+([A-Za-z\s'-]{3,35})(?:\.|!|,|;|\bbefore\b|\band\b|$)/i,
+        /(?:ordered the|tried the|got the)\s+([A-Za-z\s'-]{3,30})(?:\.|!|,|;|\band\b|\bwhich\b|\bwhich was\b)/i,
       ];
 
       for (const pattern of patterns) {
         const match = content.match(pattern);
         if (match && match[1]) {
-          const candidate = match[1].trim();
-          if (
-            !candidate.toLowerCase().includes('service') &&
-            !candidate.toLowerCase().includes('place') &&
-            !candidate.toLowerCase().includes('vibe') &&
-            candidate.length < 35
-          ) {
-            return candidate;
+          const sanitized = sanitizeHeroDish(match[1]);
+          if (sanitized) {
+            return sanitized;
           }
         }
       }
@@ -323,7 +435,7 @@ export class PlacesService {
               websiteUrl: place.websiteUri,
               rating: place.rating,
               userRatingCount: place.userRatingCount,
-              priceLevel: place.priceLevel,
+              priceLevel: formatPriceLevel(place.priceLevel),
               photoUrl,
               regularOpeningHours,
               editorialSummary,

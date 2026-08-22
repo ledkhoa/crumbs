@@ -8,7 +8,7 @@ export default function InboxScreen() {
       <View style={styles.content}>
         <Text style={styles.title}>Inbox</Text>
         <Text style={styles.subtitle}>
-          Newly ingested spots from Instagram and TikTok awaiting review.
+          Newly ingested crumbs from Instagram and TikTok awaiting review.
         </Text>
       </View>
     </SafeAreaView>

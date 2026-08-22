@@ -22,6 +22,16 @@ Consult [`mobile/DESIGN.md`](./DESIGN.md) for all design system guidelines, UI t
 - Keep screens thin; extract business logic into `src/hooks/` or `src/utils/`.
 - Use `@/` path alias for all imports (`@/components/...`, `@/theme/...`, `@/utils/...`, etc.).
 
+## App Terminology Discipline (Single Source of Truth)
+
+**All user-facing copy, labels, components, and placeholders must strictly conform to [`docs/app_terminology.md`](../docs/app_terminology.md)**:
+
+1. **Crumbs (NOT "spots")**: A saved dining establishment or food bookmark is strictly a **crumb** (plural: **crumbs**). Never use "spot" or "spots".
+2. **Guides**: A curated collection of crumbs is a **guide** (plural: **guides**).
+3. **Cravings Map / Crumb Trail**: The interactive map view.
+4. **Hero Dish**: Standout signature dish extracted from video/caption.
+5. **Vibe Tags**: Atmospheric tags (e.g. "Date Night", "Dimly Lit").
+
 ## Keyboard Management Protocol (react-native-keyboard-controller)
 
 **All keyboard handling across the mobile app must use `react-native-keyboard-controller`**:

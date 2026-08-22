@@ -2,7 +2,6 @@ import type { User, Session } from '../db/schemas/auth.table';
 
 export type IngestWorkflowParams = {
   url: string;
-  guideId?: string;
   userId?: string;
 };
 

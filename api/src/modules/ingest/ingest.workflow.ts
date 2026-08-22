@@ -24,7 +24,6 @@ import {
   Restaurants,
   PostRestaurants,
   Crumbs,
-  GuideCrumbs,
 } from '../../core/db/schemas';
 
 interface ApifyWebhookPayload {
@@ -41,7 +40,7 @@ export class IngestWorkflow extends WorkflowEntrypoint<
     event: WorkflowEvent<IngestWorkflowParams>,
     step: WorkflowStep,
   ): Promise<ProcessedCrumbPayload> {
-    const { url, guideId, userId } = event.payload;
+    const { url, userId } = event.payload;
     const workflowStartTime = performance.now();
 
     console.log(
@@ -49,7 +48,6 @@ export class IngestWorkflow extends WorkflowEntrypoint<
     );
     console.log(`🍞 [IngestWorkflow] NEW INGESTION TRIGGERED`);
     console.log(`🔗 URL:       ${url}`);
-    console.log(`🗺️ Guide ID:  ${guideId || 'None (Inbox)'}`);
     console.log(`👤 User ID:   ${userId || 'Anonymous'}`);
     console.log(`⏰ Started:   ${new Date().toISOString()}`);
     console.log(
@@ -413,7 +411,6 @@ export class IngestWorkflow extends WorkflowEntrypoint<
 
         const result: ProcessedCrumbPayload = {
           url,
-          guideId: guideId ?? null,
           userId: userId ?? null,
           platform: scrapedData?.platform ?? 'unknown',
           postType: scrapedData?.postType ?? 'unknown',
@@ -583,13 +580,13 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                   });
 
                 if (userId) {
-                  const [savedCrumb] = await db
+                  await db
                     .insert(Crumbs)
                     .values({
                       userId,
                       restaurantId: restaurantRecord.id,
                       sourcePostId: savedPost.id,
-                      status: guideId ? 'saved' : 'inbox',
+                      status: 'inbox',
                     })
                     .onConflictDoUpdate({
                       target: [Crumbs.userId, Crumbs.restaurantId],
@@ -597,19 +594,7 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                         sourcePostId: savedPost.id,
                         updatedAt: new Date(),
                       },
-                    })
-                    .returning();
-
-                  if (guideId && savedCrumb) {
-                    await db
-                      .insert(GuideCrumbs)
-                      .values({
-                        guideId,
-                        crumbId: savedCrumb.id,
-                        orderIndex: 0,
-                      })
-                      .onConflictDoNothing();
-                  }
+                    });
                 }
               }
             }
@@ -654,10 +639,10 @@ export class IngestWorkflow extends WorkflowEntrypoint<
         `🔔 [Step 6/6] INGESTION COMPLETE: Dispatching user notifications`,
       );
       console.log(`👤 User ID:     ${userId || 'Anonymous'}`);
-      console.log(`🍽️ Spots Count: ${finalizedCrumb.restaurants.length}`);
-      console.log(`🗺️ Destination: ${guideId ? `Guide ${guideId}` : 'Inbox'}`);
+      console.log(`🍽️ Crumbs Count: ${finalizedCrumb.restaurants.length}`);
+      console.log(`🗺️ Destination: Inbox`);
       console.log(
-        `💡 TODO Channels:\n   1. APNs Push Notification (Remote banner: "Saved ${finalizedCrumb.restaurants.length} spots to ${guideId ? 'Guide' : 'Inbox'}")\n   2. Cloudflare Durable Object WebSocket broadcast (Live haptic UI update if app is open)\n   3. Persistent DB Inbox state (Queried on next app launch)`,
+        `💡 TODO Channels:\n   1. APNs Push Notification (Remote banner: "Saved ${finalizedCrumb.restaurants.length} crumbs to Inbox")\n   2. Cloudflare Durable Object WebSocket broadcast (Live haptic UI update if app is open)\n   3. Persistent DB Inbox state (Queried on next app launch)`,
       );
       console.log(
         `===============================================================\n`,

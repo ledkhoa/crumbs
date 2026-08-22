@@ -7,11 +7,10 @@ import type { ProcessedCrumbPayload } from './ingest.types';
 import { requireAuth } from '../../core/auth/auth.middleware';
 import { parseSocialUrl } from './url.utils';
 import { getDb } from '../../core/db/client';
-import { Posts, Crumbs, GuideCrumbs } from '../../core/db/schemas';
+import { Posts, Crumbs } from '../../core/db/schemas';
 
 const ingestSchema = z.object({
   url: z.url('Must be a valid social media URL (Instagram or TikTok)'),
-  guideId: z.string().optional(),
 });
 
 export const ingestRouter = new Hono<AppEnv>()
@@ -21,7 +20,7 @@ export const ingestRouter = new Hono<AppEnv>()
    * Accepts a social media link and triggers ingestion.
    */
   .post('/', zValidator('json', ingestSchema), async (c) => {
-    const { url, guideId } = c.req.valid('json');
+    const { url } = c.req.valid('json');
     const user = c.get('user');
 
     // Fast-Path Cache Check
@@ -50,16 +49,8 @@ export const ingestRouter = new Hono<AppEnv>()
               `⚡ [Fast-Path Cache Hit] Post ${platformPostId} already in DB (${existingPost.classification}). Returning instant cached result...`,
             );
 
-            // Link User Crumbs (if restaurants were found)
-            const linkedCrumbs: Array<{
-              id: string;
-              userId: string;
-              restaurantId: string;
-              sourcePostId: string | null;
-              status: string;
-              userNotes: string | null;
-              userHeroDishOverride: string | null;
-            }> = [];
+            // Map created or updated crumb records to their corresponding restaurant
+            const crumbMap = new Map<string, string>();
 
             if (
               existingPost.postRestaurants &&
@@ -72,7 +63,7 @@ export const ingestRouter = new Hono<AppEnv>()
                     userId: user.id,
                     restaurantId: pr.restaurantId,
                     sourcePostId: existingPost.id,
-                    status: guideId ? 'saved' : 'inbox',
+                    status: 'inbox',
                   })
                   .onConflictDoUpdate({
                     target: [Crumbs.userId, Crumbs.restaurantId],
@@ -84,81 +75,49 @@ export const ingestRouter = new Hono<AppEnv>()
                   .returning();
 
                 if (savedCrumb) {
-                  linkedCrumbs.push({
-                    id: savedCrumb.id,
-                    userId: savedCrumb.userId,
-                    restaurantId: savedCrumb.restaurantId,
-                    sourcePostId: savedCrumb.sourcePostId,
-                    status: savedCrumb.status,
-                    userNotes: savedCrumb.userNotes,
-                    userHeroDishOverride: savedCrumb.userHeroDishOverride,
-                  });
-
-                  if (guideId) {
-                    await db
-                      .insert(GuideCrumbs)
-                      .values({
-                        guideId,
-                        crumbId: savedCrumb.id,
-                        orderIndex: 0,
-                      })
-                      .onConflictDoNothing();
-                  }
+                  crumbMap.set(pr.restaurantId, savedCrumb.id);
                 }
               }
             }
 
-            // Structured per-table response payload
-            const postData = {
+            // Streamlined post summary
+            const postSummary = {
               id: existingPost.id,
-              platform: existingPost.platform,
-              postType: existingPost.postType,
-              platformPostId: existingPost.platformPostId,
               authorUsername: existingPost.authorUsername ?? null,
+              platform: existingPost.platform,
               originalUrl: existingPost.originalUrl,
               caption: existingPost.caption ?? '',
-              locationName: existingPost.locationName ?? null,
-              mediaUrls: existingPost.mediaUrls ?? [],
-              mediaSnapshot: existingPost.mediaSnapshot ?? null,
               classification: existingPost.classification,
               summary: existingPost.summary ?? '',
+              mediaSnapshot: existingPost.mediaSnapshot ?? null,
             };
 
-            const restaurantsData = (existingPost.postRestaurants || []).map(
+            // Streamlined restaurant summaries with resolved crumbId
+            const restaurantsSummary = (existingPost.postRestaurants || []).map(
               (pr) => ({
                 id: pr.restaurant.id,
-                googlePlaceId: pr.restaurant.googlePlaceId ?? null,
+                crumbId: crumbMap.get(pr.restaurantId) || undefined,
                 name: pr.restaurant.name,
                 formattedAddress: pr.restaurant.formattedAddress ?? null,
+                neighborhood: pr.restaurant.neighborhood ?? null,
                 city: pr.restaurant.city ?? null,
                 state: pr.restaurant.state ?? null,
                 country: pr.restaurant.country ?? null,
-                latitude: pr.restaurant.latitude ?? null,
-                longitude: pr.restaurant.longitude ?? null,
-                cuisine: pr.restaurant.cuisine ?? null,
                 rating: pr.restaurant.rating
                   ? Number(pr.restaurant.rating)
                   : null,
-                userRatingCount: pr.restaurant.userRatingCount ?? null,
                 priceLevel: pr.restaurant.priceLevel ?? null,
+                photoUrl: pr.restaurant.photoUrl ?? null,
+                heroDish:
+                  pr.heroDish || pr.restaurant.communityFavoriteDish || null,
+                vibeAnchor:
+                  pr.vibeAnchor || pr.restaurant.editorialSummary || null,
+                vibeTags: pr.vibeTags ?? [],
+                walkInTips: pr.walkInTips ?? null,
                 mapsUrl: pr.restaurant.mapsUrl ?? null,
                 websiteUrl: pr.restaurant.websiteUrl ?? null,
-                photoUrl: pr.restaurant.photoUrl ?? null,
-                editorialSummary: pr.restaurant.editorialSummary ?? null,
-                communityFavoriteDish:
-                  pr.restaurant.communityFavoriteDish ?? null,
                 reservationUrl: pr.restaurant.reservationUrl ?? null,
                 reservationProvider: pr.restaurant.reservationProvider ?? null,
-                regularOpeningHours: pr.restaurant.regularOpeningHours ?? null,
-                postAttribution: {
-                  heroDish: pr.heroDish ?? null,
-                  vibeAnchor: pr.vibeAnchor ?? null,
-                  courseCategory: pr.courseCategory ?? null,
-                  walkInTips: pr.walkInTips ?? null,
-                  vibeTags: pr.vibeTags ?? [],
-                  recommendedDishes: pr.recommendedDishes ?? [],
-                  creatorNotes: pr.creatorNotes ?? null,
-                },
               }),
             );
 
@@ -168,16 +127,12 @@ export const ingestRouter = new Hono<AppEnv>()
                 workflowId: `cached_${existingPost.id}`,
                 status: 'complete',
                 cached: true,
-                data: {
-                  post: postData,
-                  restaurants: restaurantsData,
-                  crumbs: linkedCrumbs,
-                },
+                post: postSummary,
+                restaurants: restaurantsSummary,
                 message:
-                  existingPost.postRestaurants &&
-                  existingPost.postRestaurants.length > 0
-                    ? 'Instant cache hit: Post already processed and linked to user'
-                    : 'Instant cache hit: Post already analyzed (no food spots found)',
+                  restaurantsSummary.length > 0
+                    ? `Found ${restaurantsSummary.length} ${restaurantsSummary.length === 1 ? 'crumb' : 'crumbs'} in Crumbs community!`
+                    : 'Post analyzed.',
               },
               200,
             );
@@ -196,7 +151,6 @@ export const ingestRouter = new Hono<AppEnv>()
       const instance = await c.env.INGEST_WORKFLOW.create({
         params: {
           url,
-          guideId,
           userId: user.id,
         },
       });
@@ -230,6 +184,90 @@ export const ingestRouter = new Hono<AppEnv>()
    */
   .get('/:instanceId', async (c) => {
     const instanceId = c.req.param('instanceId');
+
+    // Handle cached instance IDs directly without querying Cloudflare Workflow engine
+    if (instanceId.startsWith('cached_')) {
+      const postId = instanceId.replace(/^cached_/, '');
+      if (c.env.DATABASE_URL) {
+        const db = getDb(c.env.DATABASE_URL);
+        const post = await db.query.Posts.findFirst({
+          where: eq(Posts.id, postId),
+          with: {
+            postRestaurants: {
+              with: {
+                restaurant: true,
+              },
+            },
+          },
+        });
+
+        if (post) {
+          return c.json({
+            success: true,
+            workflowId: instanceId,
+            status: 'complete',
+            output: {
+              url: post.originalUrl,
+              userId: null,
+              platform: post.platform,
+              postType: post.postType,
+              platformPostId: post.platformPostId,
+              authorUsername: post.authorUsername,
+              caption: post.caption || '',
+              locationName: post.locationName,
+              mediaUrls: post.mediaUrls || [],
+              mediaSnapshot: {
+                originalUrl: post.mediaSnapshot,
+                r2Key: null,
+                status: 'cached' as const,
+              },
+              classification: post.classification,
+              summary: post.summary || '',
+              restaurants: (post.postRestaurants || []).map((pr) => ({
+                ...pr.restaurant,
+                heroDish:
+                  pr.heroDish ||
+                  pr.restaurant.communityFavoriteDish ||
+                  undefined,
+                vibeAnchor:
+                  pr.vibeAnchor || pr.restaurant.editorialSummary || undefined,
+                vibeTags: pr.vibeTags || [],
+                recommendedDishes: pr.recommendedDishes || [],
+                walkInTips: pr.walkInTips || undefined,
+                placeDetails: {
+                  placeId: pr.restaurant.googlePlaceId || undefined,
+                  name: pr.restaurant.name,
+                  formattedAddress: pr.restaurant.formattedAddress || undefined,
+                  neighborhood: pr.restaurant.neighborhood || undefined,
+                  city: pr.restaurant.city || undefined,
+                  state: pr.restaurant.state || undefined,
+                  country: pr.restaurant.country || undefined,
+                  rating: pr.restaurant.rating
+                    ? Number(pr.restaurant.rating)
+                    : undefined,
+                  priceLevel: pr.restaurant.priceLevel || undefined,
+                  photoUrl: pr.restaurant.photoUrl || undefined,
+                  mapsUrl: pr.restaurant.mapsUrl || undefined,
+                  websiteUrl: pr.restaurant.websiteUrl || undefined,
+                  reservationUrl: pr.restaurant.reservationUrl || undefined,
+                  // SAFETY: Database stores validated reservation provider enums
+                  reservationProvider: pr.restaurant.reservationProvider as
+                    | 'resy'
+                    | 'opentable'
+                    | 'sevenrooms'
+                    | 'tock'
+                    | 'custom'
+                    | undefined,
+                },
+              })),
+              processedAt:
+                post.updatedAt?.toISOString() || new Date().toISOString(),
+            },
+            error: null,
+          });
+        }
+      }
+    }
 
     try {
       const instance = await c.env.INGEST_WORKFLOW.get(instanceId);

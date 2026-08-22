@@ -1,6 +1,7 @@
 import { generateText, Output } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
+import { sanitizeHeroDish } from './places.service';
 import type { ScrapedPostData } from './scraper.service';
 
 export const extractedRestaurantSchema = z.object({
@@ -24,7 +25,7 @@ export const extractedRestaurantSchema = z.object({
     .string()
     .optional()
     .describe(
-      'The single primary, signature, viral, or must-order dish highlighted for this spot (e.g. "Truffle Cacio e Pepe", "Pistachio Escargot Croissant"). Null/empty if no specific dish is featured.',
+      'The single primary, signature, viral, or must-order dish highlighted for this spot (e.g. "Truffle Cacio e Pepe", "Pistachio Escargot Croissant"). Must be a specific culinary menu item, NOT conversational text (NEVER "i\'ve had in a while", "best food", "so good"). Null/empty if no specific dish is featured.',
     ),
   vibeAnchor: z
     .string()
@@ -180,7 +181,17 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
     }
 
     const systemPrompt =
-      "You are an expert food, vibe, and travel curator for Crumbs ('Spotify for Cravings'). Extract structured restaurant recommendations with extreme taste and precision.\n\nCRITICAL EXTRACTION GUIDELINES:\n1. HERO DISH: Extract the single most celebrated, viral, or signature dish mentioned or shown (e.g. 'Spicy Rigatoni Vodka', 'Pistachio Croissant'). If no specific item is called out, leave heroDish empty.\n2. VIBE ANCHOR: Craft a vivid, sensory 3-to-8 word mood description that captures the unique atmosphere (e.g. 'Low-lit vinyl listening bar with orange wine', 'Charming sunlit courtyard with handmade pasta'). Avoid generic terms like 'Good food'.\n3. VIBE TAGS: Always synthesize 3 to 6 high-intent search filter tags representing the mood, crowd, aesthetic, and dining occasion (e.g. ['Date Night', 'Dimly Lit', 'Natural Wine', 'Vinyl Bar', 'Outdoor Patio', 'Solo Dining', 'Late Night', 'Aesthetic Cafe', 'Scenic Views', 'Hidden Gem']). Never leave vibeTags empty.\n4. COURSE CATEGORY: Classify the meal role: 'aperitif' (drinks + light snacks), 'main' (full meal), 'dessert' (bakeries, ice cream, sweets), 'cafe_bakery' (morning coffee, pastries), 'cocktail_bar' (late night drinks), or 'snack' (quick bites/street food).\n5. WALK-IN & RESERVATION TIPS: Extract any reservation windows, line-up warnings, or walk-in tricks (e.g. 'Book Resy 30 days ahead'). If Resy, OpenTable, SevenRooms, or Tock is mentioned, identify the reservationProvider.\n6. MULTI-SPOT POSTS: When carousel slides or numbered lists appear, thoroughly inspect every slide image and graphic text to extract each distinct restaurant.";
+      "You are an expert food, vibe, and travel curator for Crumbs ('Spotify for Cravings'). Extract structured restaurant recommendations with extreme taste and precision.\n\nCRITICAL EXTRACTION GUIDELINES:\n1. HERO DISH: Extract the single most celebrated, viral, or must-order food/drink item mentioned or shown (e.g. 'Spicy Rigatoni Vodka', 'Pistachio Croissant', 'Truffle Burger').\n- MUST be a specific culinary menu item name.\n- NEVER output conversational fragments, sentiment phrases, or review snippets (NEVER output 'i\\'ve had in a while', 'best food ever', 'a must try', 'the vibes', 'so good', 'everything'). If no specific dish is featured, leave heroDish empty/null.\n2. VIBE ANCHOR: Craft a vivid, sensory 3-to-8 word mood description that captures the unique atmosphere (e.g. 'Low-lit vinyl listening bar with orange wine', 'Charming sunlit courtyard with handmade pasta'). Avoid generic terms like 'Good food'.\n3. VIBE TAGS: Always synthesize 3 to 6 high-intent search filter tags representing the mood, crowd, aesthetic, and dining occasion (e.g. ['Date Night', 'Dimly Lit', 'Natural Wine', 'Vinyl Bar', 'Outdoor Patio', 'Solo Dining', 'Late Night', 'Aesthetic Cafe', 'Scenic Views', 'Hidden Gem']). Never leave vibeTags empty.\n4. COURSE CATEGORY: Classify the meal role: 'aperitif' (drinks + light snacks), 'main' (full meal), 'dessert' (bakeries, ice cream, sweets), 'cafe_bakery' (morning coffee, pastries), 'cocktail_bar' (late night drinks), or 'snack' (quick bites/street food).\n5. WALK-IN & RESERVATION TIPS: Extract any reservation windows, line-up warnings, or walk-in tricks (e.g. 'Book Resy 30 days ahead'). If Resy, OpenTable, SevenRooms, or Tock is mentioned, identify the reservationProvider.\n6. MULTI-SPOT POSTS: When carousel slides or numbered lists appear, thoroughly inspect every slide image and graphic text to extract each distinct restaurant.";
+
+    const sanitizeResult = (
+      result: PostExtractionResult,
+    ): PostExtractionResult => ({
+      ...result,
+      restaurants: result.restaurants.map((r) => ({
+        ...r,
+        heroDish: sanitizeHeroDish(r.heroDish),
+      })),
+    });
 
     try {
       // First attempt: with loaded images (if any succeeded)
@@ -200,7 +211,7 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
         throw new AIError('AI model returned an empty output response.');
       }
 
-      return output;
+      return sanitizeResult(output);
     } catch (err: unknown) {
       // If the multimodal call failed and images were attached, fall back immediately to text-only
       const hasImagesAttached = content.length > 1;
@@ -222,7 +233,7 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
           });
 
           if (fallbackOutput) {
-            return fallbackOutput;
+            return sanitizeResult(fallbackOutput);
           }
         } catch (fallbackErr) {
           console.error(

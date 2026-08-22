@@ -160,9 +160,9 @@ export function GuideCard({ guide, onPress }: GuideCardProps) {
           <Text style={styles.emojiText}>{guide.emojiIcon || '🗺️'}</Text>
         </View>
 
-        {/* Spot Count Pill */}
-        <View style={styles.spotCountPill}>
-          <Text style={styles.spotCountText}>
+        {/* Crumb Count Pill */}
+        <View style={styles.crumbCountPill}>
+          <Text style={styles.crumbCountText}>
             {guide.crumbCount} {guide.crumbCount === 1 ? 'crumb' : 'crumbs'}
           </Text>
         </View>
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   emojiText: {
     fontSize: 16,
   },
-  spotCountPill: {
+  crumbCountPill: {
     position: 'absolute',
     top: Theme.spacing.sm,
     right: Theme.spacing.sm,
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  spotCountText: {
+  crumbCountText: {
     fontSize: 12,
     fontWeight: '600',
     color: Theme.colors.text,
