@@ -17,6 +17,11 @@ describe('formatPriceLevel', () => {
     expect(formatPriceLevel('moderate')).toBe('$$');
     expect(formatPriceLevel('expensive')).toBe('$$$');
     expect(formatPriceLevel('very_expensive')).toBe('$$$$');
+    expect(formatPriceLevel('price level very expensive')).toBe('$$$$');
+    expect(formatPriceLevel('PRICE LEVEL VERY EXPENSIVE')).toBe('$$$$');
+    expect(formatPriceLevel('price level moderate')).toBe('$$');
+    expect(formatPriceLevel('PRICE LEVEL MODERATE')).toBe('$$');
+    expect(formatPriceLevel('price-level-expensive')).toBe('$$$');
   });
 
   it('should format numeric levels', () => {

@@ -129,11 +129,6 @@ export function IngestionProgressSteps({
                   >
                     {step.label}
                   </Text>
-                  {isActive && (
-                    <View style={styles.activeIndicatorBadge}>
-                      <Text style={styles.activeIndicatorDots}>•••</Text>
-                    </View>
-                  )}
                 </View>
                 {step.sublabel && (
                   <Text

@@ -10,7 +10,13 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { useShareIntent } from 'expo-share-intent';
 import { extractSocialUrl, isValidSocialUrl } from '@/utils/social-url';
 import { IngestionOverlaySheet } from '@/components/ingestion/IngestionOverlaySheet';
+import { BackgroundIngestionPoller } from '@/components/ingestion/BackgroundIngestionPoller';
+import { InAppToastBanner } from '@/components/inbox/InAppToastBanner';
+import { QuickAddToGuideModal } from '@/components/ingestion/QuickAddToGuideModal';
+import { useInboxStore } from '@/store/inbox';
+import { useAddCrumbToGuideMutation } from '@/hooks/useGuides';
 import { haptics } from '@/utils/haptics';
+import type { UnifiedRestaurantSpot } from '@/types/ingest';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,6 +46,64 @@ function AppNavigator() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
+  );
+}
+
+function GlobalOverlays() {
+  const router = useRouter();
+  const activeToast = useInboxStore((state) => state.activeToast);
+  const hideToast = useInboxStore((state) => state.hideToast);
+  const addCrumbMutation = useAddCrumbToGuideMutation();
+
+  const [toastGuideTarget, setToastGuideTarget] =
+    useState<UnifiedRestaurantSpot | null>(null);
+
+  const handleToastAddToGuide = (restaurant: UnifiedRestaurantSpot) => {
+    setToastGuideTarget(restaurant);
+  };
+
+  const handleToastViewInInbox = (_restaurant: UnifiedRestaurantSpot) => {
+    router.push('/(tabs)/inbox');
+  };
+
+  const handleGuideSelected = async (guideId: string) => {
+    if (toastGuideTarget) {
+      const crumbId = toastGuideTarget.crumbId || toastGuideTarget.id;
+      if (crumbId) {
+        try {
+          await addCrumbMutation.mutateAsync({
+            guideId,
+            crumbIds: [crumbId],
+          });
+        } catch (err) {
+          console.warn('[RootLayout] Failed to add toast crumb to guide:', err);
+        }
+      }
+    }
+    setToastGuideTarget(null);
+  };
+
+  return (
+    <>
+      <BackgroundIngestionPoller />
+
+      <InAppToastBanner
+        toast={activeToast}
+        onDismiss={hideToast}
+        onAddToGuide={handleToastAddToGuide}
+        onViewInInbox={handleToastViewInInbox}
+      />
+
+      {toastGuideTarget && (
+        <QuickAddToGuideModal
+          visible={Boolean(toastGuideTarget)}
+          restaurantName={toastGuideTarget.name}
+          crumbId={toastGuideTarget.crumbId || toastGuideTarget.id}
+          onClose={() => setToastGuideTarget(null)}
+          onGuideSelected={handleGuideSelected}
+        />
+      )}
+    </>
   );
 }
 
@@ -84,6 +148,7 @@ export default function RootLayout() {
     <KeyboardProvider>
       <QueryClientProvider client={queryClient}>
         <AppNavigator />
+        <GlobalOverlays />
         {overlayState.visible && (
           <IngestionOverlaySheet
             visible={overlayState.visible}
