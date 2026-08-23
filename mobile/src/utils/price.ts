@@ -14,41 +14,44 @@ export function formatPriceLevel(
 ): string | null {
   if (priceLevel == null || priceLevel === '') return null;
 
-  const normalized = String(priceLevel).trim().toUpperCase();
+  // Normalize: trim, uppercase, convert spaces/hyphens to underscores
+  const normalized = String(priceLevel)
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_');
 
-  switch (normalized) {
-    case 'PRICE_LEVEL_FREE':
+  // Strip leading prefixes like PRICE_LEVEL_ or PRICE_ or LEVEL_
+  const core = normalized.replace(/^(?:PRICE_LEVEL_|PRICE_|LEVEL_)/, '');
+
+  switch (core) {
     case 'FREE':
     case '0':
       return 'Free';
 
-    case 'PRICE_LEVEL_INEXPENSIVE':
     case 'INEXPENSIVE':
     case 'CHEAP':
     case '1':
     case '$':
       return '$';
 
-    case 'PRICE_LEVEL_MODERATE':
     case 'MODERATE':
     case 'MEDIUM':
     case '2':
     case '$$':
       return '$$';
 
-    case 'PRICE_LEVEL_EXPENSIVE':
     case 'EXPENSIVE':
     case '3':
     case '$$$':
       return '$$$';
 
-    case 'PRICE_LEVEL_VERY_EXPENSIVE':
     case 'VERY_EXPENSIVE':
+    case 'VERYEXPENSIVE':
+    case 'LUXURY':
     case '4':
     case '$$$$':
       return '$$$$';
 
-    case 'PRICE_LEVEL_UNSPECIFIED':
     case 'UNSPECIFIED':
     case 'UNKNOWN':
     case 'NULL':

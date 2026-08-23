@@ -628,9 +628,8 @@ export class IngestWorkflow extends WorkflowEntrypoint<
       },
     );
 
-    // Step 6: User Notification & Real-Time Sync Dispatch (Placeholder / To-Do)
-    // Dispatches APNs push notification (if app is in background) or triggers
-    // live WebSocket / Cloudflare Durable Object sync (if app is actively open).
+    // Step 6: User Push Notification Dispatch (To-Do / Future Channel)
+    // Dispatches an Expo Push Notification / APNs notification when background ingestion completes.
     await step.do('notify-user-completion', async () => {
       console.log(
         `\n🔔 ===============================================================`,
@@ -638,21 +637,21 @@ export class IngestWorkflow extends WorkflowEntrypoint<
       console.log(
         `🔔 [Step 6/6] INGESTION COMPLETE: Dispatching user notifications`,
       );
-      console.log(`👤 User ID:     ${userId || 'Anonymous'}`);
+      console.log(`👤 User ID:      ${userId || 'Anonymous'}`);
       console.log(`🍽️ Crumbs Count: ${finalizedCrumb.restaurants.length}`);
-      console.log(`🗺️ Destination: Inbox`);
+      console.log(`🗺️ Destination:  Inbox`);
       console.log(
-        `💡 TODO Channels:\n   1. APNs Push Notification (Remote banner: "Saved ${finalizedCrumb.restaurants.length} crumbs to Inbox")\n   2. Cloudflare Durable Object WebSocket broadcast (Live haptic UI update if app is open)\n   3. Persistent DB Inbox state (Queried on next app launch)`,
+        `💡 Push Notification Dispatch:\n   • Channel: Expo Push Notifications API (APNs / FCM)\n   • Title: "🌿 Crumb Saved to Inbox!"\n   • Body: "${finalizedCrumb.restaurants[0]?.name || 'New Crumb'} (${finalizedCrumb.restaurants[0]?.heroDish || 'Must-Order Dish'})"\n   • Data: { crumbId: "...", url: "crumbs://inbox" }`,
       );
       console.log(
         `===============================================================\n`,
       );
 
       return {
-        notified: true,
+        notified: false,
         userId: userId ?? null,
-        spotsSaved: finalizedCrumb.restaurants.length,
-        channels: ['apns_pending_ui_setup', 'durable_object_pending_ui_setup'],
+        crumbsSaved: finalizedCrumb.restaurants.length,
+        channels: ['expo_push_pending_setup'],
         timestamp: new Date().toISOString(),
       };
     });

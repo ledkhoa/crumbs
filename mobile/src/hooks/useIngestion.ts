@@ -33,6 +33,7 @@ export interface UseIngestionReturn {
   activeStepIndex: number;
   result: UnifiedIngestionResult | null;
   error: Error | null;
+  workflowId: string | null;
   isPolling: boolean;
   startIngestion: (url: string) => Promise<void>;
   cancelIngestion: () => void;
@@ -67,7 +68,7 @@ const INITIAL_STEPS: IngestionStep[] = [
 ];
 
 const POLLING_INTERVAL_MS = 1200;
-const MAX_POLLING_DURATION_MS = 45000;
+const MAX_POLLING_DURATION_MS = 120000;
 
 export function useIngestion(
   options: UseIngestionOptions = {},
@@ -80,6 +81,7 @@ export function useIngestion(
   const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
   const [result, setResult] = useState<UnifiedIngestionResult | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const [workflowId, setWorkflowId] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState<boolean>(false);
 
   const lastUrlRef = useRef<string>('');
@@ -150,7 +152,7 @@ export function useIngestion(
   );
 
   const pollWorkflowStatus = useCallback(
-    async (workflowId: string, sourceUrl: string) => {
+    async (wfId: string, sourceUrl: string) => {
       if (cancelledRef.current) return;
 
       const elapsed = Date.now() - startTimeRef.current;
@@ -169,7 +171,7 @@ export function useIngestion(
 
       try {
         const res = await apiClient.ingest[':instanceId'].$get({
-          param: { instanceId: workflowId },
+          param: { instanceId: wfId },
         });
 
         if (cancelledRef.current) return;
@@ -265,6 +267,7 @@ export function useIngestion(
       lastUrlRef.current = url;
       setError(null);
       setResult(null);
+      setWorkflowId(null);
       setPhase('starting');
       setSteps(INITIAL_STEPS);
       setActiveStepIndex(0);
@@ -355,6 +358,8 @@ export function useIngestion(
         }
 
         // 2. NORMAL ASYNC WORKFLOW QUEUED
+        const wfId = data.workflowId;
+        setWorkflowId(wfId);
         setPhase('in_progress');
         setIsPolling(true);
         setStepActive(0); // Step 1: Capturing
@@ -376,13 +381,12 @@ export function useIngestion(
         }, 1400);
 
         // Start periodic polling for Cloudflare Workflow completion
-        const workflowId = data.workflowId;
         pollTimerRef.current = setInterval(() => {
-          pollWorkflowStatus(workflowId, url);
+          pollWorkflowStatus(wfId, url);
         }, POLLING_INTERVAL_MS);
 
         // Trigger immediate first poll check
-        pollWorkflowStatus(workflowId, url);
+        pollWorkflowStatus(wfId, url);
       } catch (err: unknown) {
         if (cancelledRef.current) return;
         clearAllTimers();
@@ -425,6 +429,7 @@ export function useIngestion(
     activeStepIndex,
     result,
     error,
+    workflowId,
     isPolling,
     startIngestion,
     cancelIngestion,

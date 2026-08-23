@@ -14,6 +14,7 @@ import { haptics } from '@/utils/haptics';
 import { parseSocialUrl } from '@/utils/social-url';
 import { useIngestion } from '@/hooks/useIngestion';
 import { useAddCrumbToGuideMutation } from '@/hooks/useGuides';
+import { useInboxStore } from '@/store/inbox';
 import { IngestionProgressSteps } from './IngestionProgressSteps';
 import { IngestionCrumbCard } from './IngestionCrumbCard';
 import { CrumbsPickerCarousel } from './CrumbsPickerCarousel';
@@ -59,6 +60,7 @@ export function IngestionOverlaySheet({
     activeStepIndex,
     result,
     error,
+    workflowId,
     startIngestion,
     cancelIngestion,
     retry,
@@ -104,7 +106,9 @@ export function IngestionOverlaySheet({
 
   const handleRunInBackground = () => {
     haptics.tap();
-    // Do not cancel background polling/processing
+    if (workflowId && sourceUrl) {
+      useInboxStore.getState().addBackgroundJob({ workflowId, sourceUrl });
+    }
     onClose();
   };
 
