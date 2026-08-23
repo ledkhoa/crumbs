@@ -8,8 +8,8 @@ This document defines the universal coding principles, mistake logs, and quality
 
 In addition to these global rules, always consult and follow the domain-specific guidelines when working within each package:
 
-* **Backend / Workers API**: [`api/agents.md`](file:///Users/khoa/Documents/crumbs/api/agents.md) — Cloudflare Workers, Hono, Drizzle ORM, BetterAuth, Apify, and AI pipelines.
-* **Mobile App (React Native & Expo)**: [`mobile/AGENTS.md`](file:///Users/khoa/Documents/crumbs/mobile/AGENTS.md) — Expo v57+, Expo Router, Reanimated, and UI standards.
+- **Backend / Workers API**: [`api/agents.md`](file:///Users/khoa/Documents/crumbs/api/agents.md) — Cloudflare Workers, Hono, Drizzle ORM, BetterAuth, Apify, and AI pipelines.
+- **Mobile App (React Native & Expo)**: [`mobile/AGENTS.md`](file:///Users/khoa/Documents/crumbs/mobile/AGENTS.md) — Expo v57+, Expo Router, Reanimated, and UI standards.
 
 ---
 
@@ -30,12 +30,13 @@ In addition to these global rules, always consult and follow the domain-specific
 
 ## Mistakes & Failure Log
 
-| Date       | Mistake / Issue                                                                    | Root Cause & Prevention Rule                                                                                                            |
-| :--------- | :--------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-08-15 | Attempted to auto-run `git commit` without explicit request                         | Never run `git commit` automatically unless the user explicitly asks to commit changes.                                                 |
-| 2026-08-21 | Hardcoded specific third-party library names into product & design docs prematurely | Keep high-level architecture docs platform-agnostic; avoid hardcoding specific npm/third-party package names until docs are provided. |
-| 2026-08-21 | Used RN Modal instead of `@expo/ui` BottomSheet and standard `KeyboardAvoidingView` | Always use `@expo/ui` `BottomSheet` for bottom sheets and `react-native-keyboard-controller` (`KeyboardAwareScrollView`) for all keyboard-managed views. |
-| 2026-08-22 | Used "spot" / "spots" in UI copy instead of canonical product terminology "crumbs" | Always verify UI copy, entity naming, and user-facing text against `docs/app_terminology.md`. Saved dining places are strictly called **crumbs** (never "spots"). |
+| Date       | Mistake / Issue                                                                         | Root Cause & Prevention Rule                                                                                                                                                                                        |
+| :--------- | :-------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-08-15 | Attempted to auto-run `git commit` without explicit request                             | Never run `git commit` automatically unless the user explicitly asks to commit changes.                                                                                                                             |
+| 2026-08-21 | Hardcoded specific third-party library names into product & design docs prematurely     | Keep high-level architecture docs platform-agnostic; avoid hardcoding specific npm/third-party package names until docs are provided.                                                                               |
+| 2026-08-21 | Used RN Modal instead of `@expo/ui` BottomSheet and standard `KeyboardAvoidingView`     | Always use `@expo/ui` `BottomSheet` for bottom sheets and `react-native-keyboard-controller` (`KeyboardAwareScrollView`) for all keyboard-managed views.                                                            |
+| 2026-08-22 | Used "spot" / "spots" in UI copy instead of canonical product terminology "crumbs"      | Always verify UI copy, entity naming, and user-facing text against `docs/app_terminology.md`. Saved dining places are strictly called **crumbs** (never "spots").                                                   |
+| 2026-08-22 | Imported `@react-navigation/native` (`useFocusEffect`) in Expo SDK 57 / Expo Router v57 | As of Expo SDK 56+, Expo Router is incompatible with direct `@react-navigation/native` imports. Always import navigation hooks (`useFocusEffect`, `useRouter`, `useLocalSearchParams`) strictly from `expo-router`. |
 
 ---
 
@@ -43,7 +44,7 @@ In addition to these global rules, always consult and follow the domain-specific
 
 - **App Terminology & Glossary Discipline**:
   - Always verify UI copy, model field names, and user-facing text against [`docs/app_terminology.md`](file:///Users/khoa/Documents/crumbs/docs/app_terminology.md).
-  - Saved dining establishments are strictly called **crumbs** (singular: *crumb*, plural: *crumbs*). Collections are called **guides**. The interactive map is the **Cravings Map** / **Crumb Trail**. Never use "spot" or "spots" in user-facing UI.
+  - Saved dining establishments are strictly called **crumbs** (singular: _crumb_, plural: _crumbs_). Collections are called **guides**. The interactive map is the **Cravings Map** / **Crumb Trail**. Never use "spot" or "spots" in user-facing UI.
 
 - **Comments Philosophy (Explain the WHY, Not the WHAT or HOW)**:
   - Code must be clear, idiomatic, and self-documenting. Never add comments that simply restate what the code does.

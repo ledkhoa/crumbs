@@ -1,7 +1,10 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { useUnreadCrumbsCount } from '@/hooks/useCrumbs';
 import { haptics } from '@/utils/haptics';
 
 export default function TabLayout() {
+  const unreadCount = useUnreadCrumbsCount();
+
   return (
     <NativeTabs
       minimizeBehavior="onScrollDown"
@@ -24,6 +27,11 @@ export default function TabLayout() {
       <NativeTabs.Trigger name="inbox">
         <NativeTabs.Trigger.Icon sf="tray.fill" md="inbox" />
         <NativeTabs.Trigger.Label>Inbox</NativeTabs.Trigger.Label>
+        {unreadCount > 0 && (
+          <NativeTabs.Trigger.Badge>
+            {String(unreadCount)}
+          </NativeTabs.Trigger.Badge>
+        )}
       </NativeTabs.Trigger>
     </NativeTabs>
   );
