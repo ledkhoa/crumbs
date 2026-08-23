@@ -21,6 +21,8 @@ Consult [`mobile/DESIGN.md`](./DESIGN.md) for all design system guidelines, UI t
 - Prefer `StyleSheet.create` at the bottom of the file.
 - Keep screens thin; extract business logic into `src/hooks/` or `src/utils/`.
 - Use `@/` path alias for all imports (`@/components/...`, `@/theme/...`, `@/utils/...`, etc.).
+- **Expo Router Hook Exclusivity**: **Never** import from `@react-navigation/native`. As of Expo SDK 56+, Expo Router is no longer compatible with direct `@react-navigation/native` imports. Always import navigation hooks (`useFocusEffect`, `useRouter`, `useLocalSearchParams`, `useSegments`, `useNavigation`) directly from `expo-router`.
+- **Reanimated v4 & Worklets Thread Scheduling**: `runOnJS` from `react-native-reanimated` is deprecated in Reanimated v4. **Always** import and use `scheduleOnRN` from `react-native-worklets` (e.g. `scheduleOnRN(fn, ...args)`) when triggering JavaScript functions from the UI runtime or animation completion callbacks.
 
 ## App Terminology Discipline (Single Source of Truth)
 
