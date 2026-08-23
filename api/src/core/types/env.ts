@@ -1,22 +1,39 @@
 import type { User, Session } from '../db/schemas/auth.table';
+import type { DisposableRpcStub } from '../utils/rpc';
 
 export type IngestWorkflowParams = {
   url: string;
   userId?: string;
 };
 
-// Interface for Cloudflare Workflow binding compatible in both Workers and external TS consumers
-export interface CloudflareWorkflow<T = unknown> {
-  create: (options: { params: T; id?: string }) => Promise<{ id: string }>;
-  get: (id: string) => Promise<any>;
-  createBatch?: (batch: Array<{ params: T; id?: string }>) => Promise<any[]>;
+export interface WorkflowInstance extends DisposableRpcStub {
+  id: string;
+  status: () => Promise<{
+    status: string;
+    output?: unknown;
+    error?: { name?: string; message?: string } | null;
+  }>;
+  sendEvent: (event: { type: string; payload: unknown }) => Promise<void>;
+  pause?: () => Promise<void>;
+  resume?: () => Promise<void>;
+  terminate?: () => Promise<void>;
+  restart?: () => Promise<void>;
+  delete?: () => Promise<void>;
+}
+
+export interface WorkflowBinding<T = unknown> {
+  create: (options: { params: T; id?: string }) => Promise<WorkflowInstance>;
+  get: (id: string) => Promise<WorkflowInstance>;
+  createBatch?: (
+    batch: Array<{ params: T; id?: string }>,
+  ) => Promise<WorkflowInstance[]>;
   deleteBatch?: (
     ids: string[],
-  ) => Promise<{ deleted: string[]; errors: any[] }>;
+  ) => Promise<{ deleted: string[]; errors: unknown[] }>;
 }
 
 export type Bindings = {
-  INGEST_WORKFLOW: CloudflareWorkflow<IngestWorkflowParams>;
+  INGEST_WORKFLOW: WorkflowBinding<IngestWorkflowParams>;
   APIFY_TOKEN?: string;
   GOOGLE_GENERATIVE_AI_API_KEY?: string;
   GOOGLE_PLACES_API_KEY?: string;

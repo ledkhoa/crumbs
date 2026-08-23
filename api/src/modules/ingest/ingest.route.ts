@@ -2,12 +2,13 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
-import type { AppEnv } from '../../core/types/env';
+import type { AppEnv, WorkflowInstance } from '../../core/types/env';
 import type { ProcessedCrumbPayload } from './ingest.types';
 import { requireAuth } from '../../core/auth/auth.middleware';
 import { parseSocialUrl } from './url.utils';
 import { getDb } from '../../core/db/client';
 import { Posts, Crumbs } from '../../core/db/schemas';
+import { disposeRpc } from '../../core/utils/rpc';
 
 const ingestSchema = z.object({
   url: z.url('Must be a valid social media URL (Instagram or TikTok)'),
@@ -147,18 +148,20 @@ export const ingestRouter = new Hono<AppEnv>()
     }
 
     // Normal Async Ingestion Workflow
+    let instance: WorkflowInstance | null = null;
     try {
-      const instance = await c.env.INGEST_WORKFLOW.create({
+      const created = await c.env.INGEST_WORKFLOW.create({
         params: {
           url,
           userId: user.id,
         },
       });
+      instance = created;
 
       return c.json(
         {
           success: true,
-          workflowId: instance.id,
+          workflowId: created.id,
           status: 'queued',
           cached: false,
           message: 'Ingestion workflow dispatched successfully',
@@ -176,6 +179,8 @@ export const ingestRouter = new Hono<AppEnv>()
         },
         500,
       );
+    } finally {
+      disposeRpc(instance);
     }
   })
   /**
@@ -269,9 +274,11 @@ export const ingestRouter = new Hono<AppEnv>()
       }
     }
 
+    let instance: WorkflowInstance | null = null;
     try {
-      const instance = await c.env.INGEST_WORKFLOW.get(instanceId);
-      const status = await instance.status();
+      const fetched = await c.env.INGEST_WORKFLOW.get(instanceId);
+      instance = fetched;
+      const status = await fetched.status();
 
       // SAFETY: IngestWorkflow.run() returns a finalized ProcessedCrumbPayload as its output
       const output = (status.output as ProcessedCrumbPayload) ?? null;
@@ -281,7 +288,7 @@ export const ingestRouter = new Hono<AppEnv>()
         workflowId: instanceId,
         status: status.status,
         output,
-        error: status.error ?? null,
+        error: status.error?.message ?? null,
       });
     } catch (error: unknown) {
       const message =
@@ -293,5 +300,7 @@ export const ingestRouter = new Hono<AppEnv>()
         },
         404,
       );
+    } finally {
+      disposeRpc(instance);
     }
   });
