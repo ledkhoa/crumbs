@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
-import type { AppEnv } from '../../core/types/env';
+import type { AppEnv, WorkflowInstance } from '../../core/types/env';
+import { disposeRpc } from '../../core/utils/rpc';
 
 export const webhooksRouter = new Hono<AppEnv>()
   /**
@@ -25,6 +26,7 @@ export const webhooksRouter = new Hono<AppEnv>()
       );
     }
 
+    let instance: WorkflowInstance | null = null;
     try {
       // SAFETY: Webhook payload structure sent from Apify is parsed as partial ApifyWebhookPayload
       const payload = (await c.req.json().catch(() => ({}))) as {
@@ -44,10 +46,11 @@ export const webhooksRouter = new Hono<AppEnv>()
         `   Status:     ${payload.eventData?.status || payload.eventType || 'SUCCESS'}`,
       );
 
-      const instance = await c.env.INGEST_WORKFLOW.get(workflowId);
+      const fetched = await c.env.INGEST_WORKFLOW.get(workflowId);
+      instance = fetched;
 
       // Send the resume event to wake up step.waitForEvent()
-      await instance.sendEvent({
+      await fetched.sendEvent({
         type: 'apify-scrape-complete',
         payload: {
           status: payload.eventData?.status || 'SUCCEEDED',
@@ -73,5 +76,7 @@ export const webhooksRouter = new Hono<AppEnv>()
         },
         500,
       );
+    } finally {
+      disposeRpc(instance);
     }
   });
