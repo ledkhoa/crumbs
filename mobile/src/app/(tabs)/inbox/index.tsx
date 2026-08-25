@@ -7,6 +7,7 @@ import {
   RefreshControl,
   Linking,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -19,7 +20,6 @@ import {
 } from '@/hooks/useCrumbs';
 import { useAddCrumbToGuideMutation } from '@/hooks/useGuides';
 import { useInboxStore } from '@/store/inbox';
-import { SearchInput } from '@/components/ui/SearchInput';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CompactCrumbCard } from '@/components/crumbs/CompactCrumbCard';
@@ -33,7 +33,6 @@ import type { EnrichedUserCrumb } from '@api/modules/crumbs/crumbs.types';
 
 export default function InboxScreen() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
   const [activeSegment, setActiveSegment] =
     useState<InboxFilterSegment>('uncategorized');
 
@@ -55,7 +54,6 @@ export default function InboxScreen() {
 
   // TanStack Query for full crumbs data with distinct cache key per segment
   const { data, isLoading, isRefetching, refetch } = useCrumbsQuery({
-    search: searchQuery ? searchQuery.trim() : undefined,
     unorganized: activeSegment === 'uncategorized' ? true : undefined,
   });
 
@@ -137,14 +135,28 @@ export default function InboxScreen() {
         </View>
       </View>
 
-      {/* Search Input */}
-      <View style={styles.searchContainer}>
-        <SearchInput
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search crumbs, dishes, vibes, or @creators..."
-          onClear={() => setSearchQuery('')}
-        />
+      {/* AI-Powered Search Trigger (TODO: Connect to AI Craving Assistant) */}
+      <View style={styles.aiSearchContainer}>
+        <TouchableOpacity
+          style={styles.aiSearchBar}
+          activeOpacity={0.75}
+          onPress={() => {
+            haptics.tap();
+            // TODO: Launch AI-powered natural language craving search & assistant
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="AI Search coming soon"
+        >
+          <View style={styles.aiSearchLeft}>
+            <Text style={styles.aiSearchIcon}>✨</Text>
+            <Text style={styles.aiSearchPlaceholder}>
+              Ask AI or search your cravings...
+            </Text>
+          </View>
+          <View style={styles.aiSearchBadge}>
+            <Text style={styles.aiSearchBadgeText}>AI · Soon</Text>
+          </View>
+        </TouchableOpacity>
       </View>
 
       {/* Filter Chips */}
@@ -159,26 +171,6 @@ export default function InboxScreen() {
   const renderEmptyState = () => {
     if (isLoading) {
       return <InboxSkeletonList count={4} />;
-    }
-
-    if (searchQuery) {
-      return (
-        <EmptyState
-          emoji="🔍"
-          title="No Matching Crumbs"
-          description={`No crumbs found matching "${searchQuery}". Try a different keyword or filter.`}
-          action={
-            <Button
-              variant="secondary"
-              size="md"
-              onPress={() => setSearchQuery('')}
-            >
-              Clear Search
-            </Button>
-          }
-          style={styles.emptyState}
-        />
-      );
     }
 
     return (
@@ -282,9 +274,45 @@ const styles = StyleSheet.create({
     color: Theme.colors.textMuted,
     lineHeight: 18,
   },
-  searchContainer: {
+  aiSearchContainer: {
     paddingHorizontal: Theme.spacing.lg,
-    marginBottom: Theme.spacing.sm,
+    marginBottom: Theme.spacing.md,
+  },
+  aiSearchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Theme.colors.inputBackground,
+    borderRadius: Theme.radii.lg,
+    borderWidth: 1,
+    borderColor: Theme.colors.inputBorder,
+    paddingHorizontal: Theme.spacing.md,
+    paddingVertical: 10,
+  },
+  aiSearchLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.sm,
+    flex: 1,
+  },
+  aiSearchIcon: {
+    fontSize: 15,
+  },
+  aiSearchPlaceholder: {
+    fontSize: 13,
+    color: Theme.colors.textSubtle,
+    fontWeight: '500',
+  },
+  aiSearchBadge: {
+    backgroundColor: 'rgba(196, 91, 62, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Theme.radii.pill,
+  },
+  aiSearchBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Theme.colors.primary,
   },
   cardWrapper: {
     paddingHorizontal: Theme.spacing.lg,

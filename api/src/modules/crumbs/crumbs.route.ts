@@ -8,7 +8,6 @@ import { CrumbsRepository } from './crumbs.repository';
 
 const queryFilterSchema = z.object({
   status: z.enum(['inbox', 'saved', 'visited']).optional(),
-  search: z.string().optional(),
   guideId: z.string().optional(),
   unorganized: z
     .string()

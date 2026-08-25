@@ -1,6 +1,5 @@
 export interface CrumbFilterOptions {
   status?: 'inbox' | 'saved' | 'visited';
-  search?: string;
   guideId?: string;
   unorganized?: boolean;
   bookable?: boolean;

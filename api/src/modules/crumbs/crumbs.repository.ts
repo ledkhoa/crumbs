@@ -229,34 +229,6 @@ export class CrumbsRepository {
       );
     }
 
-    if (options.search) {
-      const q = options.search.toLowerCase().trim();
-      filtered = filtered.filter((c) => {
-        const nameMatch = c.restaurant.name.toLowerCase().includes(q);
-        const addressMatch = c.restaurant.formattedAddress
-          ?.toLowerCase()
-          .includes(q);
-        const cuisineMatch = c.restaurant.cuisine?.toLowerCase().includes(q);
-        const heroDishMatch = c.effectiveHeroDish?.toLowerCase().includes(q);
-        const creatorMatch = c.sourcePost?.authorUsername
-          ?.toLowerCase()
-          .includes(q);
-        const vibeMatch = c.postAttribution?.vibeTags?.some((tag) =>
-          tag.toLowerCase().includes(q),
-        );
-        const notesMatch = c.userNotes?.toLowerCase().includes(q);
-        return Boolean(
-          nameMatch ||
-          addressMatch ||
-          cuisineMatch ||
-          heroDishMatch ||
-          creatorMatch ||
-          vibeMatch ||
-          notesMatch,
-        );
-      });
-    }
-
     return {
       success: true,
       crumbs: filtered,
