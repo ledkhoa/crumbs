@@ -1,6 +1,5 @@
 export interface CrumbQueryFilters {
   status?: string;
-  search?: string;
   guideId?: string;
   unorganized?: boolean | string;
   bookable?: boolean | string;
@@ -18,10 +17,9 @@ export const QUERY_KEYS = {
     counts: () => [...QUERY_KEYS.crumbs.all, 'counts'] as const,
     list: (filters?: CrumbQueryFilters) =>
       [...QUERY_KEYS.crumbs.all, 'list', filters] as const,
-    uncategorized: (search?: string) =>
-      [...QUERY_KEYS.crumbs.all, 'list', 'uncategorized', { search }] as const,
-    allList: (search?: string) =>
-      [...QUERY_KEYS.crumbs.all, 'list', 'all', { search }] as const,
+    uncategorized: () =>
+      [...QUERY_KEYS.crumbs.all, 'list', 'uncategorized'] as const,
+    allList: () => [...QUERY_KEYS.crumbs.all, 'list', 'all'] as const,
     inbox: () => [...QUERY_KEYS.crumbs.all, 'inbox'] as const,
     detail: (id: string) => [...QUERY_KEYS.crumbs.all, 'detail', id] as const,
   },

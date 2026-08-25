@@ -10,7 +10,6 @@ import type {
 
 export interface UseCrumbsFilterOptions {
   status?: 'inbox' | 'saved' | 'visited';
-  search?: string;
   guideId?: string;
   unorganized?: boolean;
   bookable?: boolean;
@@ -35,17 +34,17 @@ export function useCrumbsCountsQuery() {
 }
 
 /**
- * Hook to query enriched crumbs with filtering and search capabilities.
+ * Hook to query enriched crumbs with filtering capabilities.
  */
 export function useCrumbsQuery(filters: UseCrumbsFilterOptions = {}) {
   const { enabled, ...queryFilters } = filters;
 
   const queryKey =
     queryFilters.unorganized === true
-      ? QUERY_KEYS.crumbs.uncategorized(queryFilters.search)
+      ? QUERY_KEYS.crumbs.uncategorized()
       : queryFilters.unorganized === false ||
           (queryFilters.unorganized === undefined && !queryFilters.guideId)
-        ? QUERY_KEYS.crumbs.allList(queryFilters.search)
+        ? QUERY_KEYS.crumbs.allList()
         : QUERY_KEYS.crumbs.list(queryFilters);
 
   return useQuery({
@@ -55,7 +54,6 @@ export function useCrumbsQuery(filters: UseCrumbsFilterOptions = {}) {
       const res = await apiClient.crumbs.$get({
         query: {
           ...(queryFilters.status && { status: queryFilters.status }),
-          ...(queryFilters.search && { search: queryFilters.search }),
           ...(queryFilters.guideId && { guideId: queryFilters.guideId }),
           ...(queryFilters.unorganized !== undefined && {
             unorganized: String(queryFilters.unorganized),

@@ -68,34 +68,6 @@ export function filterCrumbs(
     );
   }
 
-  if (options.search) {
-    const q = options.search.toLowerCase().trim();
-    filtered = filtered.filter((c) => {
-      const nameMatch = c.restaurant.name.toLowerCase().includes(q);
-      const addressMatch = c.restaurant.formattedAddress
-        ?.toLowerCase()
-        .includes(q);
-      const cuisineMatch = c.restaurant.cuisine?.toLowerCase().includes(q);
-      const heroDishMatch = c.effectiveHeroDish?.toLowerCase().includes(q);
-      const creatorMatch = c.sourcePost?.authorUsername
-        ?.toLowerCase()
-        .includes(q);
-      const vibeMatch = c.postAttribution?.vibeTags?.some((tag) =>
-        tag.toLowerCase().includes(q),
-      );
-      const notesMatch = c.userNotes?.toLowerCase().includes(q);
-      return Boolean(
-        nameMatch ||
-        addressMatch ||
-        cuisineMatch ||
-        heroDishMatch ||
-        creatorMatch ||
-        vibeMatch ||
-        notesMatch,
-      );
-    });
-  }
-
   return {
     filtered,
     unorganizedCount,
@@ -290,45 +262,6 @@ describe('Crumbs Business Logic & Specification Verification', () => {
       });
       expect(filtered.length).toBe(1);
       expect(filtered[0].id).toBe('crumb-2');
-    });
-
-    it('searches by restaurant name case-insensitively', () => {
-      const { filtered } = filterCrumbs(mockCrumbs, { search: 'trattoria' });
-      expect(filtered.length).toBe(1);
-      expect(filtered[0].restaurant.name).toBe('Trattoria Bella');
-    });
-
-    it('searches by hero dish name', () => {
-      const { filtered } = filterCrumbs(mockCrumbs, {
-        search: 'vodka rigatoni',
-      });
-      expect(filtered.length).toBe(1);
-      expect(filtered[0].id).toBe('crumb-1');
-    });
-
-    it('searches by creator authorUsername (@creator)', () => {
-      const { filtered } = filterCrumbs(mockCrumbs, { search: 'tokyoeats' });
-      expect(filtered.length).toBe(1);
-      expect(filtered[0].id).toBe('crumb-2');
-    });
-
-    it('searches by vibe tag', () => {
-      const { filtered } = filterCrumbs(mockCrumbs, { search: 'Romantic' });
-      expect(filtered.length).toBe(1);
-      expect(filtered[0].id).toBe('crumb-1');
-    });
-
-    it('searches by user personal notes', () => {
-      const { filtered } = filterCrumbs(mockCrumbs, { search: 'patio' });
-      expect(filtered.length).toBe(1);
-      expect(filtered[0].id).toBe('crumb-1');
-    });
-
-    it('returns empty array when search query matches nothing', () => {
-      const { filtered } = filterCrumbs(mockCrumbs, {
-        search: 'nonexistent cuisine xyz',
-      });
-      expect(filtered.length).toBe(0);
     });
   });
 });
