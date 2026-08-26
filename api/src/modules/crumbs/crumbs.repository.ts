@@ -2,9 +2,11 @@ import { eq, and, desc, inArray } from 'drizzle-orm';
 import type { getDb } from '../../core/db/client';
 import { Crumbs, PostRestaurants } from '../../core/db/schemas';
 import type {
+  CrumbDetail,
   CrumbFilterOptions,
   EnrichedUserCrumb,
   ListCrumbsResponse,
+  OpeningHoursInfo,
   UpdateCrumbInput,
 } from './crumbs.types';
 
@@ -147,6 +149,7 @@ export class CrumbsRepository {
         restaurantId: c.restaurantId,
         sourcePostId: c.sourcePostId,
         status: c.status,
+        isVisited: c.status === 'visited',
         userNotes: c.userNotes ?? null,
         userHeroDishOverride: c.userHeroDishOverride ?? null,
         effectiveHeroDish,
@@ -255,10 +258,17 @@ export class CrumbsRepository {
       return null;
     }
 
+    const newStatus =
+      input.isVisited !== undefined
+        ? input.isVisited
+          ? 'visited'
+          : 'saved'
+        : input.status;
+
     await db
       .update(Crumbs)
       .set({
-        ...(input.status !== undefined && { status: input.status }),
+        ...(newStatus !== undefined && { status: newStatus }),
         ...(input.userNotes !== undefined && { userNotes: input.userNotes }),
         ...(input.userHeroDishOverride !== undefined && {
           userHeroDishOverride: input.userHeroDishOverride,
@@ -285,5 +295,125 @@ export class CrumbsRepository {
       .returning();
 
     return deleted.length > 0;
+  }
+
+  /**
+   * Retrieves a single crumb record with restaurant, post provenance, and guide relations.
+   */
+  static async getById(
+    db: DbInstance,
+    crumbId: string,
+    userId: string,
+  ): Promise<CrumbDetail | null> {
+    const rawCrumb = await db.query.Crumbs.findFirst({
+      where: and(eq(Crumbs.id, crumbId), eq(Crumbs.userId, userId)),
+      with: {
+        restaurant: true,
+        sourcePost: true,
+        guideCrumbs: {
+          with: {
+            guide: true,
+          },
+        },
+      },
+    });
+
+    if (!rawCrumb || !rawCrumb.restaurant) {
+      return null;
+    }
+
+    let postRestaurant = null;
+    if (rawCrumb.sourcePostId && rawCrumb.restaurantId) {
+      postRestaurant = await db.query.PostRestaurants.findFirst({
+        where: and(
+          eq(PostRestaurants.restaurantId, rawCrumb.restaurantId),
+          eq(PostRestaurants.postId, rawCrumb.sourcePostId),
+        ),
+      });
+    }
+
+    // 3-Tier Hero Dish Resolution Precedence:
+    // Tier 3 (User Override) -> Tier 1 (Post Hero Dish) -> Tier 2 (Community Favorite Dish)
+    const effectiveHeroDish =
+      rawCrumb.userHeroDishOverride ||
+      postRestaurant?.heroDish ||
+      rawCrumb.restaurant.communityFavoriteDish ||
+      null;
+
+    const postAttribution = rawCrumb.sourcePost
+      ? {
+          heroDish: postRestaurant?.heroDish ?? null,
+          vibeAnchor: postRestaurant?.vibeAnchor ?? null,
+          courseCategory: postRestaurant?.courseCategory ?? null,
+          walkInTips: postRestaurant?.walkInTips ?? null,
+          vibeTags: postRestaurant?.vibeTags ?? [],
+          recommendedDishes: postRestaurant?.recommendedDishes ?? [],
+          creatorNotes: postRestaurant?.creatorNotes ?? null,
+        }
+      : null;
+
+    const guides = (rawCrumb.guideCrumbs || [])
+      .filter((gc) => Boolean(gc.guide))
+      .map((gc) => ({
+        id: gc.guide.id,
+        name: gc.guide.name,
+        emojiIcon: gc.guide.emojiIcon || '🗺️',
+      }));
+
+    return {
+      id: rawCrumb.id,
+      isVisited: rawCrumb.status === 'visited',
+      userNotes: rawCrumb.userNotes ?? null,
+      userHeroDishOverride: rawCrumb.userHeroDishOverride ?? null,
+      effectiveHeroDish,
+      createdAt: rawCrumb.createdAt.toISOString(),
+      updatedAt: rawCrumb.updatedAt.toISOString(),
+      restaurant: {
+        id: rawCrumb.restaurant.id,
+        googlePlaceId: rawCrumb.restaurant.googlePlaceId ?? null,
+        name: rawCrumb.restaurant.name,
+        formattedAddress: rawCrumb.restaurant.formattedAddress ?? null,
+        city: rawCrumb.restaurant.city ?? null,
+        neighborhood: rawCrumb.restaurant.neighborhood ?? null,
+        state: rawCrumb.restaurant.state ?? null,
+        country: rawCrumb.restaurant.country ?? null,
+        latitude: rawCrumb.restaurant.latitude
+          ? Number(rawCrumb.restaurant.latitude)
+          : null,
+        longitude: rawCrumb.restaurant.longitude
+          ? Number(rawCrumb.restaurant.longitude)
+          : null,
+        cuisine: rawCrumb.restaurant.cuisine ?? null,
+        rating: rawCrumb.restaurant.rating
+          ? Number(rawCrumb.restaurant.rating)
+          : null,
+        userRatingCount: rawCrumb.restaurant.userRatingCount ?? null,
+        priceLevel: rawCrumb.restaurant.priceLevel ?? null,
+        mapsUrl: rawCrumb.restaurant.mapsUrl ?? null,
+        websiteUrl: rawCrumb.restaurant.websiteUrl ?? null,
+        photoUrl: rawCrumb.restaurant.photoUrl ?? null,
+        editorialSummary: rawCrumb.restaurant.editorialSummary ?? null,
+        communityFavoriteDish:
+          rawCrumb.restaurant.communityFavoriteDish ?? null,
+        reservationUrl: rawCrumb.restaurant.reservationUrl ?? null,
+        reservationProvider: rawCrumb.restaurant.reservationProvider ?? null,
+        // SAFETY: Drizzle jsonb column preserves Google Places OpeningHoursInfo structure
+        regularOpeningHours:
+          (rawCrumb.restaurant.regularOpeningHours as OpeningHoursInfo) ?? null,
+      },
+      sourcePost: rawCrumb.sourcePost
+        ? {
+            id: rawCrumb.sourcePost.id,
+            platform: rawCrumb.sourcePost.platform,
+            authorUsername: rawCrumb.sourcePost.authorUsername ?? null,
+            originalUrl: rawCrumb.sourcePost.originalUrl,
+            mediaUrls: rawCrumb.sourcePost.mediaUrls ?? [],
+            caption: rawCrumb.sourcePost.caption ?? null,
+            summary: rawCrumb.sourcePost.summary ?? null,
+          }
+        : null,
+      postAttribution,
+      guides,
+    };
   }
 }

@@ -4,6 +4,7 @@ import { QUERY_KEYS } from '@/utils/query-keys';
 import { haptics } from '@/utils/haptics';
 import { useInboxStore } from '@/store/inbox';
 import type {
+  CrumbDetail,
   EnrichedUserCrumb,
   UpdateCrumbInput,
 } from '@api/modules/crumbs/crumbs.types';
@@ -78,7 +79,33 @@ export function useCrumbsQuery(filters: UseCrumbsFilterOptions = {}) {
 }
 
 /**
- * Hook to update crumb status, notes, or hero dish override.
+ * Hook to query a single thin CrumbDetail object by ID.
+ */
+export function useCrumbDetailQuery(crumbId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.crumbs.detail(crumbId),
+    enabled: Boolean(crumbId),
+    queryFn: async () => {
+      const res = await apiClient.crumbs[':id'].$get({
+        param: { id: crumbId },
+      });
+
+      if (!res.ok) {
+        // SAFETY: Server error response contains error message
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(
+          err.error || `Failed to fetch crumb: HTTP ${res.status}`,
+        );
+      }
+
+      const data = await res.json();
+      return data;
+    },
+  });
+}
+
+/**
+ * Hook to update crumb status, notes, or hero dish override with optimistic caching.
  */
 export function useUpdateCrumbMutation() {
   const queryClient = useQueryClient();
@@ -104,13 +131,58 @@ export function useUpdateCrumbMutation() {
 
       return res.json();
     },
-    onSuccess: () => {
-      haptics.success();
+    onMutate: async ({ crumbId, input }) => {
+      await queryClient.cancelQueries({
+        queryKey: QUERY_KEYS.crumbs.detail(crumbId),
+      });
+
+      const previousDetail = queryClient.getQueryData<CrumbDetail>(
+        QUERY_KEYS.crumbs.detail(crumbId),
+      );
+
+      if (previousDetail) {
+        queryClient.setQueryData<CrumbDetail>(
+          QUERY_KEYS.crumbs.detail(crumbId),
+          {
+            ...previousDetail,
+            ...(input.isVisited !== undefined && {
+              isVisited: input.isVisited,
+            }),
+            ...(input.status !== undefined && {
+              isVisited: input.status === 'visited',
+            }),
+            ...(input.userNotes !== undefined && {
+              userNotes: input.userNotes,
+            }),
+            ...(input.userHeroDishOverride !== undefined && {
+              userHeroDishOverride: input.userHeroDishOverride,
+              effectiveHeroDish:
+                input.userHeroDishOverride ||
+                previousDetail.postAttribution?.heroDish ||
+                previousDetail.restaurant.communityFavoriteDish ||
+                null,
+            }),
+          },
+        );
+      }
+
+      return { previousDetail, crumbId };
+    },
+    onError: (_err, _variables, context) => {
+      haptics.error();
+      if (context?.previousDetail && context?.crumbId) {
+        queryClient.setQueryData(
+          QUERY_KEYS.crumbs.detail(context.crumbId),
+          context.previousDetail,
+        );
+      }
+    },
+    onSettled: (_data, _error, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.crumbs.detail(variables.crumbId),
+      });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.crumbs.all });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.guides.all });
-    },
-    onError: () => {
-      haptics.error();
     },
   });
 }
