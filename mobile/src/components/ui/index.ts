@@ -10,3 +10,4 @@ export * from './GrabHandle';
 export * from './Typography';
 export * from './InAppToast';
 export * from './Skeleton';
+export * from './StarRating';

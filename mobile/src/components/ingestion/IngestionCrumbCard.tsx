@@ -6,6 +6,7 @@ import { formatPriceLevel } from '@/utils/price';
 import { Card, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { StarRating } from '@/components/ui/StarRating';
 import type { UnifiedRestaurantSpot } from '@/types/ingest';
 
 export interface IngestionCrumbCardProps {
@@ -109,12 +110,13 @@ export function IngestionCrumbCard({
               style={styles.ratingBadge}
             >
               {formattedPrice && (
-                <Text style={styles.priceText}>{formattedPrice} · </Text>
+                <Text style={styles.priceText}>{formattedPrice}</Text>
+              )}
+              {formattedPrice && crumb.rating != null && (
+                <Text style={styles.priceText}> · </Text>
               )}
               {crumb.rating != null ? (
-                <Text style={styles.ratingText}>
-                  {crumb.rating.toFixed(1)} ★
-                </Text>
+                <StarRating rating={crumb.rating} size="sm" />
               ) : null}
             </Badge>
           )}
@@ -252,11 +254,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: Theme.colors.textMuted,
-  },
-  ratingText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Theme.colors.accent,
   },
   addressText: {
     fontSize: 13,

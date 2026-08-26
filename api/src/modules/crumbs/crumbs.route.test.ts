@@ -59,6 +59,23 @@ describe('Crumbs Route HTTP & Auth Validation', () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
 
+  it('should reject unauthenticated GET /crumbs/:id with 401/400', async () => {
+    const req = new Request('http://localhost/crumbs/test-crumb-id', {
+      method: 'GET',
+    });
+
+    const res = await testApp.request(
+      req,
+      {},
+      {
+        DATABASE_URL: 'postgresql://postgres:password@localhost:5432/testdb',
+        INGEST_WORKFLOW: mockWorkflow,
+      },
+    );
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
   it('should reject unauthenticated PATCH /crumbs/:id with 401/400', async () => {
     const req = new Request('http://localhost/crumbs/test-crumb-id', {
       method: 'PATCH',

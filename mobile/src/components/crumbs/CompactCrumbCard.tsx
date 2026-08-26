@@ -9,6 +9,7 @@ import { Image } from 'expo-image';
 import { Theme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { formatPriceLevel } from '@/utils/price';
+import { StarRating } from '@/components/ui';
 import type { EnrichedUserCrumb } from '@api/modules/crumbs/crumbs.types';
 
 export interface CompactCrumbCardProps {
@@ -47,13 +48,6 @@ export function CompactCrumbCard({
   );
 
   const formattedPrice = formatPriceLevel(restaurant.priceLevel);
-
-  const priceAndRatingText = [
-    formattedPrice,
-    restaurant.rating ? `${restaurant.rating.toFixed(1)} ★` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
 
   const locationText =
     restaurant.city && restaurant.state
@@ -106,11 +100,17 @@ export function CompactCrumbCard({
           <Text style={styles.restaurantName} numberOfLines={1}>
             {restaurant.name}
           </Text>
-          {priceAndRatingText ? (
-            <Text style={styles.ratingText} numberOfLines={1}>
-              {priceAndRatingText}
-            </Text>
-          ) : null}
+          <View style={styles.metaRight}>
+            {formattedPrice ? (
+              <Text style={styles.priceText}>{formattedPrice}</Text>
+            ) : null}
+            {formattedPrice && restaurant.rating ? (
+              <Text style={styles.dotSeparator}>·</Text>
+            ) : null}
+            {restaurant.rating ? (
+              <StarRating rating={restaurant.rating} size="sm" />
+            ) : null}
+          </View>
         </View>
 
         {/* Row 2: Location & Provenance */}
@@ -268,7 +268,12 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     color: Theme.colors.text,
   },
-  ratingText: {
+  metaRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  priceText: {
     fontSize: 11,
     fontWeight: '600',
     color: Theme.colors.textMuted,

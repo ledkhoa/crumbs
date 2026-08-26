@@ -77,9 +77,11 @@ export default function InboxScreen() {
   };
 
   const handleCardPress = (crumb: EnrichedUserCrumb) => {
-    if (crumb.restaurant.mapsUrl) {
-      Linking.openURL(crumb.restaurant.mapsUrl).catch(() => {});
-    }
+    haptics.tap();
+    router.push({
+      pathname: '/crumbs/[id]',
+      params: { id: crumb.id },
+    });
   };
 
   const handleAddToGuide = (crumb: EnrichedUserCrumb) => {

@@ -25,6 +25,7 @@ const queryFilterSchema = z.object({
 });
 
 const updateCrumbSchema = z.object({
+  isVisited: z.boolean().optional(),
   status: z.enum(['inbox', 'saved', 'visited']).optional(),
   userNotes: z.string().max(1000).nullable().optional(),
   userHeroDishOverride: z.string().max(255).nullable().optional(),
@@ -54,6 +55,28 @@ export const crumbsRouter = new Hono<AppEnv>()
 
     const result = await CrumbsRepository.listUserCrumbs(db, user.id, filters);
     return c.json(result, 200);
+  })
+  /**
+   * GET /crumbs/:id
+   * Returns a thin, focused crumb detail object tailored for the Crumb Detail view.
+   */
+  .get('/:id', async (c) => {
+    const user = c.get('user');
+    const crumbId = c.req.param('id');
+    const db = getDb(c.env.DATABASE_URL || '');
+
+    const crumb = await CrumbsRepository.getById(db, crumbId, user.id);
+
+    if (!crumb) {
+      return c.json(
+        {
+          error: 'Crumb not found or unauthorized',
+        },
+        404,
+      );
+    }
+
+    return c.json(crumb, 200);
   })
   /**
    * PATCH /crumbs/:id
