@@ -156,6 +156,10 @@ export function LivingMapBottomSheet({
       });
   }, [allSavedCrumbs, userCoords]);
 
+  const triggerSnapHaptic = () => {
+    haptics.primary();
+  };
+
   // Gesture Handling for Smooth Snapping
   const snapTo = (detent: 'peek' | 'mid' | 'full') => {
     'worklet';
@@ -166,50 +170,93 @@ export function LivingMapBottomSheet({
 
     sheetHeight.value = withSpring(target, SPRING_CONFIG);
     scheduleOnRN(setCurrentDetent, detent);
+    scheduleOnRN(triggerSnapHaptic);
   };
+
+  const SNAP_MAGNETIC_RADIUS = 32;
+  const activeSnapZone = useSharedValue<'none' | 'peek' | 'mid' | 'full'>(
+    'none',
+  );
 
   const panGesture = Gesture.Pan()
     .onStart(() => {
       'worklet';
       startHeight.value = sheetHeight.value;
+      activeSnapZone.value = 'none';
     })
     .onUpdate((event) => {
       'worklet';
       const newHeight = startHeight.value - event.translationY;
-      // Clamp between PEEK and FULL with slight edge resistance
-      if (newHeight >= PEEK_HEIGHT - 20 && newHeight <= FULL_HEIGHT + 30) {
+      // Freeform drag clamped with gentle overscroll elasticity
+      if (newHeight >= PEEK_HEIGHT - 25 && newHeight <= FULL_HEIGHT + 35) {
         sheetHeight.value = newHeight;
+      }
+
+      // Real-time magnetic notch crossing detection while dragging
+      let currentZone: 'none' | 'peek' | 'mid' | 'full' = 'none';
+      if (Math.abs(newHeight - PEEK_HEIGHT) <= SNAP_MAGNETIC_RADIUS) {
+        currentZone = 'peek';
+      } else if (Math.abs(newHeight - MID_HEIGHT) <= SNAP_MAGNETIC_RADIUS) {
+        currentZone = 'mid';
+      } else if (Math.abs(newHeight - FULL_HEIGHT) <= SNAP_MAGNETIC_RADIUS) {
+        currentZone = 'full';
+      }
+
+      if (currentZone !== 'none' && currentZone !== activeSnapZone.value) {
+        activeSnapZone.value = currentZone;
+        scheduleOnRN(triggerSnapHaptic);
+      } else if (currentZone === 'none' && activeSnapZone.value !== 'none') {
+        activeSnapZone.value = 'none';
       }
     })
     .onEnd((event) => {
       'worklet';
+      activeSnapZone.value = 'none';
       const current = sheetHeight.value;
       const velocity = -event.velocityY;
 
-      if (velocity > 500) {
+      // High velocity swipes fling directly to the corresponding anchor marker
+      if (velocity > 650) {
         if (current < MID_HEIGHT) {
           snapTo('mid');
         } else {
           snapTo('full');
         }
-      } else if (velocity < -500) {
+        return;
+      }
+      if (velocity < -650) {
         if (current > MID_HEIGHT) {
           snapTo('mid');
         } else {
           snapTo('peek');
         }
-      } else {
-        // Snap to nearest detent
-        const distPeek = Math.abs(current - PEEK_HEIGHT);
-        const distMid = Math.abs(current - MID_HEIGHT);
-        const distFull = Math.abs(current - FULL_HEIGHT);
+        return;
+      }
 
-        if (distPeek <= distMid && distPeek <= distFull) {
-          snapTo('peek');
-        } else if (distMid <= distFull) {
-          snapTo('mid');
+      // Check if within magnetic snap zone of any of the 3 marker anchors
+      const distPeek = Math.abs(current - PEEK_HEIGHT);
+      const distMid = Math.abs(current - MID_HEIGHT);
+      const distFull = Math.abs(current - FULL_HEIGHT);
+
+      if (distPeek <= SNAP_MAGNETIC_RADIUS) {
+        snapTo('peek');
+      } else if (distMid <= SNAP_MAGNETIC_RADIUS) {
+        snapTo('mid');
+      } else if (distFull <= SNAP_MAGNETIC_RADIUS) {
+        snapTo('full');
+      } else {
+        // Freeform custom position: smoothly settle at exact custom height
+        const clampedHeight = Math.max(
+          PEEK_HEIGHT,
+          Math.min(FULL_HEIGHT, current),
+        );
+        sheetHeight.value = withSpring(clampedHeight, SPRING_CONFIG);
+        if (clampedHeight > MID_HEIGHT + 40) {
+          scheduleOnRN(setCurrentDetent, 'full');
+        } else if (clampedHeight > PEEK_HEIGHT + 40) {
+          scheduleOnRN(setCurrentDetent, 'mid');
         } else {
-          snapTo('full');
+          scheduleOnRN(setCurrentDetent, 'peek');
         }
       }
     });
