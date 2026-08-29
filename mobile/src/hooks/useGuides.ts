@@ -11,6 +11,14 @@ export interface CreateGuideInput {
   isPublic?: boolean;
 }
 
+export interface UpdateGuideInput {
+  name?: string;
+  description?: string | null;
+  emojiIcon?: string;
+  coverImageUrl?: string | null;
+  isPublic?: boolean;
+}
+
 /**
  * Hook to fetch all guides created by the authenticated user.
  */
@@ -78,6 +86,77 @@ export function useCreateGuideMutation() {
   });
 }
 
+/**
+ * Hook to update guide metadata (name, description, emojiIcon, isPublic).
+ */
+export function useUpdateGuideMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      guideId,
+      input,
+    }: {
+      guideId: string;
+      input: UpdateGuideInput;
+    }) => {
+      const res = await apiClient.guides[':id'].$patch({
+        param: { id: guideId },
+        json: input,
+      });
+
+      if (!res.ok) {
+        // SAFETY: Server error response contains error message
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error || `HTTP error ${res.status}`);
+      }
+
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      haptics.success();
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.guides.all });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.guides.detail(variables.guideId),
+      });
+    },
+    onError: () => {
+      haptics.error();
+    },
+  });
+}
+
+/**
+ * Hook to delete a guide created by the authenticated user.
+ */
+export function useDeleteGuideMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (guideId: string) => {
+      const res = await apiClient.guides[':id'].$delete({
+        param: { id: guideId },
+      });
+
+      if (!res.ok) {
+        // SAFETY: Server error response contains error message
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error || `HTTP error ${res.status}`);
+      }
+
+      return res.json();
+    },
+    onSuccess: () => {
+      haptics.heavy();
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.guides.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.crumbs.all });
+    },
+    onError: () => {
+      haptics.error();
+    },
+  });
+}
+
 export interface AddCrumbsToGuideInput {
   guideId: string;
   crumbId?: string;
@@ -119,6 +198,85 @@ export function useAddCrumbToGuideMutation() {
         queryKey: QUERY_KEYS.guides.detail(variables.guideId),
       });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.crumbs.all });
+    },
+    onError: () => {
+      haptics.error();
+    },
+  });
+}
+
+/**
+ * Hook to remove a single crumb from a guide.
+ */
+export function useRemoveCrumbFromGuideMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      guideId,
+      crumbId,
+    }: {
+      guideId: string;
+      crumbId: string;
+    }) => {
+      const res = await apiClient.guides[':id'].crumbs[':crumbId'].$delete({
+        param: { id: guideId, crumbId },
+      });
+
+      if (!res.ok) {
+        // SAFETY: Server error response contains error message
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error || `HTTP error ${res.status}`);
+      }
+
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      haptics.tap();
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.guides.all });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.guides.detail(variables.guideId),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.crumbs.all });
+    },
+    onError: () => {
+      haptics.error();
+    },
+  });
+}
+
+/**
+ * Hook to reorder crumbs within a guide.
+ */
+export function useReorderGuideCrumbsMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      guideId,
+      crumbIds,
+    }: {
+      guideId: string;
+      crumbIds: string[];
+    }) => {
+      const res = await apiClient.guides[':id'].reorder.$put({
+        param: { id: guideId },
+        json: { crumbIds },
+      });
+
+      if (!res.ok) {
+        // SAFETY: Server error response contains error message
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error || `HTTP error ${res.status}`);
+      }
+
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      haptics.success();
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.guides.detail(variables.guideId),
+      });
     },
     onError: () => {
       haptics.error();
