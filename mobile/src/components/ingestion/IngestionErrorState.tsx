@@ -4,6 +4,12 @@ import { Theme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { Button } from '@/components/ui/Button';
 import { Heading } from '@/components/ui/Typography';
+import {
+  WarningCircleIcon,
+  CompassIcon,
+  ArrowClockwiseIcon,
+  MagnifyingGlassIcon,
+} from 'phosphor-react-native';
 
 export interface IngestionErrorStateProps {
   type: 'unrelated' | 'error';
@@ -37,12 +43,20 @@ export function IngestionErrorState({
           isUnrelated ? styles.iconCircleUnrelated : styles.iconCircleError,
         ]}
       >
-        <Text style={styles.iconEmoji}>{isUnrelated ? '🌴' : '🍞'}</Text>
+        {isUnrelated ? (
+          <CompassIcon size={32} color={Theme.colors.textMuted} weight="bold" />
+        ) : (
+          <WarningCircleIcon
+            size={32}
+            color={Theme.colors.error}
+            weight="fill"
+          />
+        )}
       </View>
 
       {/* Header Info */}
       <Heading style={styles.title}>
-        {isUnrelated ? 'Scenic Post Detected 🌴' : "Couldn't Capture Crumb 🍞"}
+        {isUnrelated ? 'No Restaurant Detected' : "Couldn't Capture Crumb"}
       </Heading>
 
       <Text style={styles.description}>
@@ -69,7 +83,13 @@ export function IngestionErrorState({
             variant="primary"
             size="lg"
             onPress={onRetry}
-            leftIcon={<Text>🔄 </Text>}
+            leftIcon={
+              <ArrowClockwiseIcon
+                size={18}
+                color={Theme.colors.onPrimary}
+                weight="bold"
+              />
+            }
           >
             Try Ingesting Again
           </Button>
@@ -79,7 +99,13 @@ export function IngestionErrorState({
           variant={isUnrelated ? 'primary' : 'secondary'}
           size={isUnrelated ? 'lg' : 'md'}
           onPress={onSearchManually}
-          leftIcon={<Text>🔍 </Text>}
+          leftIcon={
+            <MagnifyingGlassIcon
+              size={18}
+              color={isUnrelated ? Theme.colors.onPrimary : Theme.colors.text}
+              weight="bold"
+            />
+          }
         >
           Search Place Manually
         </Button>

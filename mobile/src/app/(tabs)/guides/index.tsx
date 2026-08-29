@@ -1,23 +1,33 @@
 import { useState } from 'react';
 import {
   View,
-  Text,
   FlatList,
   StyleSheet,
-  ActivityIndicator,
   RefreshControl,
+  TouchableOpacity,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { Theme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { useGuidesQuery } from '@/hooks/useGuides';
 import { GuideCard, type GuideSummary } from '@/components/guides/GuideCard';
+import { GuidesSkeletonList } from '@/components/guides/GuidesSkeletonList';
 import { CreateGuideModal } from '@/components/guides/CreateGuideModal';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Heading, MutedText } from '@/components/ui/Typography';
+import {
+  PlusIcon,
+  WarningCircleIcon,
+  FolderSimpleIcon,
+} from 'phosphor-react-native';
 
 export default function GuidesScreen() {
+  const insets = useSafeAreaInsets();
   const [modalVisible, setModalVisible] = useState(false);
   const {
     data: guides,
@@ -27,6 +37,10 @@ export default function GuidesScreen() {
     refetch,
     isRefetching,
   } = useGuidesQuery();
+
+  // Position exactly 8px above the top edge of the native bottom tab bar
+  const tabHeight = Platform.OS === 'ios' ? 49 : 56;
+  const fabBottom = insets.bottom + tabHeight / 2;
 
   const handleOpenCreateModal = () => {
     haptics.primary();
@@ -52,28 +66,20 @@ export default function GuidesScreen() {
             Curated food crawls, tasting menus & trips
           </MutedText>
         </View>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onPress={handleOpenCreateModal}
-          leftIcon={<Text style={styles.createButtonIcon}>➕</Text>}
-          style={styles.createButton}
-          textStyle={styles.createButtonText}
-        >
-          New
-        </Button>
       </View>
 
       {/* Main Content Area */}
       {isLoading && !isRefetching ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={Theme.colors.primary} />
-          <Text style={styles.loadingText}>Loading your guides...</Text>
-        </View>
+        <GuidesSkeletonList count={3} />
       ) : isError ? (
         <EmptyState
-          emoji="⚠️"
+          icon={
+            <WarningCircleIcon
+              size={36}
+              color={Theme.colors.error}
+              weight="fill"
+            />
+          }
           title="Couldn't load guides"
           description={
             error instanceof Error ? error.message : 'Please try again later'
@@ -87,7 +93,13 @@ export default function GuidesScreen() {
         />
       ) : !guides || guides.length === 0 ? (
         <EmptyState
-          emoji="🗺️"
+          icon={
+            <FolderSimpleIcon
+              size={36}
+              color={Theme.colors.textSubtle}
+              weight="bold"
+            />
+          }
           title="No guides created yet"
           description='Group your favorite crumbs into themed itineraries like "Soho Date Nights" or "Tokyo Ramen Crawl".'
           action={
@@ -104,7 +116,10 @@ export default function GuidesScreen() {
           renderItem={({ item }) => (
             <GuideCard guide={item} onPress={handleSelectGuide} />
           )}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: fabBottom + 64 },
+          ]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -116,6 +131,17 @@ export default function GuidesScreen() {
           }
         />
       )}
+
+      {/* Thumb-Reachable Floating Action Button */}
+      <TouchableOpacity
+        style={[styles.fabButton, { bottom: fabBottom }]}
+        onPress={handleOpenCreateModal}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel="Create new guide"
+      >
+        <PlusIcon size={24} color={Theme.colors.onPrimary} weight="bold" />
+      </TouchableOpacity>
 
       {/* Create Guide Modal */}
       <CreateGuideModal
@@ -132,9 +158,6 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.colors.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: Theme.spacing.lg,
     paddingTop: Theme.spacing.md,
     paddingBottom: Theme.spacing.md,
@@ -145,35 +168,30 @@ const styles = StyleSheet.create({
   screenSubtitle: {
     marginTop: 2,
   },
-  createButton: {
-    borderRadius: Theme.radii.pill,
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Theme.spacing.xs,
-    backgroundColor: Theme.colors.cardBackground,
-    borderColor: Theme.colors.cardBorder,
-  },
-  createButtonIcon: {
-    fontSize: 12,
-  },
-  createButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Theme.colors.primary,
-  },
   listContent: {
     paddingHorizontal: Theme.spacing.lg,
-    paddingBottom: Theme.spacing.xxl,
     paddingTop: Theme.spacing.xs,
   },
   centerContainer: {
     flex: 1,
   },
-  loadingText: {
-    marginTop: Theme.spacing.md,
-    fontSize: 14,
-    color: Theme.colors.textMuted,
-  },
   emptyContainer: {
     flex: 1,
+  },
+  fabButton: {
+    position: 'absolute',
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Theme.colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+    zIndex: 10,
   },
 });

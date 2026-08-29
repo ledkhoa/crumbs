@@ -20,6 +20,13 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { GrabHandle } from '@/components/ui/GrabHandle';
 import { Heading, MutedText } from '@/components/ui/Typography';
+import {
+  SparkleIcon,
+  EnvelopeSimpleIcon,
+  LockKeyIcon,
+  EyeIcon,
+  EyeSlashIcon,
+} from 'phosphor-react-native';
 
 const signInSchema = z.object({
   email: z.email('Please enter a valid email address'),
@@ -79,7 +86,7 @@ export default function SignInScreen() {
       >
         {/* Header Brand */}
         <View style={styles.header}>
-          <Text style={styles.logoIcon}>🍞</Text>
+          <SparkleIcon size={36} color={Theme.colors.primary} weight="fill" />
           <Text style={styles.logoText}>Crumbs</Text>
         </View>
 
@@ -109,7 +116,13 @@ export default function SignInScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
-                leftIcon={<Text style={styles.inputIcon}>✉️</Text>}
+                leftIcon={
+                  <EnvelopeSimpleIcon
+                    size={18}
+                    color={Theme.colors.textSubtle}
+                    weight="bold"
+                  />
+                }
                 error={field.state.meta.errors[0]?.message}
               />
             )}
@@ -126,7 +139,13 @@ export default function SignInScreen() {
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoCorrect={false}
-                leftIcon={<Text style={styles.inputIcon}>🔒</Text>}
+                leftIcon={
+                  <LockKeyIcon
+                    size={18}
+                    color={Theme.colors.textSubtle}
+                    weight="bold"
+                  />
+                }
                 rightIcon={
                   <TouchableOpacity
                     onPress={() => {
@@ -135,7 +154,19 @@ export default function SignInScreen() {
                     }}
                     style={styles.eyeButton}
                   >
-                    <Text>{showPassword ? '👁️' : '🙈'}</Text>
+                    {showPassword ? (
+                      <EyeIcon
+                        size={18}
+                        color={Theme.colors.textSubtle}
+                        weight="bold"
+                      />
+                    ) : (
+                      <EyeSlashIcon
+                        size={18}
+                        color={Theme.colors.textSubtle}
+                        weight="bold"
+                      />
+                    )}
                   </TouchableOpacity>
                 }
                 error={field.state.meta.errors[0]?.message}

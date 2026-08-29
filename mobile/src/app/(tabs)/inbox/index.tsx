@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Theme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
+import { openDefaultMaps } from '@/utils/maps';
 import {
   useCrumbsQuery,
   useCrumbsCountsQuery,
@@ -29,6 +30,7 @@ import {
 } from '@/components/inbox/InboxFilterBar';
 import { InboxSkeletonList } from '@/components/inbox/InboxSkeletonList';
 import { QuickAddToGuideModal } from '@/components/ingestion/QuickAddToGuideModal';
+import { SparkleIcon, MapTrifoldIcon } from 'phosphor-react-native';
 import type { EnrichedUserCrumb } from '@api/modules/crumbs/crumbs.types';
 
 export default function InboxScreen() {
@@ -109,12 +111,12 @@ export default function InboxScreen() {
       return;
     }
 
-    const mapsUrl =
-      crumb.restaurant.mapsUrl ||
-      `https://maps.apple.com/?q=${encodeURIComponent(
-        `${crumb.restaurant.name} ${crumb.restaurant.formattedAddress || ''}`,
-      )}`;
-    Linking.openURL(mapsUrl).catch(() => {});
+    openDefaultMaps({
+      name: crumb.restaurant.name,
+      address: crumb.restaurant.formattedAddress,
+      latitude: crumb.restaurant.latitude,
+      longitude: crumb.restaurant.longitude,
+    });
   };
 
   const handleDeleteCrumb = async (crumb: EnrichedUserCrumb) => {
@@ -150,7 +152,7 @@ export default function InboxScreen() {
           accessibilityLabel="AI Search coming soon"
         >
           <View style={styles.aiSearchLeft}>
-            <Text style={styles.aiSearchIcon}>✨</Text>
+            <SparkleIcon size={16} color={Theme.colors.primary} weight="fill" />
             <Text style={styles.aiSearchPlaceholder}>
               Ask AI or search your cravings...
             </Text>
@@ -177,8 +179,10 @@ export default function InboxScreen() {
 
     return (
       <EmptyState
-        emoji="🍞"
-        title="Inbox Zero! 🌿"
+        icon={
+          <SparkleIcon size={36} color={Theme.colors.primary} weight="fill" />
+        }
+        title="Inbox Zero!"
         description="All your captured crumbs are organized into guides! Share food reels from Instagram or TikTok directly to Crumbs to capture new crumbs."
         action={
           <View style={styles.emptyActions}>
@@ -186,7 +190,13 @@ export default function InboxScreen() {
               variant="primary"
               size="lg"
               onPress={() => router.push('/(tabs)/(home)')}
-              leftIcon={<Text>🗺️ </Text>}
+              leftIcon={
+                <MapTrifoldIcon
+                  size={18}
+                  color={Theme.colors.onPrimary}
+                  weight="bold"
+                />
+              }
               style={styles.exploreMapButton}
             >
               Explore City Map

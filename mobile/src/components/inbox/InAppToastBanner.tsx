@@ -17,6 +17,12 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { Image } from 'expo-image';
 import { Theme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
+import {
+  ForkKnifeIcon,
+  SparkleIcon,
+  PlusIcon,
+  XCircleIcon,
+} from 'phosphor-react-native';
 import type { UnifiedRestaurantSpot } from '@/types/ingest';
 import type { InAppToastPayload } from '@/store/inbox';
 
@@ -105,17 +111,21 @@ export function InAppToastBanner({
             />
           ) : (
             <View style={styles.thumbnailPlaceholder}>
-              <Text style={styles.thumbnailEmoji}>🍽️</Text>
+              <ForkKnifeIcon size={20} color={Theme.colors.textSubtle} />
             </View>
           )}
           <View style={styles.breadBadge}>
-            <Text style={styles.breadEmoji}>🍞</Text>
+            <SparkleIcon
+              size={10}
+              color={Theme.colors.onPrimary}
+              weight="fill"
+            />
           </View>
         </View>
 
         {/* Center Details */}
         <View style={styles.detailsContainer}>
-          <Text style={styles.statusLabel}>Captured to Inbox! 🌿</Text>
+          <Text style={styles.statusLabel}>Captured to Inbox!</Text>
           <Text style={styles.title} numberOfLines={1}>
             {toast.restaurant.name}
           </Text>
@@ -140,7 +150,8 @@ export function InAppToastBanner({
             accessibilityRole="button"
             accessibilityLabel="Add crumb to guide"
           >
-            <Text style={styles.guideButtonText}>🗺️ Guide</Text>
+            <PlusIcon size={12} color={Theme.colors.onPrimary} weight="bold" />
+            <Text style={styles.guideButtonText}>Guide</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -150,7 +161,11 @@ export function InAppToastBanner({
             accessibilityRole="button"
             accessibilityLabel="Dismiss banner"
           >
-            <Text style={styles.closeText}>✕</Text>
+            <XCircleIcon
+              size={18}
+              color={Theme.colors.textSubtle}
+              weight="fill"
+            />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>

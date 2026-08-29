@@ -13,6 +13,13 @@ import { haptics } from '@/utils/haptics';
 import { useGuidesQuery } from '@/hooks/useGuides';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { EmptyState } from '@/components/ui/EmptyState';
+import {
+  CaretLeftIcon,
+  CaretRightIcon,
+  PlusIcon,
+  MagnifyingGlassIcon,
+  FolderSimpleIcon,
+} from 'phosphor-react-native';
 
 export interface GuidePickerViewProps {
   restaurantName?: string;
@@ -75,10 +82,11 @@ export function GuidePickerView({
             onBack();
           }}
           activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
-          accessibilityLabel="Back to crumb preview"
+          accessibilityLabel="Back"
         >
-          <Text style={styles.backButtonText}>← Back</Text>
+          <CaretLeftIcon size={22} color={Theme.colors.text} weight="bold" />
         </TouchableOpacity>
       </View>
 
@@ -106,7 +114,7 @@ export function GuidePickerView({
       <TouchableOpacity
         style={styles.createGuideRow}
         onPress={() => {
-          haptics.tap();
+          haptics.primary();
           onOpenCreateGuide();
         }}
         activeOpacity={0.7}
@@ -114,7 +122,7 @@ export function GuidePickerView({
         accessibilityLabel="Create New Guide"
       >
         <View style={styles.createIconContainer}>
-          <Text style={styles.createIcon}>＋</Text>
+          <PlusIcon size={18} color={Theme.colors.onPrimary} weight="bold" />
         </View>
         <View style={styles.guideInfo}>
           <Text style={styles.createGuideTitle}>Create New Guide</Text>
@@ -122,7 +130,11 @@ export function GuidePickerView({
             Start a new craving itinerary or list
           </Text>
         </View>
-        <Text style={styles.selectArrow}>→</Text>
+        <CaretRightIcon
+          size={16}
+          color={Theme.colors.textSubtle}
+          weight="bold"
+        />
       </TouchableOpacity>
 
       {/* Divider */}
@@ -176,7 +188,11 @@ export function GuidePickerView({
                     color={Theme.colors.primary}
                   />
                 ) : (
-                  <Text style={styles.selectArrow}>→</Text>
+                  <CaretRightIcon
+                    size={16}
+                    color={Theme.colors.textSubtle}
+                    weight="bold"
+                  />
                 )}
               </TouchableOpacity>
             );
@@ -184,13 +200,25 @@ export function GuidePickerView({
         </ScrollView>
       ) : searchQuery.trim().length > 0 ? (
         <EmptyState
-          emoji="🔍"
+          icon={
+            <MagnifyingGlassIcon
+              size={36}
+              color={Theme.colors.textSubtle}
+              weight="bold"
+            />
+          }
           title="No Matching Guides"
           description={`No guides found matching “${searchQuery}”. Tap Create New Guide above to make one!`}
         />
       ) : (
         <EmptyState
-          emoji="🗺️"
+          icon={
+            <FolderSimpleIcon
+              size={36}
+              color={Theme.colors.textSubtle}
+              weight="bold"
+            />
+          }
           title="No Guides Yet"
           description="Create your first guide to organize your favorite crumbs!"
         />

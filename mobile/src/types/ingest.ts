@@ -10,10 +10,13 @@ export interface IngestionStep {
   elapsedMs?: number;
 }
 
-export interface PlaceOpeningPeriod {
-  day?: number;
-  open?: string;
-  close?: string;
+export interface OpeningHoursInfo {
+  utcOffsetMinutes?: number;
+  periods?: Array<{
+    open: { day: number; time: string };
+    close?: { day: number; time: string };
+  }>;
+  weekdayDescriptions?: string[];
 }
 
 export interface PlaceDetails {
@@ -29,7 +32,7 @@ export interface PlaceDetails {
   userRatingCount?: number;
   priceLevel?: string;
   photoUrl?: string;
-  regularOpeningHours?: PlaceOpeningPeriod[];
+  regularOpeningHours?: OpeningHoursInfo;
   editorialSummary?: string;
   communityFavoriteDish?: string;
   reservationUrl?: string;

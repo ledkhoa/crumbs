@@ -1,3 +1,5 @@
+import type { OpeningHoursInfo } from '../../crumbs/crumbs.types';
+
 export interface ReservationInfo {
   reservationUrl?: string;
   reservationProvider?: 'resy' | 'opentable' | 'sevenrooms' | 'tock' | 'custom';
@@ -16,7 +18,7 @@ export interface PlaceDetails {
   userRatingCount?: number;
   priceLevel?: string;
   photoUrl?: string;
-  regularOpeningHours?: Array<{ open?: string; close?: string; day?: number }>;
+  regularOpeningHours?: OpeningHoursInfo;
   editorialSummary?: string;
   communityFavoriteDish?: string;
   reservationUrl?: string;
@@ -27,6 +29,15 @@ export interface AddressComponent {
   longText?: string;
   shortText?: string;
   types?: string[];
+}
+
+export interface GooglePlacesOpeningHours {
+  openNow?: boolean;
+  periods?: Array<{
+    open?: { day?: number; hour?: number; minute?: number };
+    close?: { day?: number; hour?: number; minute?: number };
+  }>;
+  weekdayDescriptions?: string[];
 }
 
 interface GooglePlacesSearchResponse {
@@ -41,12 +52,8 @@ interface GooglePlacesSearchResponse {
     googleMapsUri?: string;
     websiteUri?: string;
     priceLevel?: string;
-    regularOpeningHours?: {
-      periods?: Array<{
-        open?: { day?: number; hour?: number; minute?: number };
-        close?: { day?: number; hour?: number; minute?: number };
-      }>;
-    };
+    utcOffsetMinutes?: number;
+    regularOpeningHours?: GooglePlacesOpeningHours;
     editorialSummary?: { text?: string; languageCode?: string };
     reviews?: Array<{
       text?: { text?: string; languageCode?: string };
@@ -199,6 +206,40 @@ export function formatPriceLevel(
       }
       return undefined;
   }
+}
+
+/**
+ * Normalizes Google Places API (New) regularOpeningHours object into OpeningHoursInfo,
+ * preserving utcOffsetMinutes, periods, and weekdayDescriptions.
+ */
+export function parseOpeningHours(
+  rawHours?: GooglePlacesOpeningHours,
+  utcOffsetMinutes?: number,
+): OpeningHoursInfo | undefined {
+  if (!rawHours) return undefined;
+
+  return {
+    utcOffsetMinutes,
+    periods: rawHours.periods?.map((p) => ({
+      open: {
+        day: p.open?.day ?? 0,
+        time:
+          p.open?.hour !== undefined
+            ? `${String(p.open.hour).padStart(2, '0')}:${String(p.open.minute || 0).padStart(2, '0')}`
+            : '00:00',
+      },
+      close: p.close
+        ? {
+            day: p.close.day ?? 0,
+            time:
+              p.close.hour !== undefined
+                ? `${String(p.close.hour).padStart(2, '0')}:${String(p.close.minute || 0).padStart(2, '0')}`
+                : '00:00',
+          }
+        : undefined,
+    })),
+    weekdayDescriptions: rawHours.weekdayDescriptions,
+  };
 }
 
 /**
@@ -356,6 +397,7 @@ export class PlacesService {
           'places.googleMapsUri',
           'places.websiteUri',
           'places.priceLevel',
+          'places.utcOffsetMinutes',
           'places.regularOpeningHours',
           'places.editorialSummary',
           'places.reviews',
@@ -408,18 +450,9 @@ export class PlacesService {
               ? extractCommunityDishFromReviews(editorialSummary, place.reviews)
               : undefined;
 
-            const regularOpeningHours = place.regularOpeningHours?.periods?.map(
-              (p) => ({
-                day: p.open?.day,
-                open:
-                  p.open?.hour !== undefined
-                    ? `${String(p.open.hour).padStart(2, '0')}:${String(p.open.minute || 0).padStart(2, '0')}`
-                    : undefined,
-                close:
-                  p.close?.hour !== undefined
-                    ? `${String(p.close.hour).padStart(2, '0')}:${String(p.close.minute || 0).padStart(2, '0')}`
-                    : undefined,
-              }),
+            const regularOpeningHours = parseOpeningHours(
+              place.regularOpeningHours,
+              place.utcOffsetMinutes,
             );
 
             return {

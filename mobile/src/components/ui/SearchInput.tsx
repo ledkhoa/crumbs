@@ -2,7 +2,6 @@ import { forwardRef } from 'react';
 import {
   View,
   TextInput,
-  Text,
   TouchableOpacity,
   StyleSheet,
   type TextInputProps,
@@ -11,6 +10,7 @@ import {
 } from 'react-native';
 import { Theme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
+import { MagnifyingGlassIcon, XCircleIcon } from 'phosphor-react-native';
 
 export interface SearchInputProps extends TextInputProps {
   containerStyle?: StyleProp<ViewStyle>;
@@ -39,7 +39,12 @@ export const SearchInput = forwardRef<TextInput, SearchInputProps>(
 
     return (
       <View style={[styles.container, containerStyle]}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <MagnifyingGlassIcon
+          size={16}
+          color={Theme.colors.textSubtle}
+          weight="bold"
+          style={styles.searchIcon}
+        />
         <TextInput
           ref={ref}
           value={value}
@@ -60,7 +65,11 @@ export const SearchInput = forwardRef<TextInput, SearchInputProps>(
             accessibilityRole="button"
             accessibilityLabel="Clear search text"
           >
-            <Text style={styles.clearText}>✕</Text>
+            <XCircleIcon
+              size={16}
+              color={Theme.colors.textSubtle}
+              weight="fill"
+            />
           </TouchableOpacity>
         )}
       </View>
