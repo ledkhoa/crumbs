@@ -8,7 +8,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { MagnifyingGlassIcon, XCircleIcon } from 'phosphor-react-native';
 
@@ -29,6 +29,8 @@ export const SearchInput = forwardRef<TextInput, SearchInputProps>(
     },
     ref,
   ) {
+    const { colors } = useTheme();
+
     const handleClear = () => {
       haptics.tap();
       onChangeText?.('');
@@ -38,10 +40,19 @@ export const SearchInput = forwardRef<TextInput, SearchInputProps>(
     const hasValue = Boolean(value && value.length > 0);
 
     return (
-      <View style={[styles.container, containerStyle]}>
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: colors.inputBackground,
+            borderColor: colors.inputBorder,
+          },
+          containerStyle,
+        ]}
+      >
         <MagnifyingGlassIcon
           size={16}
-          color={Theme.colors.textSubtle}
+          color={colors.textSubtle}
           weight="bold"
           style={styles.searchIcon}
         />
@@ -49,9 +60,9 @@ export const SearchInput = forwardRef<TextInput, SearchInputProps>(
           ref={ref}
           value={value}
           onChangeText={onChangeText}
-          style={styles.input}
+          style={[styles.input, { color: colors.text }]}
           placeholder={placeholder}
-          placeholderTextColor={Theme.colors.textSubtle}
+          placeholderTextColor={colors.textSubtle}
           autoCapitalize="none"
           autoCorrect={false}
           clearButtonMode="never"
@@ -65,11 +76,7 @@ export const SearchInput = forwardRef<TextInput, SearchInputProps>(
             accessibilityRole="button"
             accessibilityLabel="Clear search text"
           >
-            <XCircleIcon
-              size={16}
-              color={Theme.colors.textSubtle}
-              weight="fill"
-            />
+            <XCircleIcon size={16} color={colors.textSubtle} weight="fill" />
           </TouchableOpacity>
         )}
       </View>
@@ -81,30 +88,21 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Theme.colors.inputBackground,
     borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
     borderRadius: Theme.radii.lg,
     paddingHorizontal: Theme.spacing.md,
     height: 44,
   },
   searchIcon: {
-    fontSize: 14,
     marginRight: Theme.spacing.sm,
     opacity: 0.6,
   },
   input: {
     flex: 1,
     fontSize: 14,
-    color: Theme.colors.text,
     paddingVertical: 0,
   },
   clearButton: {
-    padding: Theme.spacing.xs,
-  },
-  clearText: {
-    fontSize: 13,
-    color: Theme.colors.textMuted,
-    fontWeight: '700',
+    padding: 2,
   },
 });

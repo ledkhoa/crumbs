@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { Button } from '@/components/ui/Button';
 import { Heading } from '@/components/ui/Typography';
@@ -28,6 +28,8 @@ export function IngestionErrorState({
   onSearchManually,
   onDismiss,
 }: IngestionErrorStateProps) {
+  const { colors } = useTheme();
+
   useEffect(() => {
     haptics.error();
   }, []);
@@ -40,17 +42,21 @@ export function IngestionErrorState({
       <View
         style={[
           styles.iconCircle,
-          isUnrelated ? styles.iconCircleUnrelated : styles.iconCircleError,
+          isUnrelated
+            ? {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBorder,
+              }
+            : {
+                backgroundColor: colors.errorBackground,
+                borderColor: colors.errorBorder,
+              },
         ]}
       >
         {isUnrelated ? (
-          <CompassIcon size={32} color={Theme.colors.textMuted} weight="bold" />
+          <CompassIcon size={32} color={colors.textMuted} weight="bold" />
         ) : (
-          <WarningCircleIcon
-            size={32}
-            color={Theme.colors.error}
-            weight="fill"
-          />
+          <WarningCircleIcon size={32} color={colors.error} weight="fill" />
         )}
       </View>
 
@@ -59,7 +65,7 @@ export function IngestionErrorState({
         {isUnrelated ? 'No Restaurant Detected' : "Couldn't Capture Crumb"}
       </Heading>
 
-      <Text style={styles.description}>
+      <Text style={[styles.description, { color: colors.textMuted }]}>
         {isUnrelated
           ? "We analyzed this post, but couldn't pinpoint a specific restaurant or food crumb."
           : errorMessage ||
@@ -68,9 +74,22 @@ export function IngestionErrorState({
 
       {/* Caption Preview if available */}
       {captionSnippet && (
-        <View style={styles.captionBox}>
-          <Text style={styles.captionLabel}>Shared caption:</Text>
-          <Text style={styles.captionText} numberOfLines={3}>
+        <View
+          style={[
+            styles.captionBox,
+            {
+              backgroundColor: colors.inputBackground,
+              borderColor: colors.cardBorder,
+            },
+          ]}
+        >
+          <Text style={[styles.captionLabel, { color: colors.textSubtle }]}>
+            Shared caption:
+          </Text>
+          <Text
+            style={[styles.captionText, { color: colors.textMuted }]}
+            numberOfLines={3}
+          >
             “{captionSnippet}”
           </Text>
         </View>
@@ -86,7 +105,7 @@ export function IngestionErrorState({
             leftIcon={
               <ArrowClockwiseIcon
                 size={18}
-                color={Theme.colors.onPrimary}
+                color={colors.onPrimary}
                 weight="bold"
               />
             }
@@ -102,7 +121,7 @@ export function IngestionErrorState({
           leftIcon={
             <MagnifyingGlassIcon
               size={18}
-              color={isUnrelated ? Theme.colors.onPrimary : Theme.colors.text}
+              color={isUnrelated ? colors.onPrimary : colors.text}
               weight="bold"
             />
           }
@@ -135,17 +154,6 @@ const styles = StyleSheet.create({
     marginBottom: Theme.spacing.md,
     borderWidth: 1,
   },
-  iconCircleUnrelated: {
-    backgroundColor: Theme.colors.inputBackground,
-    borderColor: Theme.colors.inputBorder,
-  },
-  iconCircleError: {
-    backgroundColor: Theme.colors.errorBackground,
-    borderColor: Theme.colors.errorBorder,
-  },
-  iconEmoji: {
-    fontSize: 32,
-  },
   title: {
     fontSize: 22,
     marginBottom: Theme.spacing.xs,
@@ -153,15 +161,12 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    color: Theme.colors.textMuted,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: Theme.spacing.lg,
   },
   captionBox: {
     width: '100%',
-    backgroundColor: Theme.colors.inputBackground,
-    borderColor: Theme.colors.cardBorder,
     borderWidth: 1,
     borderRadius: Theme.radii.md,
     padding: Theme.spacing.md,
@@ -170,7 +175,6 @@ const styles = StyleSheet.create({
   captionLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: Theme.colors.textSubtle,
     textTransform: 'uppercase',
     marginBottom: 4,
     letterSpacing: 0.5,
@@ -178,7 +182,6 @@ const styles = StyleSheet.create({
   captionText: {
     fontSize: 13,
     fontStyle: 'italic',
-    color: Theme.colors.textMuted,
     lineHeight: 18,
   },
   buttonGroup: {

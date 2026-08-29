@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { useGuidesQuery } from '@/hooks/useGuides';
 import { SearchInput } from '@/components/ui/SearchInput';
@@ -36,6 +36,7 @@ export function GuidePickerView({
   onSelectGuide,
   onOpenCreateGuide,
 }: GuidePickerViewProps) {
+  const { colors } = useTheme();
   const { data: guides, isLoading } = useGuidesQuery();
   const [searchQuery, setSearchQuery] = useState('');
   const [submittingGuideId, setSubmittingGuideId] = useState<string | null>(
@@ -86,14 +87,17 @@ export function GuidePickerView({
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
-          <CaretLeftIcon size={22} color={Theme.colors.text} weight="bold" />
+          <CaretLeftIcon size={22} color={colors.text} weight="bold" />
         </TouchableOpacity>
       </View>
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Add to Guide</Text>
-        <Text style={styles.subtitle} numberOfLines={1}>
+        <Text style={[styles.title, { color: colors.text }]}>Add to Guide</Text>
+        <Text
+          style={[styles.subtitle, { color: colors.textMuted }]}
+          numberOfLines={1}
+        >
           {isMulti
             ? `Save ${totalCount} crumbs to your curated guides`
             : restaurantName
@@ -112,7 +116,13 @@ export function GuidePickerView({
 
       {/* Create New Guide Action Row */}
       <TouchableOpacity
-        style={styles.createGuideRow}
+        style={[
+          styles.createGuideRow,
+          {
+            backgroundColor: colors.cardBackground,
+            borderColor: colors.cardBorder,
+          },
+        ]}
         onPress={() => {
           haptics.primary();
           onOpenCreateGuide();
@@ -121,30 +131,37 @@ export function GuidePickerView({
         accessibilityRole="button"
         accessibilityLabel="Create New Guide"
       >
-        <View style={styles.createIconContainer}>
-          <PlusIcon size={18} color={Theme.colors.onPrimary} weight="bold" />
+        <View
+          style={[
+            styles.createIconContainer,
+            { backgroundColor: colors.inputBackground },
+          ]}
+        >
+          <PlusIcon size={18} color={colors.primary} weight="bold" />
         </View>
         <View style={styles.guideInfo}>
-          <Text style={styles.createGuideTitle}>Create New Guide</Text>
-          <Text style={styles.createGuideSubtitle}>
+          <Text style={[styles.createGuideTitle, { color: colors.primary }]}>
+            Create New Guide
+          </Text>
+          <Text
+            style={[styles.createGuideSubtitle, { color: colors.textMuted }]}
+          >
             Start a new craving itinerary or list
           </Text>
         </View>
-        <CaretRightIcon
-          size={16}
-          color={Theme.colors.textSubtle}
-          weight="bold"
-        />
+        <CaretRightIcon size={16} color={colors.textSubtle} weight="bold" />
       </TouchableOpacity>
 
       {/* Divider */}
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: colors.inputBorder }]} />
 
       {/* Guides List */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color={Theme.colors.primary} />
-          <Text style={styles.loadingText}>Loading your guides...</Text>
+          <ActivityIndicator color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textMuted }]}>
+            Loading your guides...
+          </Text>
         </View>
       ) : filteredGuides.length > 0 ? (
         <ScrollView
@@ -159,7 +176,14 @@ export function GuidePickerView({
                 key={guide.id}
                 style={[
                   styles.guideRow,
-                  isSelecting && styles.guideRowSelecting,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.cardBorder,
+                  },
+                  isSelecting && {
+                    borderColor: colors.primary,
+                    backgroundColor: colors.inputBackground,
+                  },
                 ]}
                 onPress={() => handleSelectGuide(guide.id)}
                 disabled={submittingGuideId !== null}
@@ -167,30 +191,38 @@ export function GuidePickerView({
                 accessibilityRole="button"
                 accessibilityLabel={`${guide.name}, ${guide.crumbCount} ${guide.crumbCount === 1 ? 'crumb' : 'crumbs'}`}
               >
-                <View style={styles.emojiContainer}>
+                <View
+                  style={[
+                    styles.emojiContainer,
+                    { backgroundColor: colors.inputBackground },
+                  ]}
+                >
                   <Text style={styles.emojiText}>
                     {guide.emojiIcon || '🗺️'}
                   </Text>
                 </View>
                 <View style={styles.guideInfo}>
-                  <Text style={styles.guideName} numberOfLines={1}>
+                  <Text
+                    style={[styles.guideName, { color: colors.text }]}
+                    numberOfLines={1}
+                  >
                     {guide.name}
                   </Text>
-                  <Text style={styles.guideMeta} numberOfLines={1}>
+                  <Text
+                    style={[styles.guideMeta, { color: colors.textMuted }]}
+                    numberOfLines={1}
+                  >
                     {guide.crumbCount}{' '}
                     {guide.crumbCount === 1 ? 'crumb' : 'crumbs'}
                     {guide.description ? ` · ${guide.description}` : ''}
                   </Text>
                 </View>
                 {isSelecting ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={Theme.colors.primary}
-                  />
+                  <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
                   <CaretRightIcon
                     size={16}
-                    color={Theme.colors.textSubtle}
+                    color={colors.textSubtle}
                     weight="bold"
                   />
                 )}
@@ -203,7 +235,7 @@ export function GuidePickerView({
           icon={
             <MagnifyingGlassIcon
               size={36}
-              color={Theme.colors.textSubtle}
+              color={colors.textSubtle}
               weight="bold"
             />
           }
@@ -215,7 +247,7 @@ export function GuidePickerView({
           icon={
             <FolderSimpleIcon
               size={36}
-              color={Theme.colors.textSubtle}
+              color={colors.textSubtle}
               weight="bold"
             />
           }
@@ -241,11 +273,6 @@ const styles = StyleSheet.create({
     paddingVertical: Theme.spacing.xs,
     paddingRight: Theme.spacing.md,
   },
-  backButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Theme.colors.primary,
-  },
   header: {
     marginBottom: Theme.spacing.md,
   },
@@ -253,12 +280,10 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    color: Theme.colors.text,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 13,
-    color: Theme.colors.textMuted,
   },
   searchBarContainer: {
     marginBottom: Theme.spacing.md,
@@ -266,9 +291,7 @@ const styles = StyleSheet.create({
   createGuideRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Theme.colors.cardBackground,
     borderWidth: 1,
-    borderColor: Theme.colors.primaryLight,
     borderRadius: Theme.radii.lg,
     padding: Theme.spacing.md,
     marginBottom: Theme.spacing.md,
@@ -277,29 +300,20 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: Theme.radii.md,
-    backgroundColor: Theme.colors.inputBackground,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Theme.spacing.md,
   },
-  createIcon: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Theme.colors.primary,
-  },
   createGuideTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: Theme.colors.primary,
   },
   createGuideSubtitle: {
     fontSize: 12,
-    color: Theme.colors.textMuted,
     marginTop: 2,
   },
   divider: {
     height: 1,
-    backgroundColor: Theme.colors.inputBorder,
     marginBottom: Theme.spacing.md,
   },
   listContainer: {
@@ -309,21 +323,14 @@ const styles = StyleSheet.create({
   guideRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Theme.colors.cardBackground,
     borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
     borderRadius: Theme.radii.lg,
     padding: Theme.spacing.md,
-  },
-  guideRowSelecting: {
-    borderColor: Theme.colors.primary,
-    backgroundColor: Theme.colors.inputBackground,
   },
   emojiContainer: {
     width: 42,
     height: 42,
     borderRadius: Theme.radii.md,
-    backgroundColor: Theme.colors.inputBackground,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Theme.spacing.md,
@@ -337,18 +344,10 @@ const styles = StyleSheet.create({
   guideName: {
     fontSize: 15,
     fontWeight: '700',
-    color: Theme.colors.text,
   },
   guideMeta: {
     fontSize: 12,
-    color: Theme.colors.textMuted,
     marginTop: 2,
-  },
-  selectArrow: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Theme.colors.textSubtle,
-    marginLeft: Theme.spacing.sm,
   },
   loadingContainer: {
     paddingVertical: Theme.spacing.xxl,
@@ -357,6 +356,5 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 13,
-    color: Theme.colors.textMuted,
   },
 });

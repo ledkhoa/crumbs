@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { SparkleIcon, CheckIcon } from 'phosphor-react-native';
 import type { IngestionStep } from '@/types/ingest';
 
@@ -22,6 +22,8 @@ export function IngestionProgressSteps({
   steps,
   platform = 'instagram',
 }: IngestionProgressStepsProps) {
+  const { colors } = useTheme();
+
   // Bread Loaf gentle pulse animation
   const breadScale = useSharedValue(1);
 
@@ -67,21 +69,41 @@ export function IngestionProgressSteps({
     <View style={styles.container}>
       {/* Animated Bread Icon */}
       <View style={styles.breadWrapper}>
-        <Animated.View style={[styles.breadCircle, breadAnimatedStyle]}>
-          <SparkleIcon size={32} color={Theme.colors.primary} weight="fill" />
+        <Animated.View
+          style={[
+            styles.breadCircle,
+            {
+              backgroundColor: colors.cardBackground,
+              borderColor: colors.cardBorder,
+              shadowColor: colors.primary,
+            },
+            breadAnimatedStyle,
+          ]}
+        >
+          <SparkleIcon size={32} color={colors.primary} weight="fill" />
         </Animated.View>
       </View>
 
       {/* Header Info */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Capturing Crumb...</Text>
-        <Text style={styles.headerSubtitle}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Capturing Crumb...
+        </Text>
+        <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>
           Extracting culinary gems from {platformDisplayName}
         </Text>
       </View>
 
       {/* 4-Stage Pipeline Card */}
-      <View style={styles.pipelineCard}>
+      <View
+        style={[
+          styles.pipelineCard,
+          {
+            backgroundColor: colors.cardBackground,
+            borderColor: colors.cardBorder,
+          },
+        ]}
+      >
         {steps.map((step, index) => {
           const isCompleted = step.status === 'completed';
           const isActive = step.status === 'active';
@@ -93,30 +115,50 @@ export function IngestionProgressSteps({
               <View style={styles.indicatorCol}>
                 <View style={styles.indicatorNode}>
                   {isCompleted && (
-                    <View style={styles.completedCircle}>
+                    <View
+                      style={[
+                        styles.completedCircle,
+                        { backgroundColor: colors.success },
+                      ]}
+                    >
                       <CheckIcon
                         size={12}
-                        color={Theme.colors.onPrimary}
+                        color={colors.onPrimary}
                         weight="bold"
                       />
                     </View>
                   )}
                   {isActive && (
                     <Animated.View
-                      style={[styles.activeDotOuter, dotAnimatedStyle]}
+                      style={[
+                        styles.activeDotOuter,
+                        { backgroundColor: colors.primaryLight },
+                        dotAnimatedStyle,
+                      ]}
                     >
-                      <View style={styles.activeDotInner} />
+                      <View
+                        style={[
+                          styles.activeDotInner,
+                          { backgroundColor: colors.primary },
+                        ]}
+                      />
                     </Animated.View>
                   )}
                   {!isCompleted && !isActive && (
-                    <View style={styles.pendingCircle} />
+                    <View
+                      style={[
+                        styles.pendingCircle,
+                        { borderColor: colors.inputBorder },
+                      ]}
+                    />
                   )}
                 </View>
                 {!isLast && (
                   <View
                     style={[
                       styles.connectorLine,
-                      isCompleted && styles.connectorLineCompleted,
+                      { backgroundColor: colors.inputBorder },
+                      isCompleted && { backgroundColor: colors.success },
                     ]}
                   />
                 )}
@@ -128,8 +170,15 @@ export function IngestionProgressSteps({
                   <Text
                     style={[
                       styles.stepLabel,
-                      isActive && styles.stepLabelActive,
-                      isCompleted && styles.stepLabelCompleted,
+                      { color: colors.textSubtle },
+                      isActive && [
+                        styles.stepLabelActive,
+                        { color: colors.text },
+                      ],
+                      isCompleted && [
+                        styles.stepLabelCompleted,
+                        { color: colors.text },
+                      ],
                     ]}
                   >
                     {step.label}
@@ -139,7 +188,11 @@ export function IngestionProgressSteps({
                   <Text
                     style={[
                       styles.stepSublabel,
-                      isActive && styles.stepSublabelActive,
+                      { color: colors.textSubtle },
+                      isActive && [
+                        styles.stepSublabelActive,
+                        { color: colors.textMuted },
+                      ],
                     ]}
                   >
                     {step.sublabel}
@@ -170,19 +223,13 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: Theme.colors.cardBackground,
     borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 10,
     elevation: 3,
-  },
-  breadEmoji: {
-    fontSize: 32,
   },
   header: {
     alignItems: 'center',
@@ -192,20 +239,16 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    color: Theme.colors.text,
     marginBottom: Theme.spacing.xs,
     textAlign: 'center',
   },
   headerSubtitle: {
     fontSize: 14,
-    color: Theme.colors.textMuted,
     textAlign: 'center',
   },
   pipelineCard: {
     width: '100%',
-    backgroundColor: Theme.colors.cardBackground,
     borderRadius: Theme.radii.xl,
-    borderColor: Theme.colors.cardBorder,
     borderWidth: 1,
     paddingVertical: Theme.spacing.md,
     paddingHorizontal: Theme.spacing.lg,
@@ -229,20 +272,13 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: Theme.colors.success,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  completedCheck: {
-    color: Theme.colors.onPrimary,
-    fontSize: 13,
-    fontWeight: 'bold',
   },
   activeDotOuter: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: Theme.colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -250,25 +286,19 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: Theme.colors.primary,
   },
   pendingCircle: {
     width: 18,
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: Theme.colors.inputBorder,
     backgroundColor: 'transparent',
   },
   connectorLine: {
     width: 2,
     flex: 1,
     minHeight: 24,
-    backgroundColor: Theme.colors.inputBorder,
     marginVertical: 2,
-  },
-  connectorLineCompleted: {
-    backgroundColor: Theme.colors.success,
   },
   stepContent: {
     flex: 1,
@@ -283,36 +313,18 @@ const styles = StyleSheet.create({
   stepLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: Theme.colors.textSubtle,
   },
   stepLabelActive: {
     fontSize: 15,
     fontWeight: '700',
-    color: Theme.colors.text,
   },
   stepLabelCompleted: {
     fontSize: 14,
     fontWeight: '600',
-    color: Theme.colors.text,
   },
   stepSublabel: {
     fontSize: 12,
-    color: Theme.colors.textSubtle,
     marginTop: 2,
   },
-  stepSublabelActive: {
-    color: Theme.colors.textMuted,
-  },
-  activeIndicatorBadge: {
-    backgroundColor: Theme.colors.inputBackground,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: Theme.radii.sm,
-  },
-  activeIndicatorDots: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: Theme.colors.primary,
-    letterSpacing: 1.5,
-  },
+  stepSublabelActive: {},
 });

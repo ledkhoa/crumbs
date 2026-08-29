@@ -7,7 +7,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 
 export interface SkeletonProps {
   width?: number | `${number}%` | 'auto';
@@ -25,6 +25,7 @@ export function Skeleton({
   borderRadius = Theme.radii.sm,
   style,
 }: SkeletonProps) {
+  const { colors } = useTheme();
   const opacity = useSharedValue(0.45);
 
   useEffect(() => {
@@ -50,6 +51,7 @@ export function Skeleton({
           width: width ?? '100%',
           height: height ?? 16,
           borderRadius,
+          backgroundColor: colors.inputBackground,
         },
         animatedStyle,
         style,
@@ -60,6 +62,6 @@ export function Skeleton({
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: Theme.colors.inputBorder,
+    overflow: 'hidden',
   },
 });

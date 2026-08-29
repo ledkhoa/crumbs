@@ -6,7 +6,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 
 export interface CheckboxProps {
@@ -24,6 +24,8 @@ export function Checkbox({
   style,
   accessibilityLabel,
 }: CheckboxProps) {
+  const { colors } = useTheme();
+
   const handlePress = () => {
     haptics.selection();
     onToggle?.(!checked);
@@ -40,7 +42,21 @@ export function Checkbox({
       style={[
         styles.circle,
         circleStyle,
-        checked ? styles.circleChecked : styles.circleUnchecked,
+        checked
+          ? [
+              styles.circleChecked,
+              {
+                backgroundColor: colors.primary,
+                borderColor: colors.cardBackground,
+              },
+            ]
+          : [
+              styles.circleUnchecked,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBorder,
+              },
+            ],
         style,
       ]}
       onPress={handlePress}
@@ -49,7 +65,9 @@ export function Checkbox({
       accessibilityState={{ checked }}
       accessibilityLabel={accessibilityLabel}
     >
-      {checked ? <Text style={styles.checkmark}>✓</Text> : null}
+      {checked ? (
+        <Text style={[styles.checkmark, { color: colors.onPrimary }]}>✓</Text>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -65,17 +83,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   circleChecked: {
-    backgroundColor: Theme.colors.primary,
     borderWidth: 1.5,
-    borderColor: Theme.colors.cardBackground,
   },
   circleUnchecked: {
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.7)',
   },
   checkmark: {
-    color: Theme.colors.onPrimary,
     fontSize: 14,
     fontWeight: '800',
     marginTop: Platform.OS === 'ios' ? -1 : 0,

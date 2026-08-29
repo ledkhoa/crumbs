@@ -6,9 +6,10 @@ import {
   StyleSheet,
   type StyleProp,
   type TextStyle,
+  type ViewStyle,
   type TouchableOpacityProps,
 } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 
 export type ButtonVariant =
@@ -41,6 +42,8 @@ export function Button({
   onPress,
   ...props
 }: ButtonProps) {
+  const { colors } = useTheme();
+
   const handlePress = (e: any) => {
     if (disabled || loading) return;
 
@@ -63,12 +66,56 @@ export function Button({
     switch (variant) {
       case 'primary':
       case 'destructive':
-        return Theme.colors.onPrimary;
+        return colors.onPrimary;
       case 'secondary':
       case 'outline':
       case 'ghost':
       default:
-        return Theme.colors.text;
+        return colors.text;
+    }
+  };
+
+  const getVariantContainerStyle = (): ViewStyle => {
+    switch (variant) {
+      case 'primary':
+        return {
+          backgroundColor: colors.primary,
+          shadowColor: colors.primary,
+        };
+      case 'secondary':
+        return {
+          backgroundColor: colors.inputBackground,
+          borderColor: colors.inputBorder,
+          borderWidth: 1,
+        };
+      case 'outline':
+        return {
+          backgroundColor: 'transparent',
+          borderColor: colors.cardBorder,
+          borderWidth: 1.5,
+        };
+      case 'ghost':
+        return {
+          backgroundColor: 'transparent',
+        };
+      case 'destructive':
+        return {
+          backgroundColor: colors.error,
+          shadowColor: colors.error,
+        };
+    }
+  };
+
+  const getVariantTextStyle = (): TextStyle => {
+    switch (variant) {
+      case 'primary':
+      case 'destructive':
+        return { color: colors.onPrimary };
+      case 'secondary':
+      case 'outline':
+        return { color: colors.text };
+      case 'ghost':
+        return { color: colors.textMuted };
     }
   };
 
@@ -78,8 +125,8 @@ export function Button({
     <TouchableOpacity
       style={[
         styles.base,
-        styles[variant],
         styles[size],
+        getVariantContainerStyle(),
         (disabled || loading) && styles.disabled,
         style,
       ]}
@@ -99,8 +146,8 @@ export function Button({
             <Text
               style={[
                 styles.textBase,
-                styles[`${variant}Text`],
                 styles[`${size}Text`],
+                getVariantTextStyle(),
                 textStyle,
               ]}
             >
@@ -143,37 +190,6 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: 0,
   },
-  // Variants
-  primary: {
-    backgroundColor: Theme.colors.primary,
-    shadowColor: Theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  secondary: {
-    backgroundColor: Theme.colors.inputBackground,
-    borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: Theme.colors.cardBorder,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-  },
-  destructive: {
-    backgroundColor: Theme.colors.error,
-    shadowColor: Theme.colors.error,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  // Text Styles
   textBase: {
     fontWeight: '600',
     textAlign: 'center',
@@ -190,20 +206,5 @@ const styles = StyleSheet.create({
   },
   iconText: {
     fontSize: 16,
-  },
-  primaryText: {
-    color: Theme.colors.onPrimary,
-  },
-  secondaryText: {
-    color: Theme.colors.text,
-  },
-  outlineText: {
-    color: Theme.colors.text,
-  },
-  ghostText: {
-    color: Theme.colors.textMuted,
-  },
-  destructiveText: {
-    color: Theme.colors.onPrimary,
   },
 });

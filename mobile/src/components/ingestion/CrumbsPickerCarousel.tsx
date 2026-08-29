@@ -8,7 +8,7 @@ import {
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { Button } from '@/components/ui/Button';
 import { IngestionCrumbCard } from './IngestionCrumbCard';
@@ -34,6 +34,7 @@ export function CrumbsPickerCarousel({
   onAddSelectedToGuide,
   onViewInInbox,
 }: CrumbsPickerCarouselProps) {
+  const { colors } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -104,12 +105,17 @@ export function CrumbsPickerCarousel({
               key={i}
               style={[
                 styles.dot,
-                i === activeIndex ? styles.dotActive : styles.dotInactive,
+                i === activeIndex
+                  ? [styles.dotActive, { backgroundColor: colors.primary }]
+                  : [
+                      styles.dotInactive,
+                      { backgroundColor: colors.inputBorder },
+                    ],
               ]}
             />
           ))}
         </View>
-        <Text style={styles.paginationText}>
+        <Text style={[styles.paginationText, { color: colors.textMuted }]}>
           {activeIndex + 1} of {crumbs.length}
         </Text>
       </View>
@@ -123,11 +129,7 @@ export function CrumbsPickerCarousel({
           disabled={selectedCount === 0}
           leftIcon={
             selectedCount > 0 ? (
-              <PlusIcon
-                size={18}
-                color={Theme.colors.onPrimary}
-                weight="bold"
-              />
+              <PlusIcon size={18} color={colors.onPrimary} weight="bold" />
             ) : undefined
           }
           accessibilityLabel={`Add ${selectedCount} ${selectedCount === 1 ? 'Crumb' : 'Crumbs'} to Guide`}
@@ -141,9 +143,7 @@ export function CrumbsPickerCarousel({
           variant="secondary"
           size="lg"
           onPress={handleViewAll}
-          leftIcon={
-            <TrayIcon size={18} color={Theme.colors.text} weight="bold" />
-          }
+          leftIcon={<TrayIcon size={18} color={colors.text} weight="bold" />}
           accessibilityLabel="View All in Inbox"
         >
           View All in Inbox
@@ -184,56 +184,18 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     width: 18,
-    backgroundColor: Theme.colors.primary,
   },
   dotInactive: {
     width: 6,
-    backgroundColor: Theme.colors.inputBorder,
   },
   paginationText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Theme.colors.textMuted,
   },
   bulkActions: {
     gap: Theme.spacing.sm,
     marginTop: Theme.spacing.xs,
     marginBottom: Theme.spacing.md,
     paddingHorizontal: Theme.spacing.lg,
-  },
-  primaryBulkButton: {
-    height: 52,
-    borderRadius: Theme.radii.lg,
-    backgroundColor: Theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  disabledButton: {
-    opacity: 0.45,
-    backgroundColor: Theme.colors.textMuted,
-  },
-  primaryBulkButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Theme.colors.onPrimary,
-  },
-  secondaryBulkButton: {
-    height: 48,
-    borderRadius: Theme.radii.lg,
-    backgroundColor: Theme.colors.inputBackground,
-    borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryBulkButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Theme.colors.text,
   },
 });

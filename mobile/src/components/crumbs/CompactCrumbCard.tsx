@@ -6,7 +6,7 @@ import {
   Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { formatPriceLevel } from '@/utils/price';
 import { StarRating, SocialPlatformIcon } from '@/components/ui';
@@ -33,6 +33,7 @@ export function CompactCrumbCard({
   onAddToGuide,
   onBookOrMapPress,
 }: CompactCrumbCardProps) {
+  const { colors } = useTheme();
   const { restaurant, sourcePost, effectiveHeroDish, postAttribution } = crumb;
 
   const handleCardPress = () => {
@@ -69,14 +70,26 @@ export function CompactCrumbCard({
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.cardBackground,
+          borderColor: colors.cardBorder,
+          shadowColor: colors.shadow,
+        },
+      ]}
       onPress={handleCardPress}
       activeOpacity={0.88}
       accessibilityRole="button"
       accessibilityLabel={`${restaurant.name}, ${locationText}`}
     >
       {/* Left 88x88 Image Column */}
-      <View style={styles.imageContainer}>
+      <View
+        style={[
+          styles.imageContainer,
+          { backgroundColor: colors.inputBackground },
+        ]}
+      >
         {restaurant.photoUrl ? (
           <Image
             source={{ uri: restaurant.photoUrl }}
@@ -86,17 +99,25 @@ export function CompactCrumbCard({
           />
         ) : (
           <View style={styles.imagePlaceholder}>
-            <ForkKnifeIcon size={32} color={Theme.colors.textSubtle} />
+            <ForkKnifeIcon size={32} color={colors.textSubtle} />
           </View>
         )}
 
         {/* Platform Watermark Badge */}
         {sourcePost?.platform && (
-          <View style={styles.platformBadge}>
+          <View
+            style={[
+              styles.platformBadge,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.cardBorder,
+              },
+            ]}
+          >
             <SocialPlatformIcon
               platform={sourcePost.platform}
               size={12}
-              color={Theme.colors.text}
+              color={colors.text}
             />
           </View>
         )}
@@ -106,15 +127,22 @@ export function CompactCrumbCard({
       <View style={styles.infoContainer}>
         {/* Row 1: Header (Title + Price/Rating) */}
         <View style={styles.headerRow}>
-          <Text style={styles.restaurantName} numberOfLines={1}>
+          <Text
+            style={[styles.restaurantName, { color: colors.text }]}
+            numberOfLines={1}
+          >
             {restaurant.name}
           </Text>
           <View style={styles.metaRight}>
             {formattedPrice ? (
-              <Text style={styles.priceText}>{formattedPrice}</Text>
+              <Text style={[styles.priceText, { color: colors.textMuted }]}>
+                {formattedPrice}
+              </Text>
             ) : null}
             {formattedPrice && restaurant.rating ? (
-              <Text style={styles.dotSeparator}>·</Text>
+              <Text style={[styles.dotSeparator, { color: colors.textSubtle }]}>
+                ·
+              </Text>
             ) : null}
             {restaurant.rating ? (
               <StarRating rating={restaurant.rating} size="sm" />
@@ -125,15 +153,23 @@ export function CompactCrumbCard({
         {/* Row 2: Location & Provenance */}
         <View style={styles.metaRow}>
           {locationText ? (
-            <Text style={styles.locationText} numberOfLines={1}>
+            <Text
+              style={[styles.locationText, { color: colors.textMuted }]}
+              numberOfLines={1}
+            >
               {locationText}
             </Text>
           ) : null}
           {creatorCredit && locationText ? (
-            <Text style={styles.dotSeparator}>·</Text>
+            <Text style={[styles.dotSeparator, { color: colors.textSubtle }]}>
+              ·
+            </Text>
           ) : null}
           {creatorCredit ? (
-            <Text style={styles.creatorText} numberOfLines={1}>
+            <Text
+              style={[styles.creatorText, { color: colors.textSubtle }]}
+              numberOfLines={1}
+            >
               {creatorCredit}
             </Text>
           ) : null}
@@ -143,19 +179,21 @@ export function CompactCrumbCard({
         <View style={styles.dishRow}>
           {effectiveHeroDish ? (
             <View style={styles.heroDishRow}>
-              <SparkleIcon
-                size={11}
-                color={Theme.colors.primary}
-                weight="fill"
-              />
-              <Text style={styles.heroDishText} numberOfLines={1}>
+              <SparkleIcon size={11} color={colors.primary} weight="fill" />
+              <Text
+                style={[styles.heroDishText, { color: colors.primary }]}
+                numberOfLines={1}
+              >
                 {effectiveHeroDish}
               </Text>
             </View>
           ) : restaurant.cuisine ? (
             <View style={styles.cuisineRow}>
-              <ForkKnifeIcon size={11} color={Theme.colors.textMuted} />
-              <Text style={styles.cuisineText} numberOfLines={1}>
+              <ForkKnifeIcon size={11} color={colors.textMuted} />
+              <Text
+                style={[styles.cuisineText, { color: colors.textMuted }]}
+                numberOfLines={1}
+              >
                 {restaurant.cuisine}
               </Text>
             </View>
@@ -167,8 +205,20 @@ export function CompactCrumbCard({
           {/* Vibe Tags */}
           <View style={styles.tagsGroup}>
             {vibeTags.slice(0, 2).map((tag, idx) => (
-              <View key={`${tag}-${idx}`} style={styles.vibeTagPill}>
-                <Text style={styles.vibeTagText} numberOfLines={1}>
+              <View
+                key={`${tag}-${idx}`}
+                style={[
+                  styles.vibeTagPill,
+                  {
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                  },
+                ]}
+              >
+                <Text
+                  style={[styles.vibeTagText, { color: colors.text }]}
+                  numberOfLines={1}
+                >
                   {tag}
                 </Text>
               </View>
@@ -178,24 +228,29 @@ export function CompactCrumbCard({
           {/* Quick Actions */}
           <View style={styles.actionsGroup}>
             <TouchableOpacity
-              style={styles.guideMiniButton}
+              style={[
+                styles.guideMiniButton,
+                { backgroundColor: colors.primary },
+              ]}
               onPress={handleGuidePress}
               activeOpacity={0.8}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               accessibilityRole="button"
               accessibilityLabel="Add to Guide"
             >
-              <PlusIcon
-                size={10}
-                color={Theme.colors.onPrimary}
-                weight="bold"
-              />
-              <Text style={styles.guideMiniText}>Guide</Text>
+              <PlusIcon size={10} color={colors.onPrimary} weight="bold" />
+              <Text style={[styles.guideMiniText, { color: colors.onPrimary }]}>
+                Guide
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.bookMiniButton,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                },
                 hasReservation && styles.bookMiniButtonActive,
               ]}
               onPress={handleBookOrMap}
@@ -215,10 +270,12 @@ export function CompactCrumbCard({
                 <>
                   <NavigationArrowIcon
                     size={11}
-                    color={Theme.colors.text}
+                    color={colors.text}
                     weight="fill"
                   />
-                  <Text style={styles.bookMiniText}>Map</Text>
+                  <Text style={[styles.bookMiniText, { color: colors.text }]}>
+                    Map
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -233,18 +290,14 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     height: 108,
-    backgroundColor: Theme.colors.cardBackground,
     borderRadius: Theme.radii.lg,
     borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
     padding: Theme.spacing.sm,
     marginBottom: Theme.spacing.sm,
-    shadowColor: Theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
     elevation: 2,
-    alignItems: 'center',
   },
   imageContainer: {
     width: 88,
@@ -252,7 +305,6 @@ const styles = StyleSheet.create({
     borderRadius: Theme.radii.md,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: Theme.colors.inputBackground,
   },
   image: {
     width: 88,
@@ -264,22 +316,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  placeholderEmoji: {
-    fontSize: 28,
-  },
   platformBadge: {
     position: 'absolute',
-    top: 4,
-    left: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    top: 5,
+    left: 5,
     borderRadius: Theme.radii.pill,
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  platformEmoji: {
-    fontSize: 10,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
   },
   infoContainer: {
     flex: 1,
@@ -298,7 +349,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: 'bold',
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    color: Theme.colors.text,
   },
   metaRight: {
     flexDirection: 'row',
@@ -308,7 +358,6 @@ const styles = StyleSheet.create({
   priceText: {
     fontSize: 11,
     fontWeight: '600',
-    color: Theme.colors.textMuted,
   },
   metaRow: {
     flexDirection: 'row',
@@ -317,17 +366,14 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 11,
-    color: Theme.colors.textMuted,
     fontWeight: '500',
     maxWidth: '55%',
   },
   dotSeparator: {
     fontSize: 10,
-    color: Theme.colors.textSubtle,
   },
   creatorText: {
     fontSize: 11,
-    color: Theme.colors.textSubtle,
     fontWeight: '600',
     flexShrink: 1,
   },
@@ -342,7 +388,6 @@ const styles = StyleSheet.create({
   heroDishText: {
     fontSize: 11,
     fontWeight: '700',
-    color: Theme.colors.primary,
     letterSpacing: 0.1,
     flexShrink: 1,
   },
@@ -354,7 +399,6 @@ const styles = StyleSheet.create({
   cuisineText: {
     fontSize: 11,
     fontWeight: '600',
-    color: Theme.colors.textMuted,
     flexShrink: 1,
   },
   bottomRow: {
@@ -371,17 +415,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   vibeTagPill: {
-    backgroundColor: Theme.colors.inputBackground,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: Theme.radii.pill,
     borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
   },
   vibeTagText: {
     fontSize: 9,
     fontWeight: '600',
-    color: Theme.colors.text,
   },
   actionsGroup: {
     flexDirection: 'row',
@@ -392,7 +433,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 24,
     paddingHorizontal: 7,
-    backgroundColor: Theme.colors.primary,
     borderRadius: Theme.radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -401,16 +441,13 @@ const styles = StyleSheet.create({
   guideMiniText: {
     fontSize: 10,
     fontWeight: '700',
-    color: Theme.colors.onPrimary,
   },
   bookMiniButton: {
     flexDirection: 'row',
     height: 24,
     paddingHorizontal: 7,
-    backgroundColor: Theme.colors.inputBackground,
     borderRadius: Theme.radii.pill,
     borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
@@ -422,7 +459,6 @@ const styles = StyleSheet.create({
   bookMiniText: {
     fontSize: 10,
     fontWeight: '700',
-    color: Theme.colors.text,
   },
   bookMiniTextActive: {
     fontSize: 10,

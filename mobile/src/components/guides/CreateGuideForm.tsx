@@ -11,7 +11,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useForm } from '@tanstack/react-form';
 import { z } from 'zod';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { useCreateGuideMutation } from '@/hooks/useGuides';
 import { Input } from '@/components/ui/Input';
@@ -45,6 +45,7 @@ const EMOJI_OPTIONS = [
 ];
 
 export function CreateGuideForm({ onCancel, onSuccess }: CreateGuideFormProps) {
+  const { colors } = useTheme();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const createMutation = useCreateGuideMutation();
 
@@ -98,17 +99,47 @@ export function CreateGuideForm({ onCancel, onSuccess }: CreateGuideFormProps) {
         </MutedText>
       </View>
 
-      {errorMsg && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{errorMsg}</Text>
+      {/* Submission Error Banner */}
+      {errorMsg ? (
+        <View
+          style={[
+            styles.errorContainer,
+            {
+              backgroundColor: colors.errorBackground,
+              borderColor: colors.errorBorder,
+            },
+          ]}
+        >
+          <Text style={[styles.errorText, { color: colors.error }]}>
+            {errorMsg}
+          </Text>
         </View>
-      )}
+      ) : null}
 
-      {/* Emoji Selector */}
+      {/* Guide Name Field */}
+      <form.Field name="name">
+        {(field) => (
+          <Input
+            label="Guide Name *"
+            placeholder='e.g., "SoHo Natural Wine Crawl"'
+            value={field.state.value}
+            onChangeText={field.handleChange}
+            onBlur={field.handleBlur}
+            error={field.state.meta.errors?.[0]?.message}
+            autoFocus
+            autoCapitalize="words"
+            returnKeyType="next"
+          />
+        )}
+      </form.Field>
+
+      {/* Emoji Icon Picker */}
       <form.Field name="emojiIcon">
         {(field) => (
           <View style={styles.fieldSection}>
-            <Text style={styles.fieldLabel}>Icon</Text>
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>
+              Cover Emoji
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -121,7 +152,17 @@ export function CreateGuideForm({ onCancel, onSuccess }: CreateGuideFormProps) {
                     key={emoji}
                     style={[
                       styles.emojiPill,
-                      isSelected && styles.emojiPillSelected,
+                      {
+                        backgroundColor: colors.inputBackground,
+                        borderColor: colors.inputBorder,
+                      },
+                      isSelected && [
+                        styles.emojiPillSelected,
+                        {
+                          borderColor: colors.primary,
+                          backgroundColor: colors.cardBackground,
+                        },
+                      ],
                     ]}
                     onPress={() => {
                       haptics.selection();
@@ -140,44 +181,32 @@ export function CreateGuideForm({ onCancel, onSuccess }: CreateGuideFormProps) {
         )}
       </form.Field>
 
-      {/* Guide Name Input */}
-      <form.Field name="name">
-        {(field) => (
-          <Input
-            label="Guide Name"
-            value={field.state.value}
-            onBlur={field.handleBlur}
-            onChangeText={field.handleChange}
-            placeholder="e.g. West Village Date Nights, Tokyo 2026"
-            autoCapitalize="words"
-            error={field.state.meta.errors[0]?.message}
-          />
-        )}
-      </form.Field>
-
-      {/* Description Input */}
+      {/* Description Field */}
       <form.Field name="description">
         {(field) => (
           <Textarea
             label="Description (Optional)"
+            placeholder="A quick summary or vibe of this guide..."
             value={field.state.value}
-            onBlur={field.handleBlur}
             onChangeText={field.handleChange}
-            placeholder="Short note about the vibe, neighborhood, or theme"
-            numberOfLines={3}
+            onBlur={field.handleBlur}
+            error={field.state.meta.errors?.[0]?.message}
+            minHeight={72}
           />
         )}
       </form.Field>
 
-      {/* Public Switch */}
+      {/* Public / Community Toggle */}
       <form.Field name="isPublic">
         {(field) => (
           <View style={styles.switchRow}>
             <View style={styles.switchTextContainer}>
-              <Text style={styles.switchLabel}>Public Guide</Text>
-              <Text style={styles.switchSubtitle}>
-                Anyone with the link can view and save your guide
+              <Text style={[styles.switchLabel, { color: colors.text }]}>
+                Share with Community
               </Text>
+              <MutedText style={styles.switchSubtitle}>
+                Allow friends & followers to discover this guide
+              </MutedText>
             </View>
             <Switch
               value={field.state.value}
@@ -186,47 +215,46 @@ export function CreateGuideForm({ onCancel, onSuccess }: CreateGuideFormProps) {
                 field.handleChange(val);
               }}
               trackColor={{
-                false: Theme.colors.switchTrackOff,
-                true: Theme.colors.primary,
+                false: colors.switchTrackOff,
+                true: colors.primary,
               }}
               thumbColor={
                 Platform.OS === 'android'
                   ? field.state.value
-                    ? Theme.colors.onPrimary
-                    : Theme.colors.switchThumbOff
-                  : Theme.colors.onPrimary
+                    ? colors.onPrimary
+                    : colors.switchThumbOff
+                  : undefined
               }
-              ios_backgroundColor={Theme.colors.switchTrackOff}
+              ios_backgroundColor={colors.switchTrackOff}
             />
           </View>
         )}
       </form.Field>
 
-      {/* Action Buttons */}
+      {/* Actions */}
       <form.Subscribe
         selector={(state) => ({
+          canSubmit: state.canSubmit,
           isSubmitting: state.isSubmitting,
         })}
       >
-        {({ isSubmitting }) => (
+        {({ canSubmit, isSubmitting }) => (
           <View style={styles.actionRow}>
             <Button
-              variant="secondary"
+              variant="outline"
               size="lg"
-              style={styles.cancelButton}
               onPress={handleCancel}
-              disabled={isSubmitting}
+              style={styles.cancelButton}
             >
               Cancel
             </Button>
-
             <Button
               variant="primary"
               size="lg"
-              style={styles.submitButton}
+              loading={isSubmitting || createMutation.isPending}
+              disabled={!canSubmit}
               onPress={() => form.handleSubmit()}
-              loading={isSubmitting}
-              disabled={isSubmitting}
+              style={styles.submitButton}
             >
               Create Guide
             </Button>
@@ -251,15 +279,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   errorContainer: {
-    backgroundColor: Theme.colors.errorBackground,
-    borderColor: Theme.colors.errorBorder,
     borderWidth: 1,
     padding: Theme.spacing.sm,
     borderRadius: Theme.radii.md,
     marginBottom: Theme.spacing.md,
   },
   errorText: {
-    color: Theme.colors.error,
     fontSize: 13,
     textAlign: 'center',
   },
@@ -269,7 +294,6 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: Theme.colors.text,
     marginBottom: Theme.spacing.xs,
   },
   emojiList: {
@@ -280,15 +304,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: Theme.radii.lg,
-    backgroundColor: Theme.colors.inputBackground,
     borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
     justifyContent: 'center',
     alignItems: 'center',
   },
   emojiPillSelected: {
-    borderColor: Theme.colors.primary,
-    backgroundColor: Theme.colors.cardBackground,
     borderWidth: 2,
   },
   emojiText: {
@@ -308,12 +328,10 @@ const styles = StyleSheet.create({
   switchLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: Theme.colors.text,
     marginBottom: 2,
   },
   switchSubtitle: {
     fontSize: 12,
-    color: Theme.colors.textMuted,
   },
   actionRow: {
     flexDirection: 'row',

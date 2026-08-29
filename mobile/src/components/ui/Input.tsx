@@ -10,7 +10,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 
 export interface InputProps extends TextInputProps {
   label?: string;
@@ -35,23 +35,32 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
   },
   ref,
 ) {
+  const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={[styles.wrapper, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && (
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      )}
       <View
         style={[
           styles.container,
-          isFocused && styles.focused,
-          Boolean(error) && styles.errorContainer,
+          {
+            backgroundColor: colors.inputBackground,
+            borderColor: isFocused
+              ? colors.primary
+              : error
+                ? colors.error
+                : colors.inputBorder,
+          },
         ]}
       >
         {leftIcon && <View style={styles.leftIconWrapper}>{leftIcon}</View>}
         <TextInput
           ref={ref}
-          style={[styles.input, inputStyle]}
-          placeholderTextColor={Theme.colors.textSubtle}
+          style={[styles.input, { color: colors.text }, inputStyle]}
+          placeholderTextColor={colors.textSubtle}
           onFocus={(e) => {
             setIsFocused(true);
             onFocus?.(e);
@@ -64,7 +73,9 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
         />
         {rightIcon && <View style={styles.rightIconWrapper}>{rightIcon}</View>}
       </View>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? (
+        <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+      ) : null}
     </View>
   );
 });
@@ -76,25 +87,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: Theme.colors.text,
     marginBottom: Theme.spacing.xs,
   },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Theme.colors.inputBackground,
     borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
     borderRadius: Theme.radii.lg,
     paddingHorizontal: Theme.spacing.md,
     paddingVertical: Platform.OS === 'ios' ? 14 : 6,
     minHeight: 48,
-  },
-  focused: {
-    borderColor: Theme.colors.primary,
-  },
-  errorContainer: {
-    borderColor: Theme.colors.error,
   },
   leftIconWrapper: {
     marginRight: Theme.spacing.sm,
@@ -109,11 +111,9 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    color: Theme.colors.text,
     padding: 0,
   },
   errorText: {
-    color: Theme.colors.error,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 2,

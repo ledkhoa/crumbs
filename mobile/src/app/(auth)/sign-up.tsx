@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { haptics } from '@/utils/haptics';
 import { useSessionStore } from '@/store/session';
 import { apiRequest } from '@/utils/api-client';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -39,6 +39,7 @@ const signUpSchema = z.object({
 });
 
 export default function SignUpScreen() {
+  const { colors } = useTheme();
   const [authError, setAuthError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const setSession = useSessionStore((state) => state.setSession);
@@ -69,49 +70,65 @@ export default function SignUpScreen() {
           }),
         });
 
-        if (response.token && response.user) {
+        if (response.user) {
+          haptics.primary();
           setSession({
-            token: response.token,
             user: response.user,
+            token: response.token || '',
           });
-          haptics.success();
           router.replace('/(tabs)/(home)');
         }
-      } catch (err: any) {
-        haptics.error();
+      } catch (err: unknown) {
+        haptics.warning();
         setAuthError(
-          err.message || 'Failed to create account. Please try again.',
+          err instanceof Error
+            ? err.message
+            : 'Could not create account. Please try again.',
         );
       }
     },
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.canvas }]}
+    >
       <KeyboardAwareScrollView
-        bottomOffset={24}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Brand */}
+        {/* Brand Header */}
         <View style={styles.header}>
-          <SparkleIcon size={36} color={Theme.colors.primary} weight="fill" />
-          <Text style={styles.logoText}>Crumbs</Text>
+          <SparkleIcon size={36} color={colors.primary} weight="fill" />
+          <Text style={[styles.logoText, { color: colors.background }]}>
+            Crumbs
+          </Text>
         </View>
 
-        {/* Form Card */}
+        {/* Auth Bottom Sheet Container */}
         <Card style={styles.card}>
           <GrabHandle />
 
-          <Heading style={styles.title}>Create your account</Heading>
+          <Heading style={styles.title}>Create Account</Heading>
           <MutedText style={styles.subtitle}>
-            Turn every craving into a place worth going.
+            Join Crumbs to start saving and organizing dining recommendations.
           </MutedText>
 
+          {/* Error Banner */}
           {authError && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{authError}</Text>
+            <View
+              style={[
+                styles.errorContainer,
+                {
+                  backgroundColor: colors.errorBackground,
+                  borderColor: colors.errorBorder,
+                },
+              ]}
+            >
+              <Text style={[styles.errorText, { color: colors.error }]}>
+                {authError}
+              </Text>
             </View>
           )}
 
@@ -119,19 +136,17 @@ export default function SignUpScreen() {
           <form.Field name="name">
             {(field) => (
               <Input
+                label="Full Name"
+                placeholder="Jane Doe"
                 value={field.state.value}
-                onBlur={field.handleBlur}
                 onChangeText={field.handleChange}
-                placeholder="Name"
+                onBlur={field.handleBlur}
+                error={field.state.meta.errors?.[0]?.message}
                 autoCapitalize="words"
+                autoCorrect={false}
                 leftIcon={
-                  <UserIcon
-                    size={18}
-                    color={Theme.colors.textSubtle}
-                    weight="bold"
-                  />
+                  <UserIcon size={18} color={colors.textSubtle} weight="bold" />
                 }
-                error={field.state.meta.errors[0]?.message}
               />
             )}
           </form.Field>
@@ -140,21 +155,22 @@ export default function SignUpScreen() {
           <form.Field name="email">
             {(field) => (
               <Input
+                label="Email"
+                placeholder="you@example.com"
                 value={field.state.value}
-                onBlur={field.handleBlur}
                 onChangeText={field.handleChange}
-                placeholder="Email"
+                onBlur={field.handleBlur}
+                error={field.state.meta.errors?.[0]?.message}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
                 leftIcon={
                   <EnvelopeSimpleIcon
                     size={18}
-                    color={Theme.colors.textSubtle}
+                    color={colors.textSubtle}
                     weight="bold"
                   />
                 }
-                error={field.state.meta.errors[0]?.message}
               />
             )}
           </form.Field>
@@ -163,89 +179,118 @@ export default function SignUpScreen() {
           <form.Field name="password">
             {(field) => (
               <Input
+                label="Password"
+                placeholder="Create a strong password"
                 value={field.state.value}
-                onBlur={field.handleBlur}
                 onChangeText={field.handleChange}
-                placeholder="Password"
+                onBlur={field.handleBlur}
+                error={field.state.meta.errors?.[0]?.message}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
-                autoCorrect={false}
                 leftIcon={
                   <LockKeyIcon
                     size={18}
-                    color={Theme.colors.textSubtle}
+                    color={colors.textSubtle}
                     weight="bold"
                   />
                 }
                 rightIcon={
                   <TouchableOpacity
-                    onPress={() => {
-                      setShowPassword(!showPassword);
-                      haptics.selection();
-                    }}
+                    onPress={() => setShowPassword(!showPassword)}
                     style={styles.eyeButton}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      showPassword ? 'Hide password' : 'Show password'
+                    }
                   >
                     {showPassword ? (
-                      <EyeIcon
+                      <EyeSlashIcon
                         size={18}
-                        color={Theme.colors.textSubtle}
+                        color={colors.textSubtle}
                         weight="bold"
                       />
                     ) : (
-                      <EyeSlashIcon
+                      <EyeIcon
                         size={18}
-                        color={Theme.colors.textSubtle}
+                        color={colors.textSubtle}
                         weight="bold"
                       />
                     )}
                   </TouchableOpacity>
                 }
-                error={field.state.meta.errors[0]?.message}
               />
             )}
           </form.Field>
 
-          {/* Terms and conditions checkbox */}
+          {/* Terms Agreement */}
           <form.Field name="agreeToTerms">
             {(field) => (
               <TouchableOpacity
-                style={styles.checkboxContainer}
+                style={styles.checkboxRow}
                 onPress={() => {
-                  field.handleChange(!field.state.value);
                   haptics.selection();
+                  field.handleChange(!field.state.value);
                 }}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: field.state.value }}
               >
-                <Text style={styles.checkboxIcon}>
-                  {field.state.value ? '☑️' : '⬜'}
-                </Text>
-                <Text style={styles.termsText}>
+                <View
+                  style={[
+                    styles.checkbox,
+                    {
+                      borderColor: colors.cardBorder,
+                      backgroundColor: colors.inputBackground,
+                    },
+                    field.state.value && [
+                      styles.checkboxChecked,
+                      {
+                        backgroundColor: colors.primary,
+                        borderColor: colors.primary,
+                      },
+                    ],
+                  ]}
+                >
+                  {field.state.value && (
+                    <Text
+                      style={[styles.checkmark, { color: colors.onPrimary }]}
+                    >
+                      ✓
+                    </Text>
+                  )}
+                </View>
+                <Text style={[styles.termsText, { color: colors.textMuted }]}>
                   I agree to the{' '}
-                  <Text style={styles.termsUnderline}>
-                    Terms & Privacy Policy
+                  <Text style={[styles.termsLink, { color: colors.text }]}>
+                    Terms of Service
+                  </Text>{' '}
+                  and{' '}
+                  <Text style={[styles.termsLink, { color: colors.text }]}>
+                    Privacy Policy
                   </Text>
                 </Text>
               </TouchableOpacity>
             )}
           </form.Field>
 
-          {/* Submit Button */}
+          {/* Sign Up Button */}
           <form.Subscribe
             selector={(state) => ({
               canSubmit: state.canSubmit,
               isSubmitting: state.isSubmitting,
             })}
           >
-            {({ isSubmitting }) => (
+            {({ canSubmit, isSubmitting }) => (
               <Button
                 variant="primary"
                 size="lg"
                 onPress={() => form.handleSubmit()}
+                disabled={!canSubmit}
                 loading={isSubmitting}
-                disabled={isSubmitting}
                 style={styles.primaryButton}
               >
-                Create account
+                Create Account
               </Button>
             )}
           </form.Subscribe>
@@ -258,9 +303,11 @@ export default function SignUpScreen() {
               router.back();
             }}
           >
-            <Text style={styles.footerText}>
+            <Text style={[styles.footerText, { color: colors.textMuted }]}>
               Already have an account?{' '}
-              <Text style={styles.footerHighlight}>Sign in</Text>
+              <Text style={[styles.footerHighlight, { color: colors.primary }]}>
+                Sign in
+              </Text>
             </Text>
           </TouchableOpacity>
         </Card>
@@ -272,7 +319,6 @@ export default function SignUpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Theme.colors.canvas,
   },
   scrollContent: {
     flexGrow: 1,
@@ -291,7 +337,6 @@ const styles = StyleSheet.create({
     fontSize: 38,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     fontWeight: 'bold',
-    color: Theme.colors.background,
   },
   card: {
     borderTopLeftRadius: Theme.radii.sheet,
@@ -311,15 +356,12 @@ const styles = StyleSheet.create({
     marginBottom: Theme.spacing.lg,
   },
   errorContainer: {
-    backgroundColor: Theme.colors.errorBackground,
-    borderColor: Theme.colors.errorBorder,
     borderWidth: 1,
     padding: Theme.spacing.sm,
     borderRadius: Theme.radii.md,
     marginBottom: Theme.spacing.md,
   },
   errorText: {
-    color: Theme.colors.error,
     fontSize: 13,
     textAlign: 'center',
   },
@@ -329,23 +371,31 @@ const styles = StyleSheet.create({
   eyeButton: {
     padding: Theme.spacing.xs,
   },
-  checkboxContainer: {
+  checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: Theme.spacing.lg,
-    marginTop: Theme.spacing.xs,
   },
-  checkboxIcon: {
-    fontSize: 18,
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1.5,
     marginRight: Theme.spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {},
+  checkmark: {
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   termsText: {
     fontSize: 13,
-    color: Theme.colors.textMuted,
+    flex: 1,
   },
-  termsUnderline: {
-    textDecorationLine: 'underline',
-    color: Theme.colors.text,
+  termsLink: {
+    fontWeight: '600',
   },
   primaryButton: {
     marginBottom: Theme.spacing.md,
@@ -356,10 +406,8 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: Theme.colors.textMuted,
   },
   footerHighlight: {
     fontWeight: '600',
-    color: Theme.colors.primary,
   },
 });

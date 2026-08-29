@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { openDefaultMaps } from '@/utils/maps';
 import {
@@ -35,6 +35,7 @@ import type { EnrichedUserCrumb } from '@api/modules/crumbs/crumbs.types';
 
 export default function InboxScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [activeSegment, setActiveSegment] =
     useState<InboxFilterSegment>('uncategorized');
 
@@ -98,67 +99,77 @@ export default function InboxScreen() {
           crumbIds: [guideModalTarget.id],
         });
       } catch (err) {
-        console.warn('[InboxScreen] Failed to add crumb to guide:', err);
+        console.error('[Inbox] Failed to add crumb to guide:', err);
+      } finally {
+        setGuideModalTarget(null);
       }
     }
-    setGuideModalTarget(null);
   };
 
   const handleBookOrMapPress = (crumb: EnrichedUserCrumb) => {
-    const bookingUrl = crumb.restaurant.reservationUrl;
-    if (bookingUrl) {
-      Linking.openURL(bookingUrl).catch(() => {});
-      return;
+    const { restaurant } = crumb;
+    if (restaurant.reservationUrl) {
+      haptics.tap();
+      Linking.openURL(restaurant.reservationUrl).catch((err) =>
+        console.warn('[Inbox] Could not open reservation link:', err),
+      );
+    } else {
+      openDefaultMaps({
+        name: restaurant.name,
+        address: restaurant.formattedAddress || undefined,
+        latitude: restaurant.latitude ? Number(restaurant.latitude) : undefined,
+        longitude: restaurant.longitude
+          ? Number(restaurant.longitude)
+          : undefined,
+      });
     }
-
-    openDefaultMaps({
-      name: crumb.restaurant.name,
-      address: crumb.restaurant.formattedAddress,
-      latitude: crumb.restaurant.latitude,
-      longitude: crumb.restaurant.longitude,
-    });
   };
 
-  const handleDeleteCrumb = async (crumb: EnrichedUserCrumb) => {
-    try {
-      await deleteCrumbMutation.mutateAsync(crumb.id);
-    } catch (err) {
-      console.warn('[InboxScreen] Delete crumb error:', err);
-    }
+  const handleDeleteCrumb = (crumb: EnrichedUserCrumb) => {
+    deleteCrumbMutation.mutate(crumb.id);
   };
 
   const renderHeader = () => (
     <View style={styles.headerContainer}>
-      {/* Title & Subtitle */}
+      {/* Screen Title & Subtitle */}
       <View style={styles.titleRow}>
         <View style={styles.titleTextContainer}>
-          <Text style={styles.title}>Inbox</Text>
-          <Text style={styles.subtitle}>
-            Newly ingested crumbs from social reels awaiting organization.
+          <Text style={[styles.title, { color: colors.text }]}>Inbox</Text>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+            Captured dining crumbs waiting to be organized
           </Text>
         </View>
       </View>
 
-      {/* AI-Powered Search Trigger (TODO: Connect to AI Craving Assistant) */}
+      {/* AI-Powered Search Trigger */}
       <View style={styles.aiSearchContainer}>
         <TouchableOpacity
-          style={styles.aiSearchBar}
+          style={[
+            styles.aiSearchBar,
+            {
+              backgroundColor: colors.inputBackground,
+              borderColor: colors.inputBorder,
+            },
+          ]}
           activeOpacity={0.75}
           onPress={() => {
             haptics.tap();
-            // TODO: Launch AI-powered natural language craving search & assistant
           }}
           accessibilityRole="button"
           accessibilityLabel="AI Search coming soon"
         >
           <View style={styles.aiSearchLeft}>
-            <SparkleIcon size={16} color={Theme.colors.primary} weight="fill" />
-            <Text style={styles.aiSearchPlaceholder}>
+            <SparkleIcon size={16} color={colors.primary} weight="fill" />
+            <Text
+              style={[styles.aiSearchPlaceholder, { color: colors.textSubtle }]}
+            >
               Ask AI or search your cravings...
             </Text>
           </View>
           <View style={styles.aiSearchBadge}>
-            <Text style={styles.aiSearchBadgeText}>AI · Soon</Text>
+            <Text style={[styles.aiSearchBadgeText, { color: colors.primary }]}>
+              AI · Soon
+            </Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -179,9 +190,7 @@ export default function InboxScreen() {
 
     return (
       <EmptyState
-        icon={
-          <SparkleIcon size={36} color={Theme.colors.primary} weight="fill" />
-        }
+        icon={<SparkleIcon size={36} color={colors.primary} weight="fill" />}
         title="Inbox Zero!"
         description="All your captured crumbs are organized into guides! Share food reels from Instagram or TikTok directly to Crumbs to capture new crumbs."
         action={
@@ -193,7 +202,7 @@ export default function InboxScreen() {
               leftIcon={
                 <MapTrifoldIcon
                   size={18}
-                  color={Theme.colors.onPrimary}
+                  color={colors.onPrimary}
                   weight="bold"
                 />
               }
@@ -209,7 +218,10 @@ export default function InboxScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top']}
+    >
       <FlatList
         data={crumbs}
         keyExtractor={(item) => item.id}
@@ -232,8 +244,8 @@ export default function InboxScreen() {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={handleRefresh}
-            tintColor={Theme.colors.primary}
-            colors={[Theme.colors.primary]}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
       />
@@ -255,7 +267,6 @@ export default function InboxScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Theme.colors.background,
   },
   listContent: {
     paddingBottom: Theme.spacing.xxl + 40,
@@ -278,12 +289,10 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    color: Theme.colors.text,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 13,
-    color: Theme.colors.textMuted,
     lineHeight: 18,
   },
   aiSearchContainer: {
@@ -294,10 +303,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Theme.colors.inputBackground,
     borderRadius: Theme.radii.lg,
     borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
     paddingHorizontal: Theme.spacing.md,
     paddingVertical: 10,
   },
@@ -307,12 +314,8 @@ const styles = StyleSheet.create({
     gap: Theme.spacing.sm,
     flex: 1,
   },
-  aiSearchIcon: {
-    fontSize: 15,
-  },
   aiSearchPlaceholder: {
     fontSize: 13,
-    color: Theme.colors.textSubtle,
     fontWeight: '500',
   },
   aiSearchBadge: {
@@ -324,7 +327,6 @@ const styles = StyleSheet.create({
   aiSearchBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: Theme.colors.primary,
   },
   cardWrapper: {
     paddingHorizontal: Theme.spacing.lg,
@@ -333,10 +335,12 @@ const styles = StyleSheet.create({
     marginTop: Theme.spacing.xl,
   },
   emptyActions: {
-    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: Theme.spacing.sm,
   },
   exploreMapButton: {
-    width: '100%',
+    minWidth: 200,
+    alignSelf: 'center',
   },
 });

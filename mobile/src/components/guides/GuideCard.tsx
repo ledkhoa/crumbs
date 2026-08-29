@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import {
   Card,
   CardTitle,
@@ -28,6 +28,7 @@ interface GuideCardProps {
 }
 
 export function GuideCard({ guide, onPress }: GuideCardProps) {
+  const { colors } = useTheme();
   const thumbnails = guide.coverThumbnails || [];
   const hasCoverImage = Boolean(guide.coverImageUrl);
   const count = hasCoverImage ? 1 : thumbnails.length;
@@ -36,7 +37,12 @@ export function GuideCard({ guide, onPress }: GuideCardProps) {
   return (
     <Card style={styles.card} onPress={() => onPress?.(guide)}>
       {/* Dynamic Cover Visual Area */}
-      <View style={styles.mediaContainer}>
+      <View
+        style={[
+          styles.mediaContainer,
+          { backgroundColor: colors.inputBackground },
+        ]}
+      >
         {hasCoverImage ? (
           <Image
             source={{ uri: guide.coverImageUrl! }}
@@ -46,7 +52,12 @@ export function GuideCard({ guide, onPress }: GuideCardProps) {
           />
         ) : count === 0 ? (
           /* 0 Images: Decorative Pattern with Central Emoji */
-          <View style={styles.placeholderPattern}>
+          <View
+            style={[
+              styles.placeholderPattern,
+              { backgroundColor: colors.inputBackground },
+            ]}
+          >
             <Text style={styles.placeholderEmoji}>
               {guide.emojiIcon || '🗺️'}
             </Text>
@@ -68,7 +79,12 @@ export function GuideCard({ guide, onPress }: GuideCardProps) {
               contentFit="cover"
               transition={200}
             />
-            <View style={styles.verticalDivider} />
+            <View
+              style={[
+                styles.verticalDivider,
+                { backgroundColor: colors.cardBackground },
+              ]}
+            />
             <Image
               source={{ uri: thumbnails[1] }}
               style={styles.splitTwoItem}
@@ -85,7 +101,12 @@ export function GuideCard({ guide, onPress }: GuideCardProps) {
               contentFit="cover"
               transition={200}
             />
-            <View style={styles.verticalDivider} />
+            <View
+              style={[
+                styles.verticalDivider,
+                { backgroundColor: colors.cardBackground },
+              ]}
+            />
             <View style={styles.splitThreeStack}>
               <Image
                 source={{ uri: thumbnails[1] }}
@@ -93,7 +114,12 @@ export function GuideCard({ guide, onPress }: GuideCardProps) {
                 contentFit="cover"
                 transition={200}
               />
-              <View style={styles.horizontalDivider} />
+              <View
+                style={[
+                  styles.horizontalDivider,
+                  { backgroundColor: colors.cardBackground },
+                ]}
+              />
               <Image
                 source={{ uri: thumbnails[2] }}
                 style={styles.splitThreeStackItem}
@@ -103,7 +129,7 @@ export function GuideCard({ guide, onPress }: GuideCardProps) {
             </View>
           </View>
         ) : (
-          /* 4+ Images: 2x2 Grid with Optional +N Overlay */
+          /* 4+ Images: 2x2 Grid (Top-Left, Top-Right, Bottom-Left, Bottom-Right with +N overlay) */
           <View style={styles.gridFourContainer}>
             <View style={styles.gridRow}>
               <Image
@@ -112,7 +138,12 @@ export function GuideCard({ guide, onPress }: GuideCardProps) {
                 contentFit="cover"
                 transition={200}
               />
-              <View style={styles.verticalDivider} />
+              <View
+                style={[
+                  styles.verticalDivider,
+                  { backgroundColor: colors.cardBackground },
+                ]}
+              />
               <Image
                 source={{ uri: thumbnails[1] }}
                 style={styles.gridItem}
@@ -120,7 +151,12 @@ export function GuideCard({ guide, onPress }: GuideCardProps) {
                 transition={200}
               />
             </View>
-            <View style={styles.horizontalDivider} />
+            <View
+              style={[
+                styles.horizontalDivider,
+                { backgroundColor: colors.cardBackground },
+              ]}
+            />
             <View style={styles.gridRow}>
               <Image
                 source={{ uri: thumbnails[2] }}
@@ -128,7 +164,12 @@ export function GuideCard({ guide, onPress }: GuideCardProps) {
                 contentFit="cover"
                 transition={200}
               />
-              <View style={styles.verticalDivider} />
+              <View
+                style={[
+                  styles.verticalDivider,
+                  { backgroundColor: colors.cardBackground },
+                ]}
+              />
               <View style={styles.gridItemWrapper}>
                 <Image
                   source={{ uri: thumbnails[3] }}
@@ -138,7 +179,14 @@ export function GuideCard({ guide, onPress }: GuideCardProps) {
                 />
                 {extraCount > 0 && (
                   <View style={styles.extraBadgeOverlay}>
-                    <Text style={styles.extraBadgeText}>+{extraCount}</Text>
+                    <Text
+                      style={[
+                        styles.extraBadgeText,
+                        { color: colors.onPrimary },
+                      ]}
+                    >
+                      +{extraCount}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -172,7 +220,7 @@ export function GuideCard({ guide, onPress }: GuideCardProps) {
             {guide.description}
           </CardDescription>
         ) : (
-          <Text style={styles.metaPlaceholder}>
+          <Text style={[styles.metaPlaceholder, { color: colors.textSubtle }]}>
             {guide.isPublic ? 'Public guide' : 'Personal guide'}
           </Text>
         )}
@@ -188,7 +236,6 @@ const styles = StyleSheet.create({
   mediaContainer: {
     height: 180,
     width: '100%',
-    backgroundColor: Theme.colors.inputBackground,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -200,7 +247,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Theme.colors.inputBackground,
   },
   placeholderEmoji: {
     fontSize: 52,
@@ -257,7 +303,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   extraBadgeText: {
-    color: Theme.colors.onPrimary,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -265,12 +310,10 @@ const styles = StyleSheet.create({
   verticalDivider: {
     width: 2,
     height: '100%',
-    backgroundColor: Theme.colors.cardBackground,
   },
   horizontalDivider: {
     height: 2,
     width: '100%',
-    backgroundColor: Theme.colors.cardBackground,
   },
   // Floating Badges
   emojiBadge: {
@@ -291,7 +334,6 @@ const styles = StyleSheet.create({
   },
   metaPlaceholder: {
     fontSize: 13,
-    color: Theme.colors.textSubtle,
     marginTop: 2,
   },
 });

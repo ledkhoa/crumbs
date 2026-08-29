@@ -12,7 +12,7 @@ import {
   Pressable,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -60,54 +60,46 @@ export function EditGuideModal({
   onClose,
   onDeleted,
 }: EditGuideModalProps) {
+  const { colors } = useTheme();
   const [name, setName] = useState(guide.name);
   const [description, setDescription] = useState(guide.description || '');
   const [emojiIcon, setEmojiIcon] = useState(guide.emojiIcon || '🗺️');
   const [isPublic, setIsPublic] = useState(guide.isPublic);
-  const [error, setError] = useState<string | null>(null);
 
   const updateMutation = useUpdateGuideMutation();
   const deleteMutation = useDeleteGuideMutation();
 
   useEffect(() => {
-    setName(guide.name);
-    setDescription(guide.description || '');
-    setEmojiIcon(guide.emojiIcon || '🗺️');
-    setIsPublic(guide.isPublic);
-    setError(null);
-  }, [guide, visible]);
+    if (visible) {
+      setName(guide.name);
+      setDescription(guide.description || '');
+      setEmojiIcon(guide.emojiIcon || '🗺️');
+      setIsPublic(guide.isPublic);
+    }
+  }, [visible, guide]);
 
-  const handleClose = () => {
-    haptics.tap();
-    onClose();
-  };
-
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
-      haptics.error();
-      setError('Guide name is required');
+      Alert.alert('Validation Error', 'Please enter a guide name');
       return;
     }
 
-    updateMutation.mutate(
-      {
+    try {
+      await updateMutation.mutateAsync({
         guideId: guide.id,
         input: {
           name: name.trim(),
-          description: description.trim() || null,
+          description: description.trim() || undefined,
           emojiIcon,
           isPublic,
         },
-      },
-      {
-        onSuccess: () => {
-          onClose();
-        },
-        onError: (err) => {
-          setError(err.message || 'Failed to update guide');
-        },
-      },
-    );
+      });
+      haptics.primary();
+      onClose();
+    } catch (err) {
+      console.error('[EditGuideModal] Failed to update guide:', err);
+      Alert.alert('Error', 'Failed to update guide. Please try again.');
+    }
   };
 
   const handleDelete = () => {
@@ -120,20 +112,21 @@ export function EditGuideModal({
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            deleteMutation.mutate(guide.id, {
-              onSuccess: () => {
-                onClose();
-                onDeleted?.();
-              },
-            });
+          onPress: async () => {
+            try {
+              await deleteMutation.mutateAsync(guide.id);
+              haptics.primary();
+              onClose();
+              onDeleted?.();
+            } catch (err) {
+              console.error('[EditGuideModal] Failed to delete guide:', err);
+              Alert.alert('Error', 'Failed to delete guide. Please try again.');
+            }
           },
         },
       ],
     );
   };
-
-  const isWorking = updateMutation.isPending || deleteMutation.isPending;
 
   return (
     <Modal
@@ -141,109 +134,124 @@ export function EditGuideModal({
       animationType="slide"
       presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'overFullScreen'}
       transparent={Platform.OS !== 'ios'}
-      onRequestClose={handleClose}
+      onRequestClose={onClose}
     >
-      <View
-        style={[
-          styles.container,
-          Platform.OS !== 'ios' && styles.androidBackdrop,
-        ]}
-      >
+      <View style={styles.modalBackdrop}>
         {Platform.OS !== 'ios' && (
-          <Pressable style={styles.backdropPressable} onPress={handleClose} />
+          <Pressable style={styles.dismissOverlay} onPress={onClose} />
         )}
-
-        <View style={styles.sheetContent}>
+        <View
+          style={[
+            styles.sheetContainer,
+            { backgroundColor: colors.cardBackground },
+          ]}
+        >
           {/* Grab Handle */}
-          <View style={styles.grabHandle} />
+          <View
+            style={[styles.grabHandle, { backgroundColor: colors.grabHandle }]}
+          />
 
-          {/* Modal Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Edit Guide</Text>
+          {/* Header */}
+          <View
+            style={[styles.header, { borderBottomColor: colors.inputBorder }]}
+          >
+            <Text style={[styles.title, { color: colors.text }]}>
+              Edit Guide
+            </Text>
             <TouchableOpacity
-              style={styles.closeButton}
-              onPress={handleClose}
+              style={[
+                styles.closeButton,
+                { backgroundColor: colors.inputBackground },
+              ]}
+              onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityRole="button"
-              accessibilityLabel="Close modal"
+              accessibilityLabel="Close sheet"
             >
-              <XIcon size={20} color={Theme.colors.textMuted} weight="bold" />
+              <XIcon size={18} color={colors.text} weight="bold" />
             </TouchableOpacity>
           </View>
 
-          {/* Form Content */}
           <KeyboardAwareScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             {/* Emoji Selector */}
             <View style={styles.emojiSection}>
-              <Text style={styles.fieldLabel}>Icon</Text>
+              <Text style={[styles.fieldLabel, { color: colors.text }]}>
+                Icon
+              </Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.emojiScroll}
               >
-                {POPULAR_EMOJIS.map((emoji) => {
-                  const isSelected = emojiIcon === emoji;
-                  return (
-                    <TouchableOpacity
-                      key={emoji}
-                      style={[
-                        styles.emojiButton,
-                        isSelected && styles.emojiButtonSelected,
-                      ]}
-                      onPress={() => {
-                        haptics.selection();
-                        setEmojiIcon(emoji);
-                      }}
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Select emoji ${emoji}`}
-                    >
-                      <Text style={styles.emojiText}>{emoji}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                {POPULAR_EMOJIS.map((emoji) => (
+                  <TouchableOpacity
+                    key={emoji}
+                    style={[
+                      styles.emojiButton,
+                      {
+                        backgroundColor: colors.inputBackground,
+                        borderColor: colors.inputBorder,
+                      },
+                      emojiIcon === emoji && [
+                        styles.emojiButtonSelected,
+                        {
+                          borderColor: colors.primary,
+                          backgroundColor: colors.cardBackground,
+                        },
+                      ],
+                    ]}
+                    onPress={() => {
+                      haptics.selection();
+                      setEmojiIcon(emoji);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select emoji ${emoji}`}
+                  >
+                    <Text style={styles.emojiText}>{emoji}</Text>
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
             </View>
 
-            {/* Name Input */}
+            {/* Guide Name */}
             <View style={styles.fieldWrapper}>
               <Input
                 label="Guide Name"
                 value={name}
-                onChangeText={(val) => {
-                  setName(val);
-                  if (error) setError(null);
-                }}
-                placeholder="e.g. Soho Date Nights, Paris 2026"
-                error={error || undefined}
-                maxLength={100}
+                onChangeText={setName}
+                placeholder="e.g. West Village Date Night"
+                maxLength={60}
                 autoCapitalize="words"
               />
             </View>
 
-            {/* Description Input */}
+            {/* Description */}
             <View style={styles.fieldWrapper}>
               <Textarea
                 label="Description (Optional)"
                 value={description}
                 onChangeText={setDescription}
-                placeholder="Short note about the vibe, neighborhood, or theme"
-                maxLength={500}
-                numberOfLines={3}
+                placeholder="What makes this itinerary special?"
+                maxLength={240}
+                minHeight={80}
               />
             </View>
 
-            {/* Public / Private Toggle (Uniform unboxed switch row) */}
+            {/* Public Switch */}
             <View style={styles.switchRow}>
               <View style={styles.switchTextContainer}>
-                <Text style={styles.switchLabel}>Public Guide</Text>
-                <Text style={styles.switchSubtitle}>
-                  Anyone with the link can view and save your guide
+                <Text style={[styles.switchLabel, { color: colors.text }]}>
+                  Public Guide
+                </Text>
+                <Text
+                  style={[styles.switchSubtitle, { color: colors.textMuted }]}
+                >
+                  Allow anyone with the link to view and clone this guide
                 </Text>
               </View>
               <Switch
@@ -253,28 +261,27 @@ export function EditGuideModal({
                   setIsPublic(val);
                 }}
                 trackColor={{
-                  false: Theme.colors.switchTrackOff,
-                  true: Theme.colors.primary,
+                  false: colors.switchTrackOff,
+                  true: colors.primary,
                 }}
                 thumbColor={
                   Platform.OS === 'android'
                     ? isPublic
-                      ? Theme.colors.onPrimary
-                      : Theme.colors.switchThumbOff
-                    : Theme.colors.onPrimary
+                      ? colors.onPrimary
+                      : colors.switchThumbOff
+                    : undefined
                 }
-                ios_backgroundColor={Theme.colors.switchTrackOff}
+                ios_backgroundColor={colors.switchTrackOff}
               />
             </View>
 
-            {/* Action Buttons: Side-by-side Cancel and Save */}
+            {/* Form Actions: Side-by-side standard layout */}
             <View style={styles.actionRow}>
               <Button
-                variant="secondary"
+                variant="outline"
                 size="lg"
+                onPress={onClose}
                 style={styles.cancelButton}
-                onPress={handleClose}
-                disabled={isWorking}
               >
                 Cancel
               </Button>
@@ -282,33 +289,30 @@ export function EditGuideModal({
               <Button
                 variant="primary"
                 size="lg"
-                style={styles.saveButton}
-                onPress={handleSave}
                 loading={updateMutation.isPending}
-                disabled={isWorking}
+                onPress={handleSave}
+                style={styles.saveButton}
               >
                 Save Changes
               </Button>
             </View>
 
-            {/* Accessible Destructive Delete Action (Separated Ghost Button) */}
-            <View style={styles.dangerZone}>
+            {/* Destructive Action: Separated Danger Zone */}
+            <View
+              style={[
+                styles.dangerZone,
+                { borderTopColor: colors.inputBorder },
+              ]}
+            >
               <Button
                 variant="ghost"
                 size="md"
                 onPress={handleDelete}
                 loading={deleteMutation.isPending}
-                disabled={isWorking}
                 leftIcon={
-                  <TrashIcon
-                    size={16}
-                    color={Theme.colors.error}
-                    weight="bold"
-                  />
+                  <TrashIcon size={16} color={colors.error} weight="bold" />
                 }
-                textStyle={styles.deleteButtonText}
-                accessibilityRole="button"
-                accessibilityLabel="Delete guide"
+                textStyle={[styles.deleteButtonText, { color: colors.error }]}
               >
                 Delete Guide
               </Button>
@@ -321,29 +325,25 @@ export function EditGuideModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
+  modalBackdrop: {
     flex: 1,
-    backgroundColor: Theme.colors.background,
-  },
-  androidBackdrop: {
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor:
+      Platform.OS === 'ios' ? 'transparent' : 'rgba(0, 0, 0, 0.45)',
   },
-  backdropPressable: {
-    flex: 1,
+  dismissOverlay: {
+    ...StyleSheet.absoluteFill,
   },
-  sheetContent: {
-    flex: 1,
-    backgroundColor: Theme.colors.background,
+  sheetContainer: {
+    height: Platform.OS === 'ios' ? '100%' : '88%',
+    paddingTop: 12,
     paddingHorizontal: Theme.spacing.lg,
-    paddingTop: Theme.spacing.md,
     borderTopLeftRadius: Platform.OS === 'ios' ? 0 : Theme.radii.sheet,
     borderTopRightRadius: Platform.OS === 'ios' ? 0 : Theme.radii.sheet,
   },
   grabHandle: {
     width: 36,
     height: 5,
-    backgroundColor: Theme.colors.textSubtle,
     borderRadius: Theme.radii.pill,
     alignSelf: 'center',
     marginBottom: Theme.spacing.md,
@@ -355,18 +355,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Theme.colors.inputBorder,
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
     fontFamily: 'Georgia',
-    color: Theme.colors.text,
   },
   closeButton: {
     padding: 6,
     borderRadius: Theme.radii.pill,
-    backgroundColor: Theme.colors.inputBackground,
   },
   scrollView: {
     flex: 1,
@@ -382,7 +379,6 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: Theme.colors.text,
     marginBottom: Theme.spacing.xs,
   },
   emojiScroll: {
@@ -393,15 +389,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: Theme.radii.lg,
-    backgroundColor: Theme.colors.inputBackground,
     borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emojiButtonSelected: {
-    borderColor: Theme.colors.primary,
-    backgroundColor: Theme.colors.cardBackground,
     borderWidth: 2,
   },
   emojiText: {
@@ -424,12 +416,10 @@ const styles = StyleSheet.create({
   switchLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: Theme.colors.text,
     marginBottom: 2,
   },
   switchSubtitle: {
     fontSize: 12,
-    color: Theme.colors.textMuted,
   },
   actionRow: {
     flexDirection: 'row',
@@ -448,10 +438,8 @@ const styles = StyleSheet.create({
     marginTop: Theme.spacing.sm,
     paddingTop: Theme.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: Theme.colors.inputBorder,
   },
   deleteButtonText: {
-    color: Theme.colors.error,
     fontWeight: '600',
     fontSize: 14,
   },

@@ -38,10 +38,16 @@ In addition to these global rules, always consult and follow the domain-specific
 | 2026-08-22 | Used "spot" / "spots" in UI copy instead of canonical product terminology "crumbs"      | Always verify UI copy, entity naming, and user-facing text against `docs/app_terminology.md`. Saved dining places are strictly called **crumbs** (never "spots").                                                   |
 | 2026-08-22 | Imported `@react-navigation/native` (`useFocusEffect`) in Expo SDK 57 / Expo Router v57 | As of Expo SDK 56+, Expo Router is incompatible with direct `@react-navigation/native` imports. Always import navigation hooks (`useFocusEffect`, `useRouter`, `useLocalSearchParams`) strictly from `expo-router`. |
 | 2026-08-28 | Inconsistent modal button layouts & solid red/terracotta buttons causing color-blind confusion | Standardize all modal action bars to side-by-side `[Cancel (flex:1)]` `[Save/Submit (flex:2)]`, use uniform `Switch` styling (`Theme.colors.switchTrackOff`), and style destructive delete actions as separated ghost/outline buttons with danger text/icons rather than solid filled buttons. |
+| 2026-08-29 | Relied on static StyleSheet.create for theming and attempted nested modal presentation | In React Native, static `StyleSheet.create` only evaluates once at boot time; always use `useTheme()` for dynamic colors. Never stack modal sheets on top of active modal sheets in iOS UIKit; switch views within the same modal container. |
 
 ---
 
 ## Universal Code Standards
+
+- **Dynamic System Theming (Dark & Light Mode)**:
+  - **Dynamic Theme Hooks**: In React Native, static `StyleSheet.create` evaluates once at module boot time. Any color-dependent property (backgrounds, borders, text, icons, modals, and navigation stacks) must dynamically bind to `colors` from `useTheme()`.
+  - **Root Navigator Canvas**: Always configure `contentStyle: { backgroundColor: colors.background }` on the root Stack navigator so view transitions and loading skeletons never flash default light backgrounds.
+  - **Single Modal Container Rule**: iOS UIKit prohibits presenting a second `pageSheet` `<Modal>` on top of an active modal. Always transition internal view state (`viewMode: 'picker' | 'create'`) inside the same modal sheet.
 
 - **UI Accessibility & Form Modal Consistency**:
   - Modal form action rows must strictly follow the standard layout: side-by-side `Cancel` (secondary / outline, `flex: 1`) and `Submit/Save` (primary, `flex: 2`).

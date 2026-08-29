@@ -9,7 +9,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 
 export interface TextareaProps extends TextInputProps {
   label?: string;
@@ -32,25 +32,34 @@ export const Textarea = forwardRef<TextInput, TextareaProps>(function Textarea(
   },
   ref,
 ) {
+  const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={[styles.wrapper, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && (
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      )}
       <View
         style={[
           styles.container,
-          { minHeight },
-          isFocused && styles.focused,
-          Boolean(error) && styles.errorContainer,
+          {
+            minHeight,
+            backgroundColor: colors.inputBackground,
+            borderColor: isFocused
+              ? colors.primary
+              : error
+                ? colors.error
+                : colors.inputBorder,
+          },
         ]}
       >
         <TextInput
           ref={ref}
           multiline
           textAlignVertical="top"
-          style={[styles.input, inputStyle]}
-          placeholderTextColor={Theme.colors.textSubtle}
+          style={[styles.input, { color: colors.text }, inputStyle]}
+          placeholderTextColor={colors.textSubtle}
           onFocus={(e) => {
             setIsFocused(true);
             onFocus?.(e);
@@ -62,7 +71,9 @@ export const Textarea = forwardRef<TextInput, TextareaProps>(function Textarea(
           {...props}
         />
       </View>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? (
+        <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+      ) : null}
     </View>
   );
 });
@@ -74,32 +85,21 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: Theme.colors.text,
     marginBottom: Theme.spacing.xs,
   },
   container: {
-    backgroundColor: Theme.colors.inputBackground,
     borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
     borderRadius: Theme.radii.lg,
     paddingHorizontal: Theme.spacing.md,
     paddingVertical: Theme.spacing.sm,
   },
-  focused: {
-    borderColor: Theme.colors.primary,
-  },
-  errorContainer: {
-    borderColor: Theme.colors.error,
-  },
   input: {
     flex: 1,
     fontSize: 15,
-    color: Theme.colors.text,
     padding: 0,
     minHeight: 60,
   },
   errorText: {
-    color: Theme.colors.error,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 2,

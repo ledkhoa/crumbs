@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { formatPriceLevel } from '@/utils/price';
 import { openDefaultMaps } from '@/utils/maps';
@@ -31,6 +31,7 @@ import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StarRating } from '@/components/ui/StarRating';
+import { Badge } from '@/components/ui/Badge';
 import { SocialPlatformIcon } from '@/components/ui/SocialPlatformIcon';
 import { QuickAddToGuideModal } from '@/components/ingestion/QuickAddToGuideModal';
 import {
@@ -60,6 +61,7 @@ import type { CrumbDetail } from '@api/modules/crumbs/crumbs.types';
 
 export default function CrumbDetailScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const crumbId = Array.isArray(id) ? (id[0] ?? '') : (id ?? '');
@@ -223,7 +225,10 @@ export default function CrumbDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['top']}
+      >
         <View style={styles.loadingHeader}>
           <Skeleton width={44} height={44} borderRadius={22} />
           <Skeleton width={80} height={36} borderRadius={18} />
@@ -243,22 +248,33 @@ export default function CrumbDetailScreen() {
 
   if (isError || !crumb) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['top']}
+      >
         <View style={styles.navBar}>
           <TouchableOpacity
-            style={styles.backButton}
+            style={[
+              styles.backButton,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.cardBorder,
+              },
+            ]}
             onPress={() => router.back()}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Text style={styles.backButtonIcon}>‹</Text>
+            <Text style={[styles.backButtonIcon, { color: colors.text }]}>
+              ‹
+            </Text>
           </TouchableOpacity>
         </View>
         <EmptyState
           icon={
             <WarningCircleIcon
               size={36}
-              color={Theme.colors.textSubtle}
+              color={colors.textSubtle}
               weight="regular"
             />
           }
@@ -289,12 +305,18 @@ export default function CrumbDetailScreen() {
     restaurant.regularOpeningHours?.weekdayDescriptions || [];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Top Floating Glass Navigation Bar */}
       <SafeAreaView edges={['top']} style={styles.navBarWrapper}>
         <View style={styles.navBar}>
           <TouchableOpacity
-            style={styles.floatingNavButton}
+            style={[
+              styles.floatingNavButton,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.cardBorder,
+              },
+            ]}
             onPress={() => {
               haptics.tap();
               router.back();
@@ -303,12 +325,15 @@ export default function CrumbDetailScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <CaretLeftIcon size={22} color={Theme.colors.text} weight="bold" />
+            <CaretLeftIcon size={22} color={colors.text} weight="bold" />
           </TouchableOpacity>
 
           <View style={styles.navRightActions}>
             <TouchableOpacity
-              style={styles.floatingActionPill}
+              style={[
+                styles.floatingActionPill,
+                { backgroundColor: colors.primary },
+              ]}
               onPress={() => {
                 haptics.primary();
                 setIsGuideModalVisible(true);
@@ -317,26 +342,24 @@ export default function CrumbDetailScreen() {
               accessibilityRole="button"
               accessibilityLabel="Add to guide"
             >
-              <PlusIcon
-                size={14}
-                color={Theme.colors.onPrimary}
-                weight="bold"
-              />
+              <PlusIcon size={14} color={colors.onPrimary} weight="bold" />
               <Text style={styles.floatingActionText}>Guide</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.floatingNavButton}
+              style={[
+                styles.floatingNavButton,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.cardBorder,
+                },
+              ]}
               onPress={handleShare}
               activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel="Share crumb"
             >
-              <ArrowSquareOutIcon
-                size={20}
-                color={Theme.colors.text}
-                weight="bold"
-              />
+              <ArrowSquareOutIcon size={20} color={colors.text} weight="bold" />
             </TouchableOpacity>
           </View>
         </View>
@@ -358,8 +381,13 @@ export default function CrumbDetailScreen() {
                 transition={250}
               />
             ) : (
-              <View style={styles.heroImagePlaceholder}>
-                <ForkKnifeIcon size={48} color={Theme.colors.textSubtle} />
+              <View
+                style={[
+                  styles.heroImagePlaceholder,
+                  { backgroundColor: colors.inputBackground },
+                ]}
+              >
+                <ForkKnifeIcon size={48} color={colors.textSubtle} />
               </View>
             )}
 
@@ -367,7 +395,13 @@ export default function CrumbDetailScreen() {
             {sourcePost?.authorUsername ? (
               <View style={styles.heroTopBadges}>
                 <TouchableOpacity
-                  style={styles.creatorGlassBadge}
+                  style={[
+                    styles.creatorGlassBadge,
+                    {
+                      backgroundColor: colors.cardBackground,
+                      borderColor: colors.cardBorder,
+                    },
+                  ]}
                   onPress={() => {
                     if (sourcePost.originalUrl) {
                       Linking.openURL(sourcePost.originalUrl).catch(() => {});
@@ -378,9 +412,12 @@ export default function CrumbDetailScreen() {
                   <SocialPlatformIcon
                     platform={sourcePost.platform}
                     size={14}
-                    color={Theme.colors.text}
+                    color={colors.text}
                   />
-                  <Text style={styles.creatorBadgeText} numberOfLines={1}>
+                  <Text
+                    style={[styles.creatorBadgeText, { color: colors.text }]}
+                    numberOfLines={1}
+                  >
                     @{sourcePost.authorUsername}
                   </Text>
                 </TouchableOpacity>
@@ -425,20 +462,30 @@ export default function CrumbDetailScreen() {
         <View style={styles.contentBody}>
           {/* Restaurant Identity & Spatial Details */}
           <View style={styles.titleSection}>
-            <Text style={styles.restaurantTitle}>{restaurant.name}</Text>
+            <Text style={[styles.restaurantTitle, { color: colors.text }]}>
+              {restaurant.name}
+            </Text>
 
             <View style={styles.metaSummaryRow}>
               {formattedPrice ? (
-                <Text style={styles.metaTagText}>{formattedPrice}</Text>
+                <Text style={[styles.metaTagText, { color: colors.textMuted }]}>
+                  {formattedPrice}
+                </Text>
               ) : null}
               {formattedPrice && restaurant.cuisine ? (
-                <Text style={styles.metaDot}>·</Text>
+                <Text style={[styles.metaDot, { color: colors.textSubtle }]}>
+                  ·
+                </Text>
               ) : null}
               {restaurant.cuisine ? (
-                <Text style={styles.metaTagText}>{restaurant.cuisine}</Text>
+                <Text style={[styles.metaTagText, { color: colors.textMuted }]}>
+                  {restaurant.cuisine}
+                </Text>
               ) : null}
               {(formattedPrice || restaurant.cuisine) && restaurant.rating ? (
-                <Text style={styles.metaDot}>·</Text>
+                <Text style={[styles.metaDot, { color: colors.textSubtle }]}>
+                  ·
+                </Text>
               ) : null}
               {restaurant.rating ? (
                 <StarRating
@@ -450,16 +497,16 @@ export default function CrumbDetailScreen() {
             </View>
             {locationSubtitle ? (
               <View style={styles.locationSubtitleRow}>
-                <MapPinIcon
-                  size={14}
-                  color={Theme.colors.primary}
-                  weight="fill"
-                />
-                <Text style={styles.locationSubtitle}>{locationSubtitle}</Text>
+                <MapPinIcon size={14} color={colors.primary} weight="fill" />
+                <Text style={[styles.locationSubtitle, { color: colors.text }]}>
+                  {locationSubtitle}
+                </Text>
               </View>
             ) : null}
             {restaurant.formattedAddress ? (
-              <Text style={styles.addressDetail}>
+              <Text
+                style={[styles.addressDetail, { color: colors.textSubtle }]}
+              >
                 {restaurant.formattedAddress}
               </Text>
             ) : null}
@@ -467,7 +514,15 @@ export default function CrumbDetailScreen() {
 
           {/* Expandable Opening Hours Accordion */}
           {weekdayDescriptions.length > 0 && (
-            <View style={styles.hoursCard}>
+            <View
+              style={[
+                styles.hoursCard,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                },
+              ]}
+            >
               <TouchableOpacity
                 style={styles.hoursHeader}
                 onPress={() => {
@@ -479,12 +534,12 @@ export default function CrumbDetailScreen() {
                 <View style={styles.hoursHeaderLeft}>
                   <ClockIcon
                     size={16}
-                    color={
-                      openStatus.isOpen ? '#3B6B38' : Theme.colors.textMuted
-                    }
+                    color={openStatus.isOpen ? '#3B6B38' : colors.textMuted}
                     weight="bold"
                   />
-                  <Text style={styles.hoursHeaderText}>
+                  <Text
+                    style={[styles.hoursHeaderText, { color: colors.text }]}
+                  >
                     {openStatus.statusText || 'Opening Hours'}
                   </Text>
                   {openStatus.statusText ? (
@@ -493,7 +548,7 @@ export default function CrumbDetailScreen() {
                         styles.statusDot,
                         openStatus.isOpen
                           ? styles.statusDotOpen
-                          : styles.statusDotClosed,
+                          : { backgroundColor: colors.textSubtle },
                       ]}
                     />
                   ) : null}
@@ -501,20 +556,25 @@ export default function CrumbDetailScreen() {
                 {isHoursExpanded ? (
                   <CaretUpIcon
                     size={16}
-                    color={Theme.colors.textMuted}
+                    color={colors.textMuted}
                     weight="bold"
                   />
                 ) : (
                   <CaretDownIcon
                     size={16}
-                    color={Theme.colors.textMuted}
+                    color={colors.textMuted}
                     weight="bold"
                   />
                 )}
               </TouchableOpacity>
 
               {isHoursExpanded && (
-                <View style={styles.hoursDropdown}>
+                <View
+                  style={[
+                    styles.hoursDropdown,
+                    { borderTopColor: colors.inputBorder },
+                  ]}
+                >
                   {weekdayDescriptions.map((desc, idx) => {
                     const isToday = idx === currentWeekdayIndex;
                     return (
@@ -528,7 +588,11 @@ export default function CrumbDetailScreen() {
                         <Text
                           style={[
                             styles.hoursRowText,
-                            isToday && styles.hoursRowTextToday,
+                            { color: colors.textMuted },
+                            isToday && [
+                              styles.hoursRowTextToday,
+                              { color: colors.text },
+                            ],
                           ]}
                         >
                           {desc}
@@ -566,7 +630,13 @@ export default function CrumbDetailScreen() {
             ) : null}
 
             <TouchableOpacity
-              style={styles.actionCapsule}
+              style={[
+                styles.actionCapsule,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.cardBorder,
+                },
+              ]}
               onPress={() => {
                 haptics.tap();
                 openDefaultMaps({
@@ -580,29 +650,47 @@ export default function CrumbDetailScreen() {
             >
               <NavigationArrowIcon
                 size={16}
-                color={Theme.colors.text}
+                color={colors.text}
                 weight="fill"
               />
-              <Text style={styles.actionCapsuleText}>Directions</Text>
+              <Text style={[styles.actionCapsuleText, { color: colors.text }]}>
+                Directions
+              </Text>
             </TouchableOpacity>
 
             {restaurant.websiteUrl ? (
               <TouchableOpacity
-                style={styles.actionCapsule}
+                style={[
+                  styles.actionCapsule,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.cardBorder,
+                  },
+                ]}
                 onPress={() => {
                   haptics.tap();
                   Linking.openURL(restaurant.websiteUrl!).catch(() => {});
                 }}
                 activeOpacity={0.8}
               >
-                <GlobeIcon size={16} color={Theme.colors.text} weight="bold" />
-                <Text style={styles.actionCapsuleText}>Web</Text>
+                <GlobeIcon size={16} color={colors.text} weight="bold" />
+                <Text
+                  style={[styles.actionCapsuleText, { color: colors.text }]}
+                >
+                  Web
+                </Text>
               </TouchableOpacity>
             ) : null}
 
             {sourcePost?.originalUrl ? (
               <TouchableOpacity
-                style={styles.actionCapsule}
+                style={[
+                  styles.actionCapsule,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.cardBorder,
+                  },
+                ]}
                 onPress={() => {
                   haptics.tap();
                   Linking.openURL(sourcePost.originalUrl).catch(() => {});
@@ -612,9 +700,13 @@ export default function CrumbDetailScreen() {
                 <SocialPlatformIcon
                   platform={sourcePost.platform}
                   size={16}
-                  color={Theme.colors.text}
+                  color={colors.text}
                 />
-                <Text style={styles.actionCapsuleText}>Reel</Text>
+                <Text
+                  style={[styles.actionCapsuleText, { color: colors.text }]}
+                >
+                  Reel
+                </Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -624,6 +716,10 @@ export default function CrumbDetailScreen() {
             <TouchableOpacity
               style={[
                 styles.visitedButton,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                },
                 crumb.isVisited && styles.visitedButtonActive,
               ]}
               onPress={handleToggleVisited}
@@ -631,12 +727,13 @@ export default function CrumbDetailScreen() {
             >
               <CheckCircleIcon
                 size={18}
-                color={crumb.isVisited ? '#3B6B38' : Theme.colors.text}
+                color={crumb.isVisited ? '#3B6B38' : colors.text}
                 weight={crumb.isVisited ? 'fill' : 'bold'}
               />
               <Text
                 style={[
                   styles.visitedButtonText,
+                  { color: colors.text },
                   crumb.isVisited && styles.visitedButtonTextActive,
                 ]}
               >
@@ -646,15 +743,23 @@ export default function CrumbDetailScreen() {
           </View>
 
           {/* Hero Dish Highlight Callout */}
-          <View style={styles.sectionCard}>
+          <View
+            style={[
+              styles.sectionCard,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.cardBorder,
+              },
+            ]}
+          >
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleWithIcon}>
-                <SparkleIcon
-                  size={15}
-                  color={Theme.colors.primary}
-                  weight="fill"
-                />
-                <Text style={styles.sectionTitle}>MUST-ORDER DISH</Text>
+                <SparkleIcon size={15} color={colors.primary} weight="fill" />
+                <Text
+                  style={[styles.sectionTitle, { color: colors.textSubtle }]}
+                >
+                  MUST-ORDER DISH
+                </Text>
               </View>
               <TouchableOpacity
                 onPress={() => {
@@ -663,7 +768,7 @@ export default function CrumbDetailScreen() {
                 }}
                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
-                <Text style={styles.editPillText}>
+                <Text style={[styles.editPillText, { color: colors.primary }]}>
                   {isEditingDishOverride ? 'Cancel' : 'Edit'}
                 </Text>
               </TouchableOpacity>
@@ -679,16 +784,19 @@ export default function CrumbDetailScreen() {
                 />
               </View>
             ) : (
-              <View style={styles.heroDishBox}>
-                <Text style={styles.heroDishName}>
+              <View style={styles.heroDishRow}>
+                <Text
+                  style={[styles.heroDishName, { color: colors.text }]}
+                  numberOfLines={2}
+                >
                   {crumb.effectiveHeroDish ||
                     restaurant.communityFavoriteDish ||
                     'Explore menu signatures'}
                 </Text>
                 {crumb.userHeroDishOverride ? (
-                  <Text style={styles.heroDishBadge}>Your Pick</Text>
+                  <Badge variant="hero" size="sm" label="Your Pick" />
                 ) : postAttribution?.heroDish ? (
-                  <Text style={styles.heroDishBadge}>Creator Highlight</Text>
+                  <Badge variant="accent" size="sm" label="Creator Highlight" />
                 ) : null}
               </View>
             )}
@@ -697,19 +805,44 @@ export default function CrumbDetailScreen() {
           {/* Recommended Dishes Tags */}
           {postAttribution?.recommendedDishes &&
             postAttribution.recommendedDishes.length > 0 && (
-              <View style={styles.sectionCard}>
+              <View
+                style={[
+                  styles.sectionCard,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.cardBorder,
+                  },
+                ]}
+              >
                 <View style={styles.sectionTitleWithIcon}>
                   <ForkKnifeIcon
                     size={15}
-                    color={Theme.colors.textMuted}
+                    color={colors.textMuted}
                     weight="bold"
                   />
-                  <Text style={styles.sectionTitle}>RECOMMENDED DISHES</Text>
+                  <Text
+                    style={[styles.sectionTitle, { color: colors.textSubtle }]}
+                  >
+                    RECOMMENDED DISHES
+                  </Text>
                 </View>
                 <View style={styles.dishTagsGrid}>
                   {postAttribution.recommendedDishes.map((dish, idx) => (
-                    <View key={`${dish}-${idx}`} style={styles.dishChip}>
-                      <Text style={styles.dishChipText}>• {dish}</Text>
+                    <View
+                      key={`${dish}-${idx}`}
+                      style={[
+                        styles.dishChip,
+                        {
+                          backgroundColor: colors.inputBackground,
+                          borderColor: colors.inputBorder,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.dishChipText, { color: colors.text }]}
+                      >
+                        • {dish}
+                      </Text>
                     </View>
                   ))}
                 </View>
@@ -718,19 +851,38 @@ export default function CrumbDetailScreen() {
 
           {/* Vibe Tags & Atmosphere */}
           {postAttribution?.vibeTags && postAttribution.vibeTags.length > 0 && (
-            <View style={styles.sectionCard}>
+            <View
+              style={[
+                styles.sectionCard,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.cardBorder,
+                },
+              ]}
+            >
               <View style={styles.sectionTitleWithIcon}>
-                <SparkleIcon
-                  size={15}
-                  color={Theme.colors.accent}
-                  weight="fill"
-                />
-                <Text style={styles.sectionTitle}>VIBE & ATMOSPHERE</Text>
+                <SparkleIcon size={15} color={colors.accent} weight="fill" />
+                <Text
+                  style={[styles.sectionTitle, { color: colors.textSubtle }]}
+                >
+                  VIBE & ATMOSPHERE
+                </Text>
               </View>
               <View style={styles.vibeTagsGrid}>
                 {postAttribution.vibeTags.map((vibe, idx) => (
-                  <View key={`${vibe}-${idx}`} style={styles.vibeChip}>
-                    <Text style={styles.vibeChipText}>{vibe}</Text>
+                  <View
+                    key={`${vibe}-${idx}`}
+                    style={[
+                      styles.vibeChip,
+                      {
+                        backgroundColor: colors.inputBackground,
+                        borderColor: colors.inputBorder,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.vibeChipText, { color: colors.text }]}>
+                      {vibe}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -741,24 +893,30 @@ export default function CrumbDetailScreen() {
           {(postAttribution?.walkInTips ||
             postAttribution?.creatorNotes ||
             restaurant.editorialSummary) && (
-            <View style={styles.sectionCard}>
+            <View
+              style={[
+                styles.sectionCard,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.cardBorder,
+                },
+              ]}
+            >
               <View style={styles.sectionTitleWithIcon}>
-                <LightbulbIcon
-                  size={15}
-                  color={Theme.colors.accent}
-                  weight="fill"
-                />
-                <Text style={styles.sectionTitle}>INSIDER TIPS</Text>
+                <LightbulbIcon size={15} color={colors.accent} weight="fill" />
+                <Text
+                  style={[styles.sectionTitle, { color: colors.textSubtle }]}
+                >
+                  INSIDER TIPS
+                </Text>
               </View>
               {postAttribution?.walkInTips ? (
                 <View style={styles.tipRow}>
-                  <DoorIcon
-                    size={16}
-                    color={Theme.colors.textMuted}
-                    weight="bold"
-                  />
-                  <Text style={styles.tipText}>
-                    <Text style={styles.tipBold}>Walk-in tip: </Text>
+                  <DoorIcon size={16} color={colors.textMuted} weight="bold" />
+                  <Text style={[styles.tipText, { color: colors.text }]}>
+                    <Text style={[styles.tipBold, { color: colors.text }]}>
+                      Walk-in tip:{' '}
+                    </Text>
                     {postAttribution.walkInTips}
                   </Text>
                 </View>
@@ -768,12 +926,14 @@ export default function CrumbDetailScreen() {
                 <View style={styles.tipRow}>
                   <QuotesIcon
                     size={16}
-                    color={Theme.colors.textMuted}
+                    color={colors.textMuted}
                     weight="fill"
                   />
-                  <Text style={styles.tipText}>
-                    <Text style={styles.tipBold}>Creator quote: </Text>"
-                    {postAttribution.creatorNotes}"
+                  <Text style={[styles.tipText, { color: colors.text }]}>
+                    <Text style={[styles.tipBold, { color: colors.text }]}>
+                      Creator quote:{' '}
+                    </Text>
+                    "{postAttribution.creatorNotes}"
                   </Text>
                 </View>
               ) : null}
@@ -782,10 +942,10 @@ export default function CrumbDetailScreen() {
                 <View style={styles.tipRow}>
                   <BookOpenIcon
                     size={16}
-                    color={Theme.colors.textMuted}
+                    color={colors.textMuted}
                     weight="bold"
                   />
-                  <Text style={styles.tipText}>
+                  <Text style={[styles.tipText, { color: colors.text }]}>
                     {restaurant.editorialSummary}
                   </Text>
                 </View>
@@ -794,15 +954,27 @@ export default function CrumbDetailScreen() {
           )}
 
           {/* Guides Section */}
-          <View style={styles.sectionCard}>
+          <View
+            style={[
+              styles.sectionCard,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.cardBorder,
+              },
+            ]}
+          >
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleWithIcon}>
                 <FolderSimpleIcon
                   size={15}
-                  color={Theme.colors.textMuted}
+                  color={colors.textMuted}
                   weight="bold"
                 />
-                <Text style={styles.sectionTitle}>IN YOUR GUIDES</Text>
+                <Text
+                  style={[styles.sectionTitle, { color: colors.textSubtle }]}
+                >
+                  IN YOUR GUIDES
+                </Text>
               </View>
               <TouchableOpacity
                 onPress={() => {
@@ -811,22 +983,40 @@ export default function CrumbDetailScreen() {
                 }}
                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
-                <Text style={styles.editPillText}>+ Add to Guide</Text>
+                <Text style={[styles.editPillText, { color: colors.primary }]}>
+                  + Add to Guide
+                </Text>
               </TouchableOpacity>
             </View>
 
             {guides && guides.length > 0 ? (
               <View style={styles.guidesGrid}>
                 {guides.map((g) => (
-                  <View key={g.id} style={styles.guideBadge}>
-                    <Text style={styles.guideBadgeText}>
+                  <View
+                    key={g.id}
+                    style={[
+                      styles.guideBadge,
+                      {
+                        backgroundColor: colors.inputBackground,
+                        borderColor: colors.inputBorder,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.guideBadgeText, { color: colors.text }]}
+                    >
                       {g.emojiIcon} {g.name}
                     </Text>
                   </View>
                 ))}
               </View>
             ) : (
-              <Text style={styles.unorganizedGuideText}>
+              <Text
+                style={[
+                  styles.unorganizedGuideText,
+                  { color: colors.textMuted },
+                ]}
+              >
                 Not assigned to any guides yet. Add to a guide to organize your
                 crumb trail!
               </Text>
@@ -834,14 +1024,24 @@ export default function CrumbDetailScreen() {
           </View>
 
           {/* Personal Notes & Inline Editor */}
-          <View style={styles.sectionCard}>
+          <View
+            style={[
+              styles.sectionCard,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.cardBorder,
+              },
+            ]}
+          >
             <View style={styles.sectionTitleWithIcon}>
               <NotePencilIcon
                 size={15}
-                color={Theme.colors.textMuted}
+                color={colors.textMuted}
                 weight="bold"
               />
-              <Text style={styles.sectionTitle}>YOUR PERSONAL NOTES</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textSubtle }]}>
+                YOUR PERSONAL NOTES
+              </Text>
             </View>
             <Textarea
               value={notes}
@@ -868,16 +1068,18 @@ export default function CrumbDetailScreen() {
 
           {/* Destructive Actions */}
           <View style={styles.footerActions}>
-            <TouchableOpacity
-              style={styles.deleteButton}
+            <Button
+              variant="ghost"
+              size="md"
               onPress={handleDeleteCrumb}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel="Remove crumb"
+              loading={deleteMutation.isPending}
+              leftIcon={
+                <TrashIcon size={16} color={colors.error} weight="bold" />
+              }
+              textStyle={{ color: colors.error }}
             >
-              <TrashIcon size={16} color={Theme.colors.error} weight="bold" />
-              <Text style={styles.deleteButtonText}>Remove from My Crumbs</Text>
-            </TouchableOpacity>
+              Remove from My Crumbs
+            </Button>
           </View>
         </View>
       </KeyboardAwareScrollView>
@@ -1273,31 +1475,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Theme.colors.primary,
   },
-  heroDishBox: {
-    backgroundColor: 'rgba(196, 91, 62, 0.08)',
-    borderRadius: Theme.radii.md,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(196, 91, 62, 0.2)',
+  heroDishRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
+    paddingTop: 2,
   },
   heroDishName: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-    color: Theme.colors.primary,
-  },
-  heroDishBadge: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Theme.colors.primary,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Theme.radii.pill,
-    marginLeft: 8,
+    lineHeight: 22,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
   editDishContainer: {
     marginTop: 4,
@@ -1389,17 +1579,11 @@ const styles = StyleSheet.create({
   },
   footerActions: {
     marginTop: Theme.spacing.md,
+    marginBottom: Theme.spacing.xxl,
     alignItems: 'center',
-  },
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
   },
   deleteButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: Theme.colors.error,
   },

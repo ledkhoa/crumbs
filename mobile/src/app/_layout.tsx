@@ -6,6 +6,7 @@ import {
   focusManager,
 } from '@tanstack/react-query';
 import { AppState, type AppStateStatus } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { useShareIntent } from 'expo-share-intent';
 import { extractSocialUrl, isValidSocialUrl } from '@/utils/social-url';
@@ -15,6 +16,7 @@ import { InAppToastBanner } from '@/components/inbox/InAppToastBanner';
 import { QuickAddToGuideModal } from '@/components/ingestion/QuickAddToGuideModal';
 import { useInboxStore } from '@/store/inbox';
 import { useAddCrumbToGuideMutation } from '@/hooks/useGuides';
+import { useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import type { UnifiedRestaurantSpot } from '@/types/ingest';
 
@@ -40,8 +42,15 @@ focusManager.setEventListener((handleFocus) => {
 });
 
 function AppNavigator() {
+  const { colors } = useTheme();
+
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
       <Stack.Screen name="index" />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -155,6 +164,7 @@ export default function RootLayout() {
   return (
     <KeyboardProvider>
       <QueryClientProvider client={queryClient}>
+        <StatusBar style="auto" />
         <AppNavigator />
         <GlobalOverlays />
         {overlayState.visible && (
