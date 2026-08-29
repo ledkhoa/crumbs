@@ -5,7 +5,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { useTheme } from '@/theme/tokens';
 
 export interface StarRatingProps {
   rating: number;
@@ -22,14 +22,33 @@ export function StarRating({
   style,
   textStyle,
 }: StarRatingProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={[styles.container, style]}>
-      <Text style={[styles.star, styles[`star_${size}`]]}>★</Text>
-      <Text style={[styles.ratingNumber, styles[`text_${size}`], textStyle]}>
+      <Text
+        style={[styles.star, styles[`star_${size}`], { color: colors.accent }]}
+      >
+        ★
+      </Text>
+      <Text
+        style={[
+          styles.ratingNumber,
+          styles[`text_${size}`],
+          { color: colors.text },
+          textStyle,
+        ]}
+      >
         {rating.toFixed(1)}
       </Text>
       {count != null ? (
-        <Text style={[styles.count, styles[`count_${size}`]]}>
+        <Text
+          style={[
+            styles.count,
+            styles[`count_${size}`],
+            { color: colors.textMuted },
+          ]}
+        >
           ({count.toLocaleString()})
         </Text>
       ) : null}
@@ -44,7 +63,6 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   star: {
-    color: Theme.colors.accent,
     includeFontPadding: false,
   },
   star_sm: {
@@ -58,7 +76,6 @@ const styles = StyleSheet.create({
   },
   ratingNumber: {
     fontWeight: '700',
-    color: Theme.colors.text,
     includeFontPadding: false,
   },
   text_sm: {
@@ -72,7 +89,6 @@ const styles = StyleSheet.create({
   },
   count: {
     fontWeight: '500',
-    color: Theme.colors.textMuted,
     includeFontPadding: false,
   },
   count_sm: {

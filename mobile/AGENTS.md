@@ -92,12 +92,15 @@ Consult [`mobile/DESIGN.md`](./DESIGN.md) for all design system guidelines, UI t
 3. **Zero Duplicate StyleSheets**:
    - Screen-level `StyleSheet.create` must only handle screen layout geometry and spacing. Avoid copy-pasting button colors, card radii, input borders, and badge styling into screen-level styles.
 
-## Theme & Token Enforcement
+## Dynamic System Theming & Token Enforcement (Dark & Light Mode)
 
-- **No hardcoded colors**: Never write raw hex (`#FFF`, `#1E1915`), `rgba(...)`, or named CSS colors directly in components or stylesheets. Always reference `Theme.colors.*` from `@/theme/tokens`.
-- **Semantic token names**: Color tokens must use role-based names (`primary`, `text`, `textMuted`, `onPrimary`, `canvas`, etc.) per `mobile/DESIGN.md`.
+- **No static colors in StyleSheet.create**: React Native's `StyleSheet.create` only evaluates once at startup. All dynamic color properties (backgrounds, borders, text, icons, modal canvases) must bind dynamically to `colors` from `useTheme()`.
+- **Root Stack Navigator Canvas**: The root `<Stack>` navigator in `src/app/_layout.tsx` must define `screenOptions={{ contentStyle: { backgroundColor: colors.background } }}` to prevent native white flashes during transitions and skeleton states.
+- **Semantic token names**: Color tokens must use role-based names (`primary`, `text`, `textMuted`, `onPrimary`, `canvas`, `cardBackground`, etc.) per `mobile/DESIGN.md`.
 - **Single source of truth**: All color values live exclusively in `src/theme/tokens.ts`.
 - **Spacing & radii**: Always use `Theme.spacing.*` and `Theme.radii.*` tokens. Avoid magic numbers for padding, margin, gap, and border radius.
+
+- **In-Sheet Modal View Switching**: Never open a second `<Modal presentationStyle="pageSheet">` on top of an active modal (which iOS drops). Manage internal view state (`viewMode`) inside the same modal sheet.
 
 ## Mandatory Haptic Feedback Pattern
 

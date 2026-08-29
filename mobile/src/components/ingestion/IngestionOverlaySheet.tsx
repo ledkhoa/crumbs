@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { parseSocialUrl } from '@/utils/social-url';
 import { useIngestion } from '@/hooks/useIngestion';
@@ -53,6 +53,7 @@ export function IngestionOverlaySheet({
   onNavigateToInbox,
   onAddedToGuide,
 }: IngestionOverlaySheetProps) {
+  const { colors } = useTheme();
   const router = useRouter();
   const addCrumbMutation = useAddCrumbToGuideMutation();
 
@@ -186,6 +187,7 @@ export function IngestionOverlaySheet({
       <View
         style={[
           styles.container,
+          { backgroundColor: colors.background },
           Platform.OS !== 'ios' && styles.androidBackdrop,
         ]}
       >
@@ -193,7 +195,9 @@ export function IngestionOverlaySheet({
           <Pressable style={styles.backdropPressable} onPress={handleClose} />
         )}
 
-        <View style={styles.sheetContent}>
+        <View
+          style={[styles.sheetContent, { backgroundColor: colors.background }]}
+        >
           {/* Grab Handle */}
           <GrabHandle />
 
@@ -211,6 +215,7 @@ export function IngestionOverlaySheet({
                   <IngestionProgressSteps
                     steps={steps}
                     activeStepIndex={activeStepIndex}
+                    platform={parsedUrl.platform}
                   />
 
                   {/* Actions while processing */}
@@ -219,7 +224,7 @@ export function IngestionOverlaySheet({
                       variant="secondary"
                       size="md"
                       onPress={handleRunInBackground}
-                      style={styles.secondaryProgressButton}
+                      style={styles.actionButton}
                     >
                       Run in Background
                     </Button>
@@ -228,7 +233,7 @@ export function IngestionOverlaySheet({
                       variant="outline"
                       size="md"
                       onPress={handleClose}
-                      style={styles.cancelProgressButton}
+                      style={styles.actionButton}
                     >
                       Cancel
                     </Button>
@@ -254,7 +259,7 @@ export function IngestionOverlaySheet({
                               <SocialPlatformIcon
                                 platform={parsedUrl.platform}
                                 size={12}
-                                color={Theme.colors.text}
+                                color={colors.text}
                               />
                             }
                             label={`@${result.authorUsername}`}
@@ -269,7 +274,7 @@ export function IngestionOverlaySheet({
                               <SocialPlatformIcon
                                 platform={parsedUrl.platform}
                                 size={12}
-                                color={Theme.colors.text}
+                                color={colors.text}
                               />
                             }
                             label={
@@ -290,13 +295,22 @@ export function IngestionOverlaySheet({
                             result.spots.length === 1 ? 'Crumb' : 'Crumbs'
                           }`}
                           style={styles.crumbCountBadge}
-                          textStyle={styles.crumbCountText}
+                          textStyle={[
+                            styles.crumbCountText,
+                            { color: colors.primary },
+                          ]}
                         />
                       </View>
 
                       {/* Short Post Summary */}
                       {(result.summary || result.caption) && (
-                        <Text style={styles.postSummaryText} numberOfLines={5}>
+                        <Text
+                          style={[
+                            styles.postSummaryText,
+                            { color: colors.textMuted },
+                          ]}
+                          numberOfLines={5}
+                        >
                           {result.summary || result.caption}
                         </Text>
                       )}
@@ -329,11 +343,10 @@ export function IngestionOverlaySheet({
                             leftIcon={
                               <PlusIcon
                                 size={18}
-                                color={Theme.colors.onPrimary}
+                                color={colors.onPrimary}
                                 weight="bold"
                               />
                             }
-                            style={styles.primaryButton}
                           >
                             Add Crumb to Guide
                           </Button>
@@ -349,11 +362,10 @@ export function IngestionOverlaySheet({
                             leftIcon={
                               <TrayIcon
                                 size={18}
-                                color={Theme.colors.text}
+                                color={colors.text}
                                 weight="bold"
                               />
                             }
-                            style={styles.secondaryButton}
                           >
                             View in Inbox
                           </Button>
@@ -421,7 +433,6 @@ export function IngestionOverlaySheet({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Theme.colors.background,
   },
   androidBackdrop: {
     justifyContent: 'flex-end',
@@ -432,19 +443,9 @@ const styles = StyleSheet.create({
   },
   sheetContent: {
     flex: 1,
-    backgroundColor: Theme.colors.background,
     borderTopLeftRadius: Platform.OS === 'ios' ? 0 : Theme.radii.sheet,
     borderTopRightRadius: Platform.OS === 'ios' ? 0 : Theme.radii.sheet,
     paddingTop: Theme.spacing.md,
-  },
-  grabHandle: {
-    width: 36,
-    height: 5,
-    backgroundColor: Theme.colors.grabHandle,
-    borderRadius: Theme.radii.pill,
-    alignSelf: 'center',
-    marginBottom: Theme.spacing.md,
-    opacity: 0.7,
   },
   scrollContent: {
     paddingBottom: Theme.spacing.xxl,
@@ -460,31 +461,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Theme.spacing.lg,
     marginTop: Theme.spacing.md,
   },
-  secondaryProgressButton: {
+  actionButton: {
     flex: 1,
-    height: 48,
-    borderRadius: Theme.radii.lg,
-    backgroundColor: Theme.colors.cardBackground,
-    borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryProgressButtonText: {
-    color: Theme.colors.text,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  cancelProgressButton: {
-    height: 48,
-    paddingHorizontal: Theme.spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelProgressButtonText: {
-    color: Theme.colors.textMuted,
-    fontSize: 14,
-    fontWeight: '500',
   },
   completedContent: {
     width: '100%',
@@ -499,46 +477,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Theme.spacing.xs,
   },
-  authorBadge: {
-    backgroundColor: Theme.colors.inputBackground,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: Theme.spacing.xs,
-    borderRadius: Theme.radii.pill,
-    borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
-  },
+  authorBadge: {},
   authorText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Theme.colors.text,
   },
-  platformBadge: {
-    backgroundColor: Theme.colors.inputBackground,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: Theme.spacing.xs,
-    borderRadius: Theme.radii.pill,
-  },
+  platformBadge: {},
   platformBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Theme.colors.textMuted,
   },
-  crumbCountBadge: {
-    backgroundColor: Theme.colors.cardBackground,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: Theme.spacing.xs,
-    borderRadius: Theme.radii.pill,
-    borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
-  },
+  crumbCountBadge: {},
   crumbCountText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Theme.colors.primary,
   },
   postSummaryText: {
     fontSize: 13,
-    color: Theme.colors.textMuted,
     lineHeight: 18,
     marginTop: 4,
   },
@@ -549,37 +504,6 @@ const styles = StyleSheet.create({
     gap: Theme.spacing.sm,
     marginTop: Theme.spacing.md,
     marginBottom: Theme.spacing.md,
-  },
-  primaryButton: {
-    height: 52,
-    borderRadius: Theme.radii.lg,
-    backgroundColor: Theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Theme.colors.onPrimary,
-  },
-  secondaryButton: {
-    height: 48,
-    borderRadius: Theme.radii.lg,
-    backgroundColor: Theme.colors.inputBackground,
-    borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Theme.colors.text,
   },
   createGuideContainer: {
     flex: 1,

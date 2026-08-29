@@ -10,7 +10,7 @@ import {
   type TextStyle,
   type TouchableOpacityProps,
 } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 
 export type CardVariant = 'default' | 'flat' | 'outline';
@@ -28,10 +28,36 @@ export function Card({
   onPress,
   ...props
 }: CardProps) {
+  const { colors } = useTheme();
+
+  const getVariantStyle = (): ViewStyle => {
+    switch (variant) {
+      case 'flat':
+        return {
+          backgroundColor: colors.inputBackground,
+          borderWidth: 0,
+        };
+      case 'outline':
+        return {
+          backgroundColor: 'transparent',
+          borderColor: colors.cardBorder,
+          borderWidth: 1,
+        };
+      case 'default':
+      default:
+        return {
+          backgroundColor: colors.cardBackground,
+          borderColor: colors.cardBorder,
+          borderWidth: 1.5,
+          shadowColor: colors.shadow,
+        };
+    }
+  };
+
   if (onPress) {
     return (
       <TouchableOpacity
-        style={[styles.cardBase, styles[variant], style]}
+        style={[styles.cardBase, getVariantStyle(), style]}
         onPress={(e) => {
           haptics.tap();
           onPress(e);
@@ -45,7 +71,7 @@ export function Card({
   }
 
   return (
-    <View style={[styles.cardBase, styles[variant], style]}>{children}</View>
+    <View style={[styles.cardBase, getVariantStyle(), style]}>{children}</View>
   );
 }
 
@@ -71,9 +97,15 @@ export function CardTitle({
   numberOfLines,
   children,
 }: CardTitleProps) {
+  const { colors } = useTheme();
   return (
     <Text
-      style={[styles.title, serif && styles.serifTitle, style]}
+      style={[
+        styles.title,
+        { color: colors.text },
+        serif && styles.serifTitle,
+        style,
+      ]}
       numberOfLines={numberOfLines}
     >
       {children}
@@ -92,8 +124,12 @@ export function CardDescription({
   numberOfLines,
   children,
 }: CardDescriptionProps) {
+  const { colors } = useTheme();
   return (
-    <Text style={[styles.description, style]} numberOfLines={numberOfLines}>
+    <Text
+      style={[styles.description, { color: colors.textMuted }, style]}
+      numberOfLines={numberOfLines}
+    >
       {children}
     </Text>
   );
@@ -119,27 +155,8 @@ export function CardFooter({ style, children }: CardFooterProps) {
 
 const styles = StyleSheet.create({
   cardBase: {
-    backgroundColor: Theme.colors.cardBackground,
     borderRadius: Theme.radii.xl,
-    borderWidth: 1.5,
-    borderColor: Theme.colors.cardBorder,
     overflow: 'hidden',
-  },
-  default: {
-    shadowColor: Theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  flat: {
-    borderWidth: 0,
-    backgroundColor: Theme.colors.inputBackground,
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
   },
   header: {
     padding: Theme.spacing.md,
@@ -148,14 +165,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: Theme.colors.text,
   },
   serifTitle: {
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
   description: {
     fontSize: 13,
-    color: Theme.colors.textMuted,
     lineHeight: 18,
     marginTop: 2,
   },

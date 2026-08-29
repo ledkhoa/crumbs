@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { formatPriceLevel } from '@/utils/price';
 import { Card, CardTitle, CardContent } from '@/components/ui/Card';
@@ -33,6 +33,8 @@ export function IngestionCrumbCard({
   onToggleSelect,
   cardWidth,
 }: IngestionCrumbCardProps) {
+  const { colors } = useTheme();
+
   const handlePress = () => {
     if (selectable && onToggleSelect) {
       haptics.selection();
@@ -61,7 +63,12 @@ export function IngestionCrumbCard({
   const content = (
     <Card style={cardStyle}>
       {/* 16:9 Hero Photography */}
-      <View style={styles.photoContainer}>
+      <View
+        style={[
+          styles.photoContainer,
+          { backgroundColor: colors.inputBackground },
+        ]}
+      >
         {crumb.photoUrl ? (
           <Image
             source={{ uri: crumb.photoUrl }}
@@ -70,8 +77,13 @@ export function IngestionCrumbCard({
             transition={250}
           />
         ) : (
-          <View style={styles.photoPlaceholder}>
-            <ForkKnifeIcon size={36} color={Theme.colors.textSubtle} />
+          <View
+            style={[
+              styles.photoPlaceholder,
+              { backgroundColor: colors.inputBackground },
+            ]}
+          >
+            <ForkKnifeIcon size={36} color={colors.textSubtle} />
           </View>
         )}
 
@@ -96,11 +108,7 @@ export function IngestionCrumbCard({
             corner="pill"
             style={styles.heroDishPill}
             icon={
-              <SparkleIcon
-                size={12}
-                color={Theme.colors.onPrimary}
-                weight="fill"
-              />
+              <SparkleIcon size={12} color={colors.primary} weight="fill" />
             }
             label={`MUST-ORDER: ${crumb.heroDish.toUpperCase()}`}
           />
@@ -121,10 +129,15 @@ export function IngestionCrumbCard({
               style={styles.ratingBadge}
             >
               {formattedPrice && (
-                <Text style={styles.priceText}>{formattedPrice}</Text>
+                <Text style={[styles.priceText, { color: colors.textMuted }]}>
+                  {formattedPrice}
+                </Text>
               )}
               {formattedPrice && crumb.rating != null && (
-                <Text style={styles.priceText}> · </Text>
+                <Text style={[styles.priceText, { color: colors.textSubtle }]}>
+                  {' '}
+                  ·{' '}
+                </Text>
               )}
               {crumb.rating != null ? (
                 <StarRating rating={crumb.rating} size="sm" />
@@ -135,15 +148,28 @@ export function IngestionCrumbCard({
 
         {/* Address / Neighborhood / City / State */}
         {locationText ? (
-          <Text style={styles.addressText} numberOfLines={1}>
+          <Text
+            style={[styles.addressText, { color: colors.textMuted }]}
+            numberOfLines={1}
+          >
             {locationText}
           </Text>
         ) : null}
 
         {/* Vibe Anchor Quotation */}
         {crumb.vibeAnchor && (
-          <View style={styles.quoteContainer}>
-            <Text style={styles.quoteText}>“{crumb.vibeAnchor}”</Text>
+          <View
+            style={[
+              styles.quoteContainer,
+              {
+                backgroundColor: colors.inputBackground,
+                borderLeftColor: colors.primary,
+              },
+            ]}
+          >
+            <Text style={[styles.quoteText, { color: colors.text }]}>
+              “{crumb.vibeAnchor}”
+            </Text>
           </View>
         )}
 
@@ -165,14 +191,20 @@ export function IngestionCrumbCard({
 
         {/* Tactical Walk-In Tip Callout */}
         {crumb.walkInTips && (
-          <View style={styles.walkInBox}>
-            <LightbulbIcon
-              size={16}
-              color={Theme.colors.accent}
-              weight="fill"
-            />
-            <Text style={styles.walkInText}>
-              <Text style={styles.walkInLabel}>Walk-in Tip: </Text>
+          <View
+            style={[
+              styles.walkInBox,
+              {
+                backgroundColor: 'rgba(223, 176, 100, 0.12)',
+                borderColor: 'rgba(223, 176, 100, 0.3)',
+              },
+            ]}
+          >
+            <LightbulbIcon size={16} color={colors.accent} weight="fill" />
+            <Text style={[styles.walkInText, { color: colors.text }]}>
+              <Text style={[styles.walkInLabel, { color: colors.primary }]}>
+                Walk-in Tip:{' '}
+              </Text>
               {crumb.walkInTips}
             </Text>
           </View>
@@ -209,7 +241,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 180,
     position: 'relative',
-    backgroundColor: Theme.colors.inputBackground,
   },
   heroPhoto: {
     width: '100%',
@@ -220,11 +251,6 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Theme.colors.inputBackground,
-  },
-  photoPlaceholderEmoji: {
-    fontSize: 40,
-    opacity: 0.5,
   },
   photoScrim: {
     ...StyleSheet.absoluteFill,
@@ -241,10 +267,6 @@ const styles = StyleSheet.create({
     bottom: Theme.spacing.sm,
     left: Theme.spacing.sm,
     right: Theme.spacing.sm,
-  },
-  heroDishEmoji: {
-    fontSize: 14,
-    marginRight: 2,
   },
   cardBody: {
     padding: Theme.spacing.md,
@@ -268,26 +290,21 @@ const styles = StyleSheet.create({
   priceText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Theme.colors.textMuted,
   },
   addressText: {
     fontSize: 13,
-    color: Theme.colors.textMuted,
     marginBottom: Theme.spacing.sm,
   },
   quoteContainer: {
-    backgroundColor: Theme.colors.inputBackground,
     paddingHorizontal: Theme.spacing.md,
     paddingVertical: Theme.spacing.sm,
     borderRadius: Theme.radii.md,
     borderLeftWidth: 3,
-    borderLeftColor: Theme.colors.primary,
     marginBottom: Theme.spacing.sm,
   },
   quoteText: {
     fontSize: 13,
     fontStyle: 'italic',
-    color: Theme.colors.text,
     lineHeight: 18,
   },
   vibeTagsRow: {
@@ -306,26 +323,18 @@ const styles = StyleSheet.create({
   walkInBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(223, 176, 100, 0.12)',
     paddingHorizontal: Theme.spacing.sm,
     paddingVertical: Theme.spacing.xs + 2,
     borderRadius: Theme.radii.md,
     borderWidth: 1,
-    borderColor: 'rgba(223, 176, 100, 0.3)',
     marginTop: 2,
-  },
-  walkInIcon: {
-    fontSize: 14,
-    marginRight: 6,
   },
   walkInText: {
     flex: 1,
     fontSize: 12,
-    color: Theme.colors.text,
     lineHeight: 16,
   },
   walkInLabel: {
     fontWeight: '700',
-    color: Theme.colors.primary,
   },
 });

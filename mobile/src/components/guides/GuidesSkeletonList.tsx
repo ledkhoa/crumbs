@@ -1,5 +1,5 @@
 import { View, StyleSheet } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Card, CardContent } from '@/components/ui/Card';
 
@@ -7,10 +7,17 @@ import { Card, CardContent } from '@/components/ui/Card';
  * Individual skeleton placeholder matching GuideCard dimensions and visual hierarchy.
  */
 export function GuideCardSkeleton() {
+  const { colors } = useTheme();
+
   return (
     <Card style={styles.card}>
       {/* Media Cover Visual Area Skeleton */}
-      <View style={styles.mediaContainer}>
+      <View
+        style={[
+          styles.mediaContainer,
+          { backgroundColor: colors.inputBackground },
+        ]}
+      >
         <Skeleton
           width="100%"
           height={180}
@@ -72,7 +79,6 @@ const styles = StyleSheet.create({
     height: 180,
     width: '100%',
     position: 'relative',
-    backgroundColor: Theme.colors.inputBackground,
     overflow: 'hidden',
   },
   mediaSkeleton: {

@@ -7,7 +7,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 
 export type BadgeVariant =
   | 'default'
@@ -43,11 +43,74 @@ export function Badge({
   textStyle,
   children,
 }: BadgeProps) {
+  const { colors } = useTheme();
+
+  const variantContainerStyles = {
+    default: {
+      backgroundColor: colors.inputBackground,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+    },
+    secondary: {
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    primary: {
+      backgroundColor: colors.primary,
+    },
+    hero: {
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.12,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    accent: {
+      backgroundColor: 'rgba(223, 176, 100, 0.15)',
+      borderWidth: 1,
+      borderColor: 'rgba(223, 176, 100, 0.35)',
+    },
+    success: {
+      backgroundColor: 'rgba(124, 144, 112, 0.15)',
+      borderWidth: 1,
+      borderColor: 'rgba(124, 144, 112, 0.35)',
+    },
+    error: {
+      backgroundColor: colors.errorBackground,
+      borderWidth: 1,
+      borderColor: colors.errorBorder,
+    },
+    outline: {
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+  } satisfies Record<BadgeVariant, ViewStyle>;
+
+  const variantTextStyles = {
+    default: { color: colors.text },
+    secondary: { color: colors.text },
+    primary: { color: colors.onPrimary, fontWeight: '700' },
+    hero: {
+      color: colors.primary,
+      fontWeight: '800',
+      letterSpacing: 0.3,
+    },
+    accent: { color: colors.accent, fontWeight: '700' },
+    success: { color: colors.success, fontWeight: '700' },
+    error: { color: colors.error, fontWeight: '700' },
+    outline: { color: colors.textMuted },
+  } satisfies Record<BadgeVariant, TextStyle>;
+
   return (
     <View
       style={[
         styles.base,
-        styles[variant],
+        variantContainerStyles[variant],
         styles[corner],
         styles[size],
         style,
@@ -58,7 +121,7 @@ export function Badge({
         <Text
           style={[
             styles.textBase,
-            styles[`${variant}Text`],
+            variantTextStyles[variant],
             styles[`${size}Text`],
             textStyle,
           ]}
@@ -100,50 +163,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Theme.spacing.sm,
     paddingVertical: 5,
   },
-  // Variants
-  default: {
-    backgroundColor: Theme.colors.inputBackground,
-    borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
-  },
-  secondary: {
-    backgroundColor: Theme.colors.cardBackground,
-    borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
-  },
-  primary: {
-    backgroundColor: Theme.colors.primary,
-  },
-  hero: {
-    backgroundColor: Theme.colors.cardBackground,
-    borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
-    shadowColor: Theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  accent: {
-    backgroundColor: 'rgba(223, 176, 100, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(223, 176, 100, 0.35)',
-  },
-  success: {
-    backgroundColor: 'rgba(124, 144, 112, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(124, 144, 112, 0.35)',
-  },
-  error: {
-    backgroundColor: Theme.colors.errorBackground,
-    borderWidth: 1,
-    borderColor: Theme.colors.errorBorder,
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
-  },
   // Text Styles
   textBase: {
     fontWeight: '600',
@@ -153,35 +172,5 @@ const styles = StyleSheet.create({
   },
   mdText: {
     fontSize: 12,
-  },
-  defaultText: {
-    color: Theme.colors.text,
-  },
-  secondaryText: {
-    color: Theme.colors.text,
-  },
-  primaryText: {
-    color: Theme.colors.onPrimary,
-    fontWeight: '700',
-  },
-  heroText: {
-    color: Theme.colors.primary,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  accentText: {
-    color: Theme.colors.accent,
-    fontWeight: '700',
-  },
-  successText: {
-    color: Theme.colors.success,
-    fontWeight: '700',
-  },
-  errorText: {
-    color: Theme.colors.error,
-    fontWeight: '700',
-  },
-  outlineText: {
-    color: Theme.colors.textMuted,
   },
 });

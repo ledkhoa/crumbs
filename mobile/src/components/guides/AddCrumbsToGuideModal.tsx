@@ -10,7 +10,7 @@ import {
   Pressable,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { formatPriceLevel } from '@/utils/price';
 import { Button } from '@/components/ui/Button';
@@ -33,6 +33,7 @@ export function AddCrumbsToGuideModal({
   existingCrumbIds,
   onClose,
 }: AddCrumbsToGuideModalProps) {
+  const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -48,20 +49,16 @@ export function AddCrumbsToGuideModal({
   const filteredCrumbs = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return crumbs;
-
-    return crumbs.filter((c) => {
-      const name = c.restaurant.name.toLowerCase();
-      const location = (
-        c.restaurant.formattedAddress ||
-        c.restaurant.city ||
-        ''
-      ).toLowerCase();
-      const dish = (c.effectiveHeroDish || '').toLowerCase();
-      return name.includes(q) || location.includes(q) || dish.includes(q);
-    });
+    return crumbs.filter(
+      (c) =>
+        c.restaurant.name.toLowerCase().includes(q) ||
+        c.restaurant.city?.toLowerCase().includes(q) ||
+        c.restaurant.formattedAddress?.toLowerCase().includes(q) ||
+        c.effectiveHeroDish?.toLowerCase().includes(q),
+    );
   }, [crumbs, searchQuery]);
 
-  const handleToggleSelect = (crumbId: string) => {
+  const handleToggleCrumb = (crumbId: string) => {
     if (existingSet.has(crumbId)) return;
     haptics.selection();
     setSelectedIds((prev) =>
@@ -71,26 +68,19 @@ export function AddCrumbsToGuideModal({
     );
   };
 
-  const handleAdd = () => {
+  const handleAddSelected = async () => {
     if (selectedIds.length === 0) return;
-
-    addMutation.mutate(
-      {
+    try {
+      await addMutation.mutateAsync({
         guideId,
         crumbIds: selectedIds,
-      },
-      {
-        onSuccess: () => {
-          setSelectedIds([]);
-          onClose();
-        },
-      },
-    );
-  };
-
-  const handleClose = () => {
-    haptics.tap();
-    onClose();
+      });
+      haptics.primary();
+      setSelectedIds([]);
+      onClose();
+    } catch (err) {
+      console.error('[AddCrumbsToGuideModal] Failed to add crumbs:', err);
+    }
   };
 
   return (
@@ -99,117 +89,169 @@ export function AddCrumbsToGuideModal({
       animationType="slide"
       presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'overFullScreen'}
       transparent={Platform.OS !== 'ios'}
-      onRequestClose={handleClose}
+      onRequestClose={onClose}
     >
-      <View
-        style={[
-          styles.container,
-          Platform.OS !== 'ios' && styles.androidBackdrop,
-        ]}
-      >
+      <View style={styles.modalBackdrop}>
         {Platform.OS !== 'ios' && (
-          <Pressable style={styles.backdropPressable} onPress={handleClose} />
+          <Pressable style={styles.dismissOverlay} onPress={onClose} />
         )}
-
-        <View style={styles.sheetContent}>
+        <View
+          style={[
+            styles.sheetContainer,
+            { backgroundColor: colors.cardBackground },
+          ]}
+        >
           {/* Grab Handle */}
-          <View style={styles.grabHandle} />
+          <View
+            style={[styles.grabHandle, { backgroundColor: colors.grabHandle }]}
+          />
 
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Add Crumbs to Guide</Text>
+            <Text style={[styles.title, { color: colors.text }]}>
+              Add Crumbs to Guide
+            </Text>
             <TouchableOpacity
-              style={styles.closeButton}
-              onPress={handleClose}
+              style={[
+                styles.closeButton,
+                { backgroundColor: colors.inputBackground },
+              ]}
+              onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityRole="button"
-              accessibilityLabel="Close modal"
+              accessibilityLabel="Close sheet"
             >
-              <XIcon size={20} color={Theme.colors.textMuted} weight="bold" />
+              <XIcon size={18} color={colors.text} weight="bold" />
             </TouchableOpacity>
           </View>
 
-          {/* Search Bar */}
+          {/* Search Input */}
           <View style={styles.searchContainer}>
             <SearchInput
               value={searchQuery}
               onChangeText={setSearchQuery}
-              onClear={() => setSearchQuery('')}
-              placeholder="Search saved crumbs..."
+              placeholder="Search your crumbs..."
             />
           </View>
 
-          {/* Crumbs List */}
+          {/* List of Crumbs */}
           <FlatList
             data={filteredCrumbs}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
-            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
             renderItem={({ item }) => {
-              const isExisting = existingSet.has(item.id);
+              const isAlreadyInGuide = existingSet.has(item.id);
               const isSelected = selectedIds.includes(item.id);
               const formattedPrice = formatPriceLevel(
                 item.restaurant.priceLevel,
               );
+              const locationText = [item.restaurant.city, item.restaurant.state]
+                .filter(Boolean)
+                .join(', ');
 
               return (
                 <TouchableOpacity
                   style={[
                     styles.crumbRow,
-                    isExisting && styles.crumbRowDisabled,
-                    isSelected && styles.crumbRowSelected,
+                    {
+                      backgroundColor: colors.cardBackground,
+                      borderColor: colors.cardBorder,
+                    },
+                    isSelected && [
+                      styles.crumbRowSelected,
+                      { borderColor: colors.primary },
+                    ],
+                    isAlreadyInGuide && styles.crumbRowDisabled,
                   ]}
-                  onPress={() => handleToggleSelect(item.id)}
-                  disabled={isExisting}
-                  activeOpacity={0.7}
+                  onPress={() => handleToggleCrumb(item.id)}
+                  disabled={isAlreadyInGuide}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.restaurant.name}${isAlreadyInGuide ? ', already in guide' : ''}`}
                 >
                   {/* Thumbnail */}
                   {item.restaurant.photoUrl ? (
                     <Image
                       source={{ uri: item.restaurant.photoUrl }}
-                      style={styles.thumbnail}
+                      style={[
+                        styles.thumbnail,
+                        { backgroundColor: colors.inputBackground },
+                      ]}
                       contentFit="cover"
+                      transition={150}
                     />
                   ) : (
-                    <View style={styles.thumbnailPlaceholder}>
+                    <View
+                      style={[
+                        styles.thumbnailPlaceholder,
+                        { backgroundColor: colors.inputBackground },
+                      ]}
+                    >
                       <ForkKnifeIcon
                         size={18}
-                        color={Theme.colors.textSubtle}
+                        color={colors.textSubtle}
                         weight="bold"
                       />
                     </View>
                   )}
 
-                  {/* Info */}
+                  {/* Details */}
                   <View style={styles.crumbDetails}>
-                    <Text style={styles.restaurantName} numberOfLines={1}>
+                    <Text
+                      style={[styles.restaurantName, { color: colors.text }]}
+                      numberOfLines={1}
+                    >
                       {item.restaurant.name}
                     </Text>
-                    <Text style={styles.subtitleText} numberOfLines={1}>
-                      {formattedPrice ? `${formattedPrice} · ` : ''}
-                      {item.restaurant.city || item.restaurant.formattedAddress}
-                    </Text>
-                    {item.effectiveHeroDish ? (
+                    {(formattedPrice || locationText) && (
+                      <Text
+                        style={[
+                          styles.subtitleText,
+                          { color: colors.textMuted },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {[formattedPrice, locationText]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Text>
+                    )}
+                    {item.effectiveHeroDish && (
                       <View style={styles.heroDishPill}>
                         <SparkleIcon
                           size={10}
-                          color={Theme.colors.primary}
+                          color={colors.primary}
                           weight="fill"
                         />
-                        <Text style={styles.heroDishText} numberOfLines={1}>
+                        <Text
+                          style={[
+                            styles.heroDishText,
+                            { color: colors.primary },
+                          ]}
+                          numberOfLines={1}
+                        >
                           {item.effectiveHeroDish}
                         </Text>
                       </View>
-                    ) : null}
+                    )}
                   </View>
 
-                  {/* Right Checkbox / Status */}
-                  {isExisting ? (
-                    <Text style={styles.inGuideLabel}>Added</Text>
+                  {/* Selection Indicator */}
+                  {isAlreadyInGuide ? (
+                    <Text
+                      style={[
+                        styles.inGuideLabel,
+                        { color: colors.textSubtle },
+                      ]}
+                    >
+                      In Guide
+                    </Text>
                   ) : (
                     <Checkbox
                       checked={isSelected}
-                      onToggle={() => handleToggleSelect(item.id)}
+                      onToggle={() => handleToggleCrumb(item.id)}
+                      size={24}
                     />
                   )}
                 </TouchableOpacity>
@@ -217,19 +259,18 @@ export function AddCrumbsToGuideModal({
             }}
           />
 
-          {/* Bottom Sticky Action */}
-          <View style={styles.footer}>
+          {/* Footer Action */}
+          <View style={[styles.footer, { borderTopColor: colors.inputBorder }]}>
             <Button
               variant="primary"
               size="lg"
-              onPress={handleAdd}
               disabled={selectedIds.length === 0}
               loading={addMutation.isPending}
+              onPress={handleAddSelected}
               style={styles.addButton}
             >
-              {selectedIds.length > 0
-                ? `Add ${selectedIds.length} ${selectedIds.length === 1 ? 'Crumb' : 'Crumbs'} to Guide`
-                : 'Select Crumbs to Add'}
+              Add {selectedIds.length > 0 ? `(${selectedIds.length})` : ''} to
+              Guide
             </Button>
           </View>
         </View>
@@ -239,29 +280,25 @@ export function AddCrumbsToGuideModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
+  modalBackdrop: {
     flex: 1,
-    backgroundColor: Theme.colors.background,
-  },
-  androidBackdrop: {
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor:
+      Platform.OS === 'ios' ? 'transparent' : 'rgba(0, 0, 0, 0.45)',
   },
-  backdropPressable: {
-    flex: 1,
+  dismissOverlay: {
+    ...StyleSheet.absoluteFill,
   },
-  sheetContent: {
-    flex: 1,
-    backgroundColor: Theme.colors.background,
+  sheetContainer: {
+    height: Platform.OS === 'ios' ? '100%' : '88%',
+    paddingTop: 12,
     paddingHorizontal: Theme.spacing.lg,
-    paddingTop: Theme.spacing.md,
     borderTopLeftRadius: Platform.OS === 'ios' ? 0 : Theme.radii.sheet,
     borderTopRightRadius: Platform.OS === 'ios' ? 0 : Theme.radii.sheet,
   },
   grabHandle: {
     width: 36,
     height: 5,
-    backgroundColor: Theme.colors.textSubtle,
     borderRadius: Theme.radii.pill,
     alignSelf: 'center',
     marginBottom: Theme.spacing.md,
@@ -277,12 +314,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     fontFamily: 'Georgia',
-    color: Theme.colors.text,
   },
   closeButton: {
     padding: 6,
     borderRadius: Theme.radii.pill,
-    backgroundColor: Theme.colors.inputBackground,
   },
   searchContainer: {
     paddingBottom: 10,
@@ -294,15 +329,12 @@ const styles = StyleSheet.create({
   crumbRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Theme.colors.cardBackground,
     padding: 10,
     borderRadius: Theme.radii.md,
     borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
     gap: 12,
   },
   crumbRowSelected: {
-    borderColor: Theme.colors.primary,
     backgroundColor: 'rgba(196, 91, 62, 0.04)',
   },
   crumbRowDisabled: {
@@ -312,13 +344,11 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: Theme.radii.sm,
-    backgroundColor: Theme.colors.inputBackground,
   },
   thumbnailPlaceholder: {
     width: 48,
     height: 48,
     borderRadius: Theme.radii.sm,
-    backgroundColor: Theme.colors.inputBackground,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -329,11 +359,9 @@ const styles = StyleSheet.create({
   restaurantName: {
     fontSize: 14,
     fontWeight: '700',
-    color: Theme.colors.text,
   },
   subtitleText: {
     fontSize: 12,
-    color: Theme.colors.textMuted,
   },
   heroDishPill: {
     flexDirection: 'row',
@@ -344,12 +372,10 @@ const styles = StyleSheet.create({
   heroDishText: {
     fontSize: 11,
     fontWeight: '600',
-    color: Theme.colors.primary,
   },
   inGuideLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: Theme.colors.textSubtle,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -357,7 +383,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 24 : 16,
     borderTopWidth: 1,
-    borderTopColor: Theme.colors.inputBorder,
   },
   addButton: {
     width: '100%',

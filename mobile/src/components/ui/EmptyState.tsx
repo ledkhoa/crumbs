@@ -7,7 +7,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 
 export interface EmptyStateProps {
   emoji?: string;
@@ -28,19 +28,38 @@ export function EmptyState({
   style,
   serifTitle = true,
 }: EmptyStateProps) {
+  const { colors } = useTheme();
   const hasIcon = Boolean(emoji || icon);
 
   return (
     <View style={[styles.container, style]}>
       {hasIcon && (
-        <View style={styles.iconCircle}>
+        <View
+          style={[
+            styles.iconCircle,
+            {
+              backgroundColor: colors.inputBackground,
+              borderColor: colors.cardBorder,
+            },
+          ]}
+        >
           {emoji ? <Text style={styles.emojiText}>{emoji}</Text> : icon}
         </View>
       )}
-      <Text style={[styles.title, serifTitle && styles.serifTitle]}>
+      <Text
+        style={[
+          styles.title,
+          { color: colors.text },
+          serifTitle && styles.serifTitle,
+        ]}
+      >
         {title}
       </Text>
-      {description && <Text style={styles.description}>{description}</Text>}
+      {description && (
+        <Text style={[styles.description, { color: colors.textMuted }]}>
+          {description}
+        </Text>
+      )}
       {action && <View style={styles.actionContainer}>{action}</View>}
     </View>
   );
@@ -57,20 +76,17 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: Theme.radii.pill,
-    backgroundColor: Theme.colors.inputBackground,
     borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: Theme.spacing.md,
   },
   emojiText: {
-    fontSize: 34,
+    fontSize: 32,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: Theme.colors.text,
     textAlign: 'center',
     marginBottom: Theme.spacing.xs,
   },
@@ -78,13 +94,15 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
   description: {
-    fontSize: 14,
-    color: Theme.colors.textMuted,
+    fontSize: 13,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
+    maxWidth: 280,
     marginBottom: Theme.spacing.lg,
   },
   actionContainer: {
-    marginTop: Theme.spacing.xs,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

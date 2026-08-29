@@ -15,7 +15,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import {
   useGuideDetailQuery,
@@ -42,6 +42,7 @@ import {
 export default function GuideDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const guideId = Array.isArray(id) ? id[0] : id;
 
@@ -49,7 +50,6 @@ export default function GuideDetailScreen() {
     data: guide,
     isLoading,
     isError,
-    refetch,
   } = useGuideDetailQuery(guideId || '');
   const deleteMutation = useDeleteGuideMutation();
   const removeCrumbMutation = useRemoveCrumbFromGuideMutation();
@@ -163,7 +163,10 @@ export default function GuideDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['top']}
+      >
         <View style={styles.loadingHeader}>
           <Skeleton width={40} height={40} borderRadius={20} />
           <Skeleton width={80} height={36} borderRadius={18} />
@@ -185,22 +188,27 @@ export default function GuideDetailScreen() {
 
   if (isError || !guide) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={['top']}
+      >
         <View style={styles.navBar}>
           <TouchableOpacity
-            style={styles.floatingNavButton}
+            style={[
+              styles.floatingNavButton,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.cardBorder,
+              },
+            ]}
             onPress={() => router.back()}
           >
-            <CaretLeftIcon size={20} color={Theme.colors.text} weight="bold" />
+            <CaretLeftIcon size={20} color={colors.text} weight="bold" />
           </TouchableOpacity>
         </View>
         <EmptyState
           icon={
-            <WarningCircleIcon
-              size={36}
-              color={Theme.colors.error}
-              weight="bold"
-            />
+            <WarningCircleIcon size={36} color={colors.error} weight="bold" />
           }
           title="Guide Not Found"
           description="We couldn't load this guide. It may have been deleted or is private."
@@ -218,12 +226,18 @@ export default function GuideDetailScreen() {
   const crumbs = guide.crumbs || [];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Top Floating Glass Navigation Bar */}
       <SafeAreaView edges={['top']} style={styles.navBarWrapper}>
         <View style={styles.navBar}>
           <TouchableOpacity
-            style={styles.floatingNavButton}
+            style={[
+              styles.floatingNavButton,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.cardBorder,
+              },
+            ]}
             onPress={() => {
               haptics.tap();
               router.back();
@@ -231,32 +245,40 @@ export default function GuideDetailScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <CaretLeftIcon size={20} color={Theme.colors.text} weight="bold" />
+            <CaretLeftIcon size={20} color={colors.text} weight="bold" />
           </TouchableOpacity>
 
           <View style={styles.navBarRight}>
             <TouchableOpacity
-              style={styles.floatingNavButton}
+              style={[
+                styles.floatingNavButton,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.cardBorder,
+                },
+              ]}
               onPress={handleShare}
               accessibilityRole="button"
               accessibilityLabel="Share guide"
             >
-              <ShareNetworkIcon
-                size={18}
-                color={Theme.colors.text}
-                weight="bold"
-              />
+              <ShareNetworkIcon size={18} color={colors.text} weight="bold" />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.floatingNavButton}
+              style={[
+                styles.floatingNavButton,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.cardBorder,
+                },
+              ]}
               onPress={handleOpenMenu}
               accessibilityRole="button"
               accessibilityLabel="More options"
             >
               <DotsThreeVerticalIcon
                 size={18}
-                color={Theme.colors.text}
+                color={colors.text}
                 weight="bold"
               />
             </TouchableOpacity>
@@ -274,31 +296,51 @@ export default function GuideDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Hero Header Section */}
-        <View style={styles.heroHeader}>
-          <View style={styles.emojiAvatar}>
+        <View
+          style={[styles.heroHeader, { borderBottomColor: colors.inputBorder }]}
+        >
+          <View
+            style={[
+              styles.emojiAvatar,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBorder,
+              },
+            ]}
+          >
             <Text style={styles.emojiText}>{guide.emojiIcon || '🗺️'}</Text>
           </View>
 
-          <Text style={styles.guideTitle}>{guide.name}</Text>
+          <Text style={[styles.guideTitle, { color: colors.text }]}>
+            {guide.name}
+          </Text>
 
           <View style={styles.metaRow}>
-            <Text style={styles.metaBadge}>
+            <Text style={[styles.metaBadge, { color: colors.textMuted }]}>
               {guide.crumbCount} {guide.crumbCount === 1 ? 'crumb' : 'crumbs'}
             </Text>
-            <Text style={styles.metaDot}>·</Text>
-            <Text style={styles.metaBadge}>
+            <Text style={[styles.metaDot, { color: colors.textSubtle }]}>
+              ·
+            </Text>
+            <Text style={[styles.metaBadge, { color: colors.textMuted }]}>
               {guide.isPublic ? 'Public Guide' : 'Private'}
             </Text>
           </View>
 
           {guide.description ? (
-            <Text style={styles.descriptionText}>{guide.description}</Text>
+            <Text style={[styles.descriptionText, { color: colors.textMuted }]}>
+              {guide.description}
+            </Text>
           ) : null}
 
           {/* Intentional Action Capsules */}
           <View style={styles.actionCapsuleRow}>
             <TouchableOpacity
-              style={[styles.actionCapsule, styles.primaryCapsule]}
+              style={[
+                styles.actionCapsule,
+                styles.primaryCapsule,
+                { backgroundColor: colors.primary },
+              ]}
               onPress={handleViewOnMap}
               activeOpacity={0.8}
             >
@@ -308,29 +350,44 @@ export default function GuideDetailScreen() {
 
             {guide.crumbCount >= 2 && (
               <TouchableOpacity
-                style={[styles.actionCapsule, styles.accentCapsule]}
+                style={[
+                  styles.actionCapsule,
+                  styles.accentCapsule,
+                  { borderColor: colors.primaryLight },
+                ]}
                 onPress={handleStartFoodCrawl}
                 activeOpacity={0.8}
               >
-                <SparkleIcon
-                  size={15}
-                  color={Theme.colors.primary}
-                  weight="fill"
-                />
-                <Text style={styles.accentCapsuleText}>Food Crawl</Text>
+                <SparkleIcon size={15} color={colors.primary} weight="fill" />
+                <Text
+                  style={[styles.accentCapsuleText, { color: colors.primary }]}
+                >
+                  Food Crawl
+                </Text>
               </TouchableOpacity>
             )}
 
             <TouchableOpacity
-              style={[styles.actionCapsule, styles.secondaryCapsule]}
+              style={[
+                styles.actionCapsule,
+                styles.secondaryCapsule,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                },
+              ]}
               onPress={() => {
                 haptics.tap();
                 setIsAddCrumbsModalVisible(true);
               }}
               activeOpacity={0.8}
             >
-              <PlusIcon size={15} color={Theme.colors.text} weight="bold" />
-              <Text style={styles.secondaryCapsuleText}>Add Crumbs</Text>
+              <PlusIcon size={15} color={colors.text} weight="bold" />
+              <Text
+                style={[styles.secondaryCapsuleText, { color: colors.text }]}
+              >
+                Add Crumbs
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -341,7 +398,7 @@ export default function GuideDetailScreen() {
             icon={
               <FolderSimpleIcon
                 size={36}
-                color={Theme.colors.textSubtle}
+                color={colors.textSubtle}
                 weight="bold"
               />
             }
@@ -361,8 +418,12 @@ export default function GuideDetailScreen() {
         ) : (
           <View style={styles.crumbsSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Saved Places</Text>
-              <Text style={styles.sectionCount}>{crumbs.length}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Saved Places
+              </Text>
+              <Text style={[styles.sectionCount, { color: colors.textMuted }]}>
+                {crumbs.length}
+              </Text>
             </View>
             {crumbs.map((item) => (
               <GuideCrumbCard
@@ -391,7 +452,6 @@ export default function GuideDetailScreen() {
         existingCrumbIds={existingCrumbIds}
         onClose={() => {
           setIsAddCrumbsModalVisible(false);
-          refetch();
         }}
       />
     </View>
@@ -401,7 +461,6 @@ export default function GuideDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Theme.colors.background,
   },
   loadingHeader: {
     flexDirection: 'row',
@@ -442,12 +501,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: Theme.colors.cardBackground,
     borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
@@ -464,20 +520,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Theme.colors.inputBorder,
     marginBottom: 16,
   },
   emojiAvatar: {
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: Theme.colors.inputBackground,
     borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
-    shadowColor: Theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
@@ -489,7 +541,6 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '700',
     fontFamily: 'Georgia',
-    color: Theme.colors.text,
     textAlign: 'center',
     marginBottom: 6,
   },
@@ -502,16 +553,13 @@ const styles = StyleSheet.create({
   metaBadge: {
     fontSize: 13,
     fontWeight: '600',
-    color: Theme.colors.textMuted,
   },
   metaDot: {
     fontSize: 13,
-    color: Theme.colors.textSubtle,
   },
   descriptionText: {
     fontSize: 14,
     lineHeight: 20,
-    color: Theme.colors.textMuted,
     textAlign: 'center',
     marginBottom: 16,
     paddingHorizontal: 8,
@@ -529,14 +577,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: Theme.radii.pill,
-    shadowColor: Theme.colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
   },
-  primaryCapsule: {
-    backgroundColor: Theme.colors.primary,
-  },
+  primaryCapsule: {},
   primaryCapsuleText: {
     fontSize: 13,
     fontWeight: '700',
@@ -545,22 +590,17 @@ const styles = StyleSheet.create({
   accentCapsule: {
     backgroundColor: 'rgba(196, 91, 62, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(196, 91, 62, 0.25)',
   },
   accentCapsuleText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Theme.colors.primary,
   },
   secondaryCapsule: {
-    backgroundColor: Theme.colors.inputBackground,
     borderWidth: 1,
-    borderColor: Theme.colors.inputBorder,
   },
   secondaryCapsuleText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Theme.colors.text,
   },
   crumbsSection: {
     paddingTop: 4,
@@ -575,12 +615,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: Theme.colors.text,
   },
   sectionCount: {
     fontSize: 13,
     fontWeight: '600',
-    color: Theme.colors.textMuted,
   },
   emptyGuideState: {
     marginTop: 32,

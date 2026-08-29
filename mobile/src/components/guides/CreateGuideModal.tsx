@@ -1,5 +1,5 @@
 import { View, StyleSheet, Platform, Modal, Pressable } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { CreateGuideForm } from './CreateGuideForm';
 
@@ -14,6 +14,8 @@ export function CreateGuideModal({
   onClose,
   onSuccess,
 }: CreateGuideModalProps) {
+  const { colors } = useTheme();
+
   const handleClose = () => {
     haptics.tap();
     onClose();
@@ -30,6 +32,7 @@ export function CreateGuideModal({
       <View
         style={[
           styles.container,
+          { backgroundColor: colors.background },
           Platform.OS !== 'ios' && styles.androidBackdrop,
         ]}
       >
@@ -37,9 +40,13 @@ export function CreateGuideModal({
           <Pressable style={styles.backdropPressable} onPress={handleClose} />
         )}
 
-        <View style={styles.sheetContent}>
+        <View
+          style={[styles.sheetContent, { backgroundColor: colors.background }]}
+        >
           {/* Grab Handle */}
-          <View style={styles.grabHandle} />
+          <View
+            style={[styles.grabHandle, { backgroundColor: colors.grabHandle }]}
+          />
 
           <CreateGuideForm onCancel={handleClose} onSuccess={onSuccess} />
         </View>
@@ -51,7 +58,6 @@ export function CreateGuideModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Theme.colors.background,
   },
   androidBackdrop: {
     justifyContent: 'flex-end',
@@ -62,7 +68,6 @@ const styles = StyleSheet.create({
   },
   sheetContent: {
     flex: 1,
-    backgroundColor: Theme.colors.background,
     paddingHorizontal: Theme.spacing.lg,
     paddingTop: Theme.spacing.md,
     borderTopLeftRadius: Platform.OS === 'ios' ? 0 : Theme.radii.sheet,
@@ -71,7 +76,6 @@ const styles = StyleSheet.create({
   grabHandle: {
     width: 36,
     height: 5,
-    backgroundColor: Theme.colors.textSubtle,
     borderRadius: Theme.radii.pill,
     alignSelf: 'center',
     marginBottom: Theme.spacing.md,

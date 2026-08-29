@@ -1,4 +1,5 @@
 import { InstagramLogoIcon, TiktokLogoIcon } from 'phosphor-react-native';
+import { useTheme } from '@/theme/tokens';
 
 export interface SocialPlatformIconProps {
   platform?: string | null;
@@ -13,16 +14,14 @@ export function SocialPlatformIcon({
   color,
   weight = 'fill',
 }: SocialPlatformIconProps) {
+  const { colors } = useTheme();
   const normalized = platform?.toLowerCase();
+  const iconColor = color || colors.text;
 
   if (normalized === 'tiktok') {
-    return (
-      <TiktokLogoIcon size={size} color={color || '#000000'} weight={weight} />
-    );
+    return <TiktokLogoIcon size={size} color={iconColor} weight={weight} />;
   }
 
   // Default to Instagram as primary supported social source
-  return (
-    <InstagramLogoIcon size={size} color={color || '#E1306C'} weight={weight} />
-  );
+  return <InstagramLogoIcon size={size} color={iconColor} weight={weight} />;
 }

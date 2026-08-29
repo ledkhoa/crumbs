@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { haptics } from '@/utils/haptics';
 import { useSessionStore } from '@/store/session';
 import { apiRequest } from '@/utils/api-client';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -29,11 +29,12 @@ import {
 } from 'phosphor-react-native';
 
 const signInSchema = z.object({
-  email: z.email('Please enter a valid email address'),
+  email: z.string().email('Please enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
 export default function SignInScreen() {
+  const { colors } = useTheme();
   const [authError, setAuthError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const setSession = useSessionStore((state) => state.setSession);
@@ -61,47 +62,65 @@ export default function SignInScreen() {
           }),
         });
 
-        if (response.token && response.user) {
+        if (response.user) {
+          haptics.primary();
           setSession({
-            token: response.token,
             user: response.user,
+            token: response.token || '',
           });
-          haptics.success();
           router.replace('/(tabs)/(home)');
         }
-      } catch (err: any) {
-        haptics.error();
-        setAuthError(err.message || 'Failed to sign in. Please try again.');
+      } catch (err: unknown) {
+        haptics.warning();
+        setAuthError(
+          err instanceof Error
+            ? err.message
+            : 'Invalid email or password. Please try again.',
+        );
       }
     },
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.canvas }]}
+    >
       <KeyboardAwareScrollView
-        bottomOffset={24}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Brand */}
+        {/* Brand Header */}
         <View style={styles.header}>
-          <SparkleIcon size={36} color={Theme.colors.primary} weight="fill" />
-          <Text style={styles.logoText}>Crumbs</Text>
+          <SparkleIcon size={36} color={colors.primary} weight="fill" />
+          <Text style={[styles.logoText, { color: colors.background }]}>
+            Crumbs
+          </Text>
         </View>
 
-        {/* Form Card */}
+        {/* Auth Bottom Sheet Container */}
         <Card style={styles.card}>
           <GrabHandle />
 
           <Heading style={styles.title}>Welcome back</Heading>
           <MutedText style={styles.subtitle}>
-            Your next favorite place is waiting.
+            Sign in to access your curated food collections.
           </MutedText>
 
+          {/* Error Banner */}
           {authError && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{authError}</Text>
+            <View
+              style={[
+                styles.errorContainer,
+                {
+                  backgroundColor: colors.errorBackground,
+                  borderColor: colors.errorBorder,
+                },
+              ]}
+            >
+              <Text style={[styles.errorText, { color: colors.error }]}>
+                {authError}
+              </Text>
             </View>
           )}
 
@@ -109,21 +128,22 @@ export default function SignInScreen() {
           <form.Field name="email">
             {(field) => (
               <Input
+                label="Email"
+                placeholder="you@example.com"
                 value={field.state.value}
-                onBlur={field.handleBlur}
                 onChangeText={field.handleChange}
-                placeholder="Email"
+                onBlur={field.handleBlur}
+                error={field.state.meta.errors?.[0]?.message}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
                 leftIcon={
                   <EnvelopeSimpleIcon
                     size={18}
-                    color={Theme.colors.textSubtle}
+                    color={colors.textSubtle}
                     weight="bold"
                   />
                 }
-                error={field.state.meta.errors[0]?.message}
               />
             )}
           </form.Field>
@@ -132,70 +152,77 @@ export default function SignInScreen() {
           <form.Field name="password">
             {(field) => (
               <Input
+                label="Password"
+                placeholder="Enter your password"
                 value={field.state.value}
-                onBlur={field.handleBlur}
                 onChangeText={field.handleChange}
-                placeholder="Password"
+                onBlur={field.handleBlur}
+                error={field.state.meta.errors?.[0]?.message}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
-                autoCorrect={false}
                 leftIcon={
                   <LockKeyIcon
                     size={18}
-                    color={Theme.colors.textSubtle}
+                    color={colors.textSubtle}
                     weight="bold"
                   />
                 }
                 rightIcon={
                   <TouchableOpacity
-                    onPress={() => {
-                      setShowPassword(!showPassword);
-                      haptics.selection();
-                    }}
+                    onPress={() => setShowPassword(!showPassword)}
                     style={styles.eyeButton}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      showPassword ? 'Hide password' : 'Show password'
+                    }
                   >
                     {showPassword ? (
-                      <EyeIcon
+                      <EyeSlashIcon
                         size={18}
-                        color={Theme.colors.textSubtle}
+                        color={colors.textSubtle}
                         weight="bold"
                       />
                     ) : (
-                      <EyeSlashIcon
+                      <EyeIcon
                         size={18}
-                        color={Theme.colors.textSubtle}
+                        color={colors.textSubtle}
                         weight="bold"
                       />
                     )}
                   </TouchableOpacity>
                 }
-                error={field.state.meta.errors[0]?.message}
               />
             )}
           </form.Field>
 
-          {/* Forgot password link */}
+          {/* Forgot Password */}
           <TouchableOpacity
             style={styles.forgotPassword}
             onPress={() => haptics.tap()}
+            accessibilityRole="button"
           >
-            <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+            <Text
+              style={[styles.forgotPasswordText, { color: colors.textMuted }]}
+            >
+              Forgot password?
+            </Text>
           </TouchableOpacity>
 
-          {/* Submit Button */}
+          {/* Sign In Button */}
           <form.Subscribe
             selector={(state) => ({
               canSubmit: state.canSubmit,
               isSubmitting: state.isSubmitting,
             })}
           >
-            {({ isSubmitting }) => (
+            {({ canSubmit, isSubmitting }) => (
               <Button
                 variant="primary"
                 size="lg"
                 onPress={() => form.handleSubmit()}
+                disabled={!canSubmit}
                 loading={isSubmitting}
-                disabled={isSubmitting}
                 style={styles.primaryButton}
               >
                 Sign in
@@ -211,9 +238,11 @@ export default function SignInScreen() {
               router.push('/(auth)/sign-up');
             }}
           >
-            <Text style={styles.footerText}>
+            <Text style={[styles.footerText, { color: colors.textMuted }]}>
               New to Crumbs?{' '}
-              <Text style={styles.footerHighlight}>Create account</Text>
+              <Text style={[styles.footerHighlight, { color: colors.primary }]}>
+                Create account
+              </Text>
             </Text>
           </TouchableOpacity>
         </Card>
@@ -225,7 +254,6 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Theme.colors.canvas,
   },
   scrollContent: {
     flexGrow: 1,
@@ -244,7 +272,6 @@ const styles = StyleSheet.create({
     fontSize: 38,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     fontWeight: 'bold',
-    color: Theme.colors.background,
   },
   card: {
     borderTopLeftRadius: Theme.radii.sheet,
@@ -264,15 +291,12 @@ const styles = StyleSheet.create({
     marginBottom: Theme.spacing.lg,
   },
   errorContainer: {
-    backgroundColor: Theme.colors.errorBackground,
-    borderColor: Theme.colors.errorBorder,
     borderWidth: 1,
     padding: Theme.spacing.sm,
     borderRadius: Theme.radii.md,
     marginBottom: Theme.spacing.md,
   },
   errorText: {
-    color: Theme.colors.error,
     fontSize: 13,
     textAlign: 'center',
   },
@@ -288,7 +312,6 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 13,
-    color: Theme.colors.textMuted,
     fontWeight: '500',
   },
   primaryButton: {
@@ -300,10 +323,8 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: Theme.colors.textMuted,
   },
   footerHighlight: {
     fontWeight: '600',
-    color: Theme.colors.primary,
   },
 });

@@ -1,13 +1,23 @@
 import { View, StyleSheet } from 'react-native';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 /**
  * Individual skeleton placeholder matching CompactCrumbCard dimensions.
  */
 export function CompactCrumbCardSkeleton() {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.cardBackground,
+          borderColor: colors.cardBorder,
+        },
+      ]}
+    >
       {/* Left 88x88 Image Skeleton */}
       <Skeleton
         width={88}
@@ -72,10 +82,8 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     height: 108,
-    backgroundColor: Theme.colors.cardBackground,
     borderRadius: Theme.radii.lg,
     borderWidth: 1,
-    borderColor: Theme.colors.cardBorder,
     padding: Theme.spacing.sm,
     marginBottom: Theme.spacing.sm,
     alignItems: 'center',

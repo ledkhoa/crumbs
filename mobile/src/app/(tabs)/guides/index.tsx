@@ -11,7 +11,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
-import { Theme } from '@/theme/tokens';
+import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { useGuidesQuery } from '@/hooks/useGuides';
 import { GuideCard, type GuideSummary } from '@/components/guides/GuideCard';
@@ -30,6 +30,7 @@ import {
 export default function GuidesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const {
     data: guides,
@@ -63,7 +64,10 @@ export default function GuidesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
       {/* Header Bar */}
       <View style={styles.header}>
         <View>
@@ -80,11 +84,7 @@ export default function GuidesScreen() {
       ) : isError ? (
         <EmptyState
           icon={
-            <WarningCircleIcon
-              size={36}
-              color={Theme.colors.error}
-              weight="fill"
-            />
+            <WarningCircleIcon size={36} color={colors.error} weight="fill" />
           }
           title="Couldn't load guides"
           description={
@@ -102,7 +102,7 @@ export default function GuidesScreen() {
           icon={
             <FolderSimpleIcon
               size={36}
-              color={Theme.colors.textSubtle}
+              color={colors.textSubtle}
               weight="bold"
             />
           }
@@ -131,8 +131,8 @@ export default function GuidesScreen() {
             <RefreshControl
               refreshing={isRefetching}
               onRefresh={handleRefresh}
-              tintColor={Theme.colors.primary}
-              colors={[Theme.colors.primary]}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
             />
           }
         />
@@ -140,13 +140,20 @@ export default function GuidesScreen() {
 
       {/* Thumb-Reachable Floating Action Button */}
       <TouchableOpacity
-        style={[styles.fabButton, { bottom: fabBottom }]}
+        style={[
+          styles.fabButton,
+          {
+            bottom: fabBottom,
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
+          },
+        ]}
         onPress={handleOpenCreateModal}
         activeOpacity={0.85}
         accessibilityRole="button"
         accessibilityLabel="Create new guide"
       >
-        <PlusIcon size={24} color={Theme.colors.onPrimary} weight="bold" />
+        <PlusIcon size={24} color={colors.onPrimary} weight="bold" />
       </TouchableOpacity>
 
       {/* Create Guide Modal */}
@@ -161,7 +168,6 @@ export default function GuidesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Theme.colors.background,
   },
   header: {
     paddingHorizontal: Theme.spacing.lg,
@@ -190,10 +196,8 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
