@@ -39,21 +39,6 @@ import {
   SparkleIcon,
 } from 'phosphor-react-native';
 
-function getCourseOrder(category?: string | null): number {
-  switch (category) {
-    case 'aperitif':
-      return 1;
-    case 'cafe_bakery':
-      return 2;
-    case 'main':
-      return 3;
-    case 'digestif_dessert':
-      return 4;
-    default:
-      return 99;
-  }
-}
-
 export default function GuideDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -71,25 +56,11 @@ export default function GuideDetailScreen() {
 
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isAddCrumbsModalVisible, setIsAddCrumbsModalVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'crawl'>('all');
 
   const existingCrumbIds = useMemo(
     () => guide?.crumbs?.map((c) => c.crumbId) || [],
     [guide?.crumbs],
   );
-
-  // Sort crumbs based on active mode (Standard sequence vs Food Crawl timeline)
-  const displayCrumbs = useMemo(() => {
-    if (!guide?.crumbs) return [];
-    if (activeTab === 'all') return guide.crumbs;
-
-    // In 'crawl' mode, sort by dining course timeline
-    return [...guide.crumbs].sort((a, b) => {
-      const orderA = getCourseOrder(a.attribution?.courseCategory);
-      const orderB = getCourseOrder(b.attribution?.courseCategory);
-      return orderA - orderB;
-    });
-  }, [guide?.crumbs, activeTab]);
 
   const handleShare = async () => {
     if (!guide) return;
@@ -97,7 +68,7 @@ export default function GuideDetailScreen() {
     try {
       await Share.share({
         title: guide.name,
-        message: `Check out "${guide.name}" on Crumbs — ${guide.description || 'A curated food itinerary'}!`,
+        message: `Check out "${guide.name}" on Crumbs — ${guide.description || 'A curated collection of dining spots'}!`,
         url: `https://crumbs.app/guides/${guide.id}`,
       });
     } catch (err) {
@@ -181,6 +152,15 @@ export default function GuideDetailScreen() {
     router.push('/(tabs)/(home)');
   };
 
+  const handleStartFoodCrawl = () => {
+    haptics.primary();
+    Alert.alert(
+      '🍸 Food Crawl Mode',
+      'Food Crawl will let you turn this collection into a step-by-step progressive dinner or walking tasting trail with course timing and map routes.',
+      [{ text: 'Got it', style: 'default' }],
+    );
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -234,6 +214,8 @@ export default function GuideDetailScreen() {
       </SafeAreaView>
     );
   }
+
+  const crumbs = guide.crumbs || [];
 
   return (
     <View style={styles.container}>
@@ -313,16 +295,31 @@ export default function GuideDetailScreen() {
             <Text style={styles.descriptionText}>{guide.description}</Text>
           ) : null}
 
-          {/* Action Capsules */}
+          {/* Intentional Action Capsules */}
           <View style={styles.actionCapsuleRow}>
             <TouchableOpacity
               style={[styles.actionCapsule, styles.primaryCapsule]}
               onPress={handleViewOnMap}
               activeOpacity={0.8}
             >
-              <MapPinIcon size={16} color="#FFFFFF" weight="fill" />
-              <Text style={styles.primaryCapsuleText}>View on Map</Text>
+              <MapPinIcon size={15} color="#FFFFFF" weight="fill" />
+              <Text style={styles.primaryCapsuleText}>Map</Text>
             </TouchableOpacity>
+
+            {guide.crumbCount >= 2 && (
+              <TouchableOpacity
+                style={[styles.actionCapsule, styles.accentCapsule]}
+                onPress={handleStartFoodCrawl}
+                activeOpacity={0.8}
+              >
+                <SparkleIcon
+                  size={15}
+                  color={Theme.colors.primary}
+                  weight="fill"
+                />
+                <Text style={styles.accentCapsuleText}>Food Crawl</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={[styles.actionCapsule, styles.secondaryCapsule]}
@@ -332,68 +329,14 @@ export default function GuideDetailScreen() {
               }}
               activeOpacity={0.8}
             >
-              <PlusIcon size={16} color={Theme.colors.primary} weight="bold" />
+              <PlusIcon size={15} color={Theme.colors.text} weight="bold" />
               <Text style={styles.secondaryCapsuleText}>Add Crumbs</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Mode Selector Segmented Control */}
-        {guide.crumbCount > 0 && (
-          <View style={styles.modeSegmentContainer}>
-            <TouchableOpacity
-              style={[
-                styles.modeSegmentTab,
-                activeTab === 'all' && styles.modeSegmentTabActive,
-              ]}
-              onPress={() => {
-                haptics.selection();
-                setActiveTab('all');
-              }}
-            >
-              <Text
-                style={[
-                  styles.modeSegmentText,
-                  activeTab === 'all' && styles.modeSegmentTextActive,
-                ]}
-              >
-                All Stops ({guide.crumbCount})
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.modeSegmentTab,
-                activeTab === 'crawl' && styles.modeSegmentTabActive,
-              ]}
-              onPress={() => {
-                haptics.selection();
-                setActiveTab('crawl');
-              }}
-            >
-              <SparkleIcon
-                size={14}
-                color={
-                  activeTab === 'crawl'
-                    ? Theme.colors.primary
-                    : Theme.colors.textMuted
-                }
-                weight="fill"
-              />
-              <Text
-                style={[
-                  styles.modeSegmentText,
-                  activeTab === 'crawl' && styles.modeSegmentTextActive,
-                ]}
-              >
-                Food Crawl
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Timeline Itinerary Stops */}
-        {displayCrumbs.length === 0 ? (
+        {/* Crumbs List */}
+        {crumbs.length === 0 ? (
           <EmptyState
             icon={
               <FolderSimpleIcon
@@ -403,7 +346,7 @@ export default function GuideDetailScreen() {
               />
             }
             title="No crumbs in this guide yet"
-            description="Add your favorite dining spots to build a curated itinerary or tasting crawl."
+            description="Add your favorite dining spots to curate this collection."
             action={
               <Button
                 variant="primary"
@@ -416,13 +359,15 @@ export default function GuideDetailScreen() {
             style={styles.emptyGuideState}
           />
         ) : (
-          <View style={styles.timelineSection}>
-            {displayCrumbs.map((item, idx) => (
+          <View style={styles.crumbsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Saved Places</Text>
+              <Text style={styles.sectionCount}>{crumbs.length}</Text>
+            </View>
+            {crumbs.map((item) => (
               <GuideCrumbCard
                 key={item.crumbId}
                 item={item}
-                index={idx}
-                isLast={idx === displayCrumbs.length - 1}
                 onPress={handleNavigateToCrumb}
                 onRemove={handleRemoveCrumb}
               />
@@ -520,6 +465,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: Theme.colors.inputBorder,
+    marginBottom: 16,
   },
   emojiAvatar: {
     width: 68,
@@ -573,15 +519,15 @@ const styles = StyleSheet.create({
   actionCapsuleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 6,
+    gap: 8,
+    marginTop: 4,
   },
   actionCapsule: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: Theme.radii.pill,
     shadowColor: Theme.colors.shadow,
     shadowOffset: { width: 0, height: 1 },
@@ -596,6 +542,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
+  accentCapsule: {
+    backgroundColor: 'rgba(196, 91, 62, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(196, 91, 62, 0.25)',
+  },
+  accentCapsuleText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Theme.colors.primary,
+  },
   secondaryCapsule: {
     backgroundColor: Theme.colors.inputBackground,
     borderWidth: 1,
@@ -603,43 +559,28 @@ const styles = StyleSheet.create({
   },
   secondaryCapsuleText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: Theme.colors.primary,
+    fontWeight: '600',
+    color: Theme.colors.text,
   },
-  modeSegmentContainer: {
-    flexDirection: 'row',
-    backgroundColor: Theme.colors.inputBackground,
-    borderRadius: Theme.radii.pill,
-    padding: 3,
-    marginVertical: 16,
+  crumbsSection: {
+    paddingTop: 4,
   },
-  modeSegmentTab: {
-    flex: 1,
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 8,
-    borderRadius: Theme.radii.pill,
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    paddingHorizontal: 2,
   },
-  modeSegmentTabActive: {
-    backgroundColor: Theme.colors.cardBackground,
-    shadowColor: Theme.colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Theme.colors.text,
   },
-  modeSegmentText: {
+  sectionCount: {
     fontSize: 13,
     fontWeight: '600',
     color: Theme.colors.textMuted,
-  },
-  modeSegmentTextActive: {
-    color: Theme.colors.text,
-    fontWeight: '700',
-  },
-  timelineSection: {
-    paddingTop: 8,
   },
   emptyGuideState: {
     marginTop: 32,
