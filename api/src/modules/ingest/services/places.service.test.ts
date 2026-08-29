@@ -3,6 +3,7 @@ import {
   detectReservationProvider,
   extractCommunityDishFromReviews,
   extractNeighborhood,
+  parseOpeningHours,
   sanitizeHeroDish,
 } from './places.service';
 
@@ -197,5 +198,63 @@ describe('extractNeighborhood', () => {
       { longText: 'NY', types: ['administrative_area_level_1', 'political'] },
     ];
     expect(extractNeighborhood(components)).toBeUndefined();
+  });
+});
+
+describe('parseOpeningHours', () => {
+  it('should return undefined when rawHours is undefined', () => {
+    expect(parseOpeningHours(undefined)).toBeUndefined();
+  });
+
+  it('should properly preserve utcOffsetMinutes, periods, and weekdayDescriptions', () => {
+    const rawHours = {
+      periods: [
+        {
+          open: { day: 1, hour: 11, minute: 30 },
+          close: { day: 1, hour: 22, minute: 0 },
+        },
+        {
+          open: { day: 2, hour: 11, minute: 30 },
+          close: { day: 2, hour: 22, minute: 0 },
+        },
+      ],
+      weekdayDescriptions: [
+        'Monday: 11:30 AM – 10:00 PM',
+        'Tuesday: 11:30 AM – 10:00 PM',
+      ],
+    };
+
+    const parsed = parseOpeningHours(rawHours, -300);
+    expect(parsed).toEqual({
+      utcOffsetMinutes: -300,
+      periods: [
+        {
+          open: { day: 1, time: '11:30' },
+          close: { day: 1, time: '22:00' },
+        },
+        {
+          open: { day: 2, time: '11:30' },
+          close: { day: 2, time: '22:00' },
+        },
+      ],
+      weekdayDescriptions: [
+        'Monday: 11:30 AM – 10:00 PM',
+        'Tuesday: 11:30 AM – 10:00 PM',
+      ],
+    });
+  });
+
+  it('should handle missing close period (24/7 or open-ended)', () => {
+    const rawHours = {
+      periods: [{ open: { day: 0, hour: 0, minute: 0 } }],
+      weekdayDescriptions: ['Open 24 hours'],
+    };
+
+    const parsed = parseOpeningHours(rawHours, 540);
+    expect(parsed).toEqual({
+      utcOffsetMinutes: 540,
+      periods: [{ open: { day: 0, time: '00:00' }, close: undefined }],
+      weekdayDescriptions: ['Open 24 hours'],
+    });
   });
 });

@@ -7,6 +7,11 @@ import { Card, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { StarRating } from '@/components/ui/StarRating';
+import {
+  ForkKnifeIcon,
+  SparkleIcon,
+  LightbulbIcon,
+} from 'phosphor-react-native';
 import type { UnifiedRestaurantSpot } from '@/types/ingest';
 
 export interface IngestionCrumbCardProps {
@@ -66,7 +71,7 @@ export function IngestionCrumbCard({
           />
         ) : (
           <View style={styles.photoPlaceholder}>
-            <Text style={styles.photoPlaceholderEmoji}>🍽️</Text>
+            <ForkKnifeIcon size={36} color={Theme.colors.textSubtle} />
           </View>
         )}
 
@@ -90,7 +95,13 @@ export function IngestionCrumbCard({
             variant="hero"
             corner="pill"
             style={styles.heroDishPill}
-            icon={<Text style={styles.heroDishEmoji}>🍝</Text>}
+            icon={
+              <SparkleIcon
+                size={12}
+                color={Theme.colors.onPrimary}
+                weight="fill"
+              />
+            }
             label={`MUST-ORDER: ${crumb.heroDish.toUpperCase()}`}
           />
         )}
@@ -155,7 +166,11 @@ export function IngestionCrumbCard({
         {/* Tactical Walk-In Tip Callout */}
         {crumb.walkInTips && (
           <View style={styles.walkInBox}>
-            <Text style={styles.walkInIcon}>💡</Text>
+            <LightbulbIcon
+              size={16}
+              color={Theme.colors.accent}
+              weight="fill"
+            />
             <Text style={styles.walkInText}>
               <Text style={styles.walkInLabel}>Walk-in Tip: </Text>
               {crumb.walkInTips}

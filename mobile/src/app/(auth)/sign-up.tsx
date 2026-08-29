@@ -20,13 +20,21 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { GrabHandle } from '@/components/ui/GrabHandle';
 import { Heading, MutedText } from '@/components/ui/Typography';
+import {
+  SparkleIcon,
+  UserIcon,
+  EnvelopeSimpleIcon,
+  LockKeyIcon,
+  EyeIcon,
+  EyeSlashIcon,
+} from 'phosphor-react-native';
 
 const signUpSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.email('Please enter a valid email address'),
+  email: z.string().email('Please enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   agreeToTerms: z.boolean().refine((val) => val === true, {
-    message: 'You must agree to the Terms and Privacy Policy',
+    message: 'You must agree to the Terms of Service and Privacy Policy',
   }),
 });
 
@@ -88,7 +96,7 @@ export default function SignUpScreen() {
       >
         {/* Header Brand */}
         <View style={styles.header}>
-          <Text style={styles.logoIcon}>🍞</Text>
+          <SparkleIcon size={36} color={Theme.colors.primary} weight="fill" />
           <Text style={styles.logoText}>Crumbs</Text>
         </View>
 
@@ -116,7 +124,13 @@ export default function SignUpScreen() {
                 onChangeText={field.handleChange}
                 placeholder="Name"
                 autoCapitalize="words"
-                leftIcon={<Text style={styles.inputIcon}>👤</Text>}
+                leftIcon={
+                  <UserIcon
+                    size={18}
+                    color={Theme.colors.textSubtle}
+                    weight="bold"
+                  />
+                }
                 error={field.state.meta.errors[0]?.message}
               />
             )}
@@ -133,7 +147,13 @@ export default function SignUpScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
-                leftIcon={<Text style={styles.inputIcon}>✉️</Text>}
+                leftIcon={
+                  <EnvelopeSimpleIcon
+                    size={18}
+                    color={Theme.colors.textSubtle}
+                    weight="bold"
+                  />
+                }
                 error={field.state.meta.errors[0]?.message}
               />
             )}
@@ -150,7 +170,13 @@ export default function SignUpScreen() {
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoCorrect={false}
-                leftIcon={<Text style={styles.inputIcon}>🔒</Text>}
+                leftIcon={
+                  <LockKeyIcon
+                    size={18}
+                    color={Theme.colors.textSubtle}
+                    weight="bold"
+                  />
+                }
                 rightIcon={
                   <TouchableOpacity
                     onPress={() => {
@@ -159,7 +185,19 @@ export default function SignUpScreen() {
                     }}
                     style={styles.eyeButton}
                   >
-                    <Text>{showPassword ? '👁️' : '🙈'}</Text>
+                    {showPassword ? (
+                      <EyeIcon
+                        size={18}
+                        color={Theme.colors.textSubtle}
+                        weight="bold"
+                      />
+                    ) : (
+                      <EyeSlashIcon
+                        size={18}
+                        color={Theme.colors.textSubtle}
+                        weight="bold"
+                      />
+                    )}
                   </TouchableOpacity>
                 }
                 error={field.state.meta.errors[0]?.message}

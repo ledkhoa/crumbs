@@ -17,6 +17,8 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Theme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { formatPriceLevel } from '@/utils/price';
+import { openDefaultMaps } from '@/utils/maps';
+import { getRestaurantOpenStatus } from '@/utils/opening-hours';
 import {
   useCrumbDetailQuery,
   useUpdateCrumbMutation,
@@ -29,7 +31,31 @@ import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StarRating } from '@/components/ui/StarRating';
+import { SocialPlatformIcon } from '@/components/ui/SocialPlatformIcon';
 import { QuickAddToGuideModal } from '@/components/ingestion/QuickAddToGuideModal';
+import {
+  CaretLeftIcon,
+  CaretDownIcon,
+  CaretUpIcon,
+  ArrowSquareOutIcon,
+  PlusIcon,
+  ForkKnifeIcon,
+  ClockIcon,
+  WineIcon,
+  NavigationArrowIcon,
+  GlobeIcon,
+  CheckCircleIcon,
+  SparkleIcon,
+  LightbulbIcon,
+  DoorIcon,
+  QuotesIcon,
+  BookOpenIcon,
+  FolderSimpleIcon,
+  NotePencilIcon,
+  TrashIcon,
+  WarningCircleIcon,
+  MapPinIcon,
+} from 'phosphor-react-native';
 import type { CrumbDetail } from '@api/modules/crumbs/crumbs.types';
 
 export default function CrumbDetailScreen() {
@@ -98,6 +124,13 @@ export default function CrumbDetailScreen() {
     const initialDish = crumb.userHeroDishOverride || '';
     return notes !== initialNotes || heroDishOverride !== initialDish;
   }, [crumb, notes, heroDishOverride]);
+
+  const openStatus = useMemo(
+    () => getRestaurantOpenStatus(crumb?.restaurant.regularOpeningHours),
+    [crumb?.restaurant.regularOpeningHours],
+  );
+  const currentWeekdayIndex =
+    openStatus.currentLocalDay >= 0 ? (openStatus.currentLocalDay + 6) % 7 : -1;
 
   const handleToggleVisited = () => {
     if (!crumb) return;
@@ -222,7 +255,13 @@ export default function CrumbDetailScreen() {
           </TouchableOpacity>
         </View>
         <EmptyState
-          emoji="🍞"
+          icon={
+            <WarningCircleIcon
+              size={36}
+              color={Theme.colors.textSubtle}
+              weight="regular"
+            />
+          }
           title="Crumb Not Found"
           description="We couldn't load the details for this crumb. It may have been deleted."
           action={
@@ -264,7 +303,7 @@ export default function CrumbDetailScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Text style={styles.backButtonIcon}>‹</Text>
+            <CaretLeftIcon size={22} color={Theme.colors.text} weight="bold" />
           </TouchableOpacity>
 
           <View style={styles.navRightActions}>
@@ -278,7 +317,12 @@ export default function CrumbDetailScreen() {
               accessibilityRole="button"
               accessibilityLabel="Add to guide"
             >
-              <Text style={styles.floatingActionText}>🗺️ + Guide</Text>
+              <PlusIcon
+                size={14}
+                color={Theme.colors.onPrimary}
+                weight="bold"
+              />
+              <Text style={styles.floatingActionText}>Guide</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -288,7 +332,11 @@ export default function CrumbDetailScreen() {
               accessibilityRole="button"
               accessibilityLabel="Share crumb"
             >
-              <Text style={styles.shareIcon}>↗</Text>
+              <ArrowSquareOutIcon
+                size={20}
+                color={Theme.colors.text}
+                weight="bold"
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -311,7 +359,7 @@ export default function CrumbDetailScreen() {
               />
             ) : (
               <View style={styles.heroImagePlaceholder}>
-                <Text style={styles.heroPlaceholderEmoji}>🍽️</Text>
+                <ForkKnifeIcon size={48} color={Theme.colors.textSubtle} />
               </View>
             )}
 
@@ -327,9 +375,13 @@ export default function CrumbDetailScreen() {
                   }}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.creatorBadgeText}>
-                    {sourcePost.platform === 'tiktok' ? '🎵' : '📸'} @
-                    {sourcePost.authorUsername} ↗
+                  <SocialPlatformIcon
+                    platform={sourcePost.platform}
+                    size={14}
+                    color={Theme.colors.text}
+                  />
+                  <Text style={styles.creatorBadgeText} numberOfLines={1}>
+                    @{sourcePost.authorUsername}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -397,7 +449,14 @@ export default function CrumbDetailScreen() {
               ) : null}
             </View>
             {locationSubtitle ? (
-              <Text style={styles.locationSubtitle}>📍 {locationSubtitle}</Text>
+              <View style={styles.locationSubtitleRow}>
+                <MapPinIcon
+                  size={14}
+                  color={Theme.colors.primary}
+                  weight="fill"
+                />
+                <Text style={styles.locationSubtitle}>{locationSubtitle}</Text>
+              </View>
             ) : null}
             {restaurant.formattedAddress ? (
               <Text style={styles.addressDetail}>
@@ -418,21 +477,68 @@ export default function CrumbDetailScreen() {
                 activeOpacity={0.7}
               >
                 <View style={styles.hoursHeaderLeft}>
-                  <Text style={styles.hoursIcon}>🕒</Text>
-                  <Text style={styles.hoursHeaderText}>Opening Hours</Text>
+                  <ClockIcon
+                    size={16}
+                    color={
+                      openStatus.isOpen ? '#3B6B38' : Theme.colors.textMuted
+                    }
+                    weight="bold"
+                  />
+                  <Text style={styles.hoursHeaderText}>
+                    {openStatus.statusText || 'Opening Hours'}
+                  </Text>
+                  {openStatus.statusText ? (
+                    <View
+                      style={[
+                        styles.statusDot,
+                        openStatus.isOpen
+                          ? styles.statusDotOpen
+                          : styles.statusDotClosed,
+                      ]}
+                    />
+                  ) : null}
                 </View>
-                <Text style={styles.hoursChevron}>
-                  {isHoursExpanded ? '▴' : '▾'}
-                </Text>
+                {isHoursExpanded ? (
+                  <CaretUpIcon
+                    size={16}
+                    color={Theme.colors.textMuted}
+                    weight="bold"
+                  />
+                ) : (
+                  <CaretDownIcon
+                    size={16}
+                    color={Theme.colors.textMuted}
+                    weight="bold"
+                  />
+                )}
               </TouchableOpacity>
 
               {isHoursExpanded && (
                 <View style={styles.hoursDropdown}>
-                  {weekdayDescriptions.map((desc, idx) => (
-                    <Text key={`${desc}-${idx}`} style={styles.hoursRowText}>
-                      {desc}
-                    </Text>
-                  ))}
+                  {weekdayDescriptions.map((desc, idx) => {
+                    const isToday = idx === currentWeekdayIndex;
+                    return (
+                      <View
+                        key={`${desc}-${idx}`}
+                        style={[
+                          styles.hoursRow,
+                          isToday && styles.hoursRowToday,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.hoursRowText,
+                            isToday && styles.hoursRowTextToday,
+                          ]}
+                        >
+                          {desc}
+                        </Text>
+                        {isToday ? (
+                          <Text style={styles.todayBadgeText}>Today</Text>
+                        ) : null}
+                      </View>
+                    );
+                  })}
                 </View>
               )}
             </View>
@@ -449,8 +555,9 @@ export default function CrumbDetailScreen() {
                 }}
                 activeOpacity={0.85}
               >
+                <WineIcon size={16} color="#3B6B38" weight="fill" />
                 <Text style={styles.reserveCapsuleText}>
-                  🍷 Book{' '}
+                  Book{' '}
                   {restaurant.reservationProvider
                     ? `(${restaurant.reservationProvider})`
                     : 'Table'}
@@ -462,16 +569,21 @@ export default function CrumbDetailScreen() {
               style={styles.actionCapsule}
               onPress={() => {
                 haptics.tap();
-                const mapsUrl =
-                  restaurant.mapsUrl ||
-                  `https://maps.apple.com/?q=${encodeURIComponent(
-                    `${restaurant.name} ${restaurant.formattedAddress || ''}`,
-                  )}`;
-                Linking.openURL(mapsUrl).catch(() => {});
+                openDefaultMaps({
+                  name: restaurant.name,
+                  address: restaurant.formattedAddress,
+                  latitude: restaurant.latitude,
+                  longitude: restaurant.longitude,
+                });
               }}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionCapsuleText}>📍 Directions</Text>
+              <NavigationArrowIcon
+                size={16}
+                color={Theme.colors.text}
+                weight="fill"
+              />
+              <Text style={styles.actionCapsuleText}>Directions</Text>
             </TouchableOpacity>
 
             {restaurant.websiteUrl ? (
@@ -483,7 +595,8 @@ export default function CrumbDetailScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={styles.actionCapsuleText}>🌐 Web</Text>
+                <GlobeIcon size={16} color={Theme.colors.text} weight="bold" />
+                <Text style={styles.actionCapsuleText}>Web</Text>
               </TouchableOpacity>
             ) : null}
 
@@ -496,9 +609,12 @@ export default function CrumbDetailScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={styles.actionCapsuleText}>
-                  {sourcePost.platform === 'tiktok' ? '🎵 Reel' : '📸 Reel'}
-                </Text>
+                <SocialPlatformIcon
+                  platform={sourcePost.platform}
+                  size={16}
+                  color={Theme.colors.text}
+                />
+                <Text style={styles.actionCapsuleText}>Reel</Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -513,15 +629,18 @@ export default function CrumbDetailScreen() {
               onPress={handleToggleVisited}
               activeOpacity={0.85}
             >
+              <CheckCircleIcon
+                size={18}
+                color={crumb.isVisited ? '#3B6B38' : Theme.colors.text}
+                weight={crumb.isVisited ? 'fill' : 'bold'}
+              />
               <Text
                 style={[
                   styles.visitedButtonText,
                   crumb.isVisited && styles.visitedButtonTextActive,
                 ]}
               >
-                {crumb.isVisited
-                  ? '✓ Dined Here · Visited'
-                  : '🍽️ Mark as Visited'}
+                {crumb.isVisited ? 'Dined Here · Visited' : 'Mark as Visited'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -529,7 +648,14 @@ export default function CrumbDetailScreen() {
           {/* Hero Dish Highlight Callout */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>🍝 MUST-ORDER DISH</Text>
+              <View style={styles.sectionTitleWithIcon}>
+                <SparkleIcon
+                  size={15}
+                  color={Theme.colors.primary}
+                  weight="fill"
+                />
+                <Text style={styles.sectionTitle}>MUST-ORDER DISH</Text>
+              </View>
               <TouchableOpacity
                 onPress={() => {
                   haptics.tap();
@@ -572,7 +698,14 @@ export default function CrumbDetailScreen() {
           {postAttribution?.recommendedDishes &&
             postAttribution.recommendedDishes.length > 0 && (
               <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>🍽️ RECOMMENDED DISHES</Text>
+                <View style={styles.sectionTitleWithIcon}>
+                  <ForkKnifeIcon
+                    size={15}
+                    color={Theme.colors.textMuted}
+                    weight="bold"
+                  />
+                  <Text style={styles.sectionTitle}>RECOMMENDED DISHES</Text>
+                </View>
                 <View style={styles.dishTagsGrid}>
                   {postAttribution.recommendedDishes.map((dish, idx) => (
                     <View key={`${dish}-${idx}`} style={styles.dishChip}>
@@ -586,7 +719,14 @@ export default function CrumbDetailScreen() {
           {/* Vibe Tags & Atmosphere */}
           {postAttribution?.vibeTags && postAttribution.vibeTags.length > 0 && (
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>✨ VIBE & ATMOSPHERE</Text>
+              <View style={styles.sectionTitleWithIcon}>
+                <SparkleIcon
+                  size={15}
+                  color={Theme.colors.accent}
+                  weight="fill"
+                />
+                <Text style={styles.sectionTitle}>VIBE & ATMOSPHERE</Text>
+              </View>
               <View style={styles.vibeTagsGrid}>
                 {postAttribution.vibeTags.map((vibe, idx) => (
                   <View key={`${vibe}-${idx}`} style={styles.vibeChip}>
@@ -602,10 +742,21 @@ export default function CrumbDetailScreen() {
             postAttribution?.creatorNotes ||
             restaurant.editorialSummary) && (
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>💡 INSIDER TIPS</Text>
+              <View style={styles.sectionTitleWithIcon}>
+                <LightbulbIcon
+                  size={15}
+                  color={Theme.colors.accent}
+                  weight="fill"
+                />
+                <Text style={styles.sectionTitle}>INSIDER TIPS</Text>
+              </View>
               {postAttribution?.walkInTips ? (
                 <View style={styles.tipRow}>
-                  <Text style={styles.tipEmoji}>🚪</Text>
+                  <DoorIcon
+                    size={16}
+                    color={Theme.colors.textMuted}
+                    weight="bold"
+                  />
                   <Text style={styles.tipText}>
                     <Text style={styles.tipBold}>Walk-in tip: </Text>
                     {postAttribution.walkInTips}
@@ -615,7 +766,11 @@ export default function CrumbDetailScreen() {
 
               {postAttribution?.creatorNotes ? (
                 <View style={styles.tipRow}>
-                  <Text style={styles.tipEmoji}>💬</Text>
+                  <QuotesIcon
+                    size={16}
+                    color={Theme.colors.textMuted}
+                    weight="fill"
+                  />
                   <Text style={styles.tipText}>
                     <Text style={styles.tipBold}>Creator quote: </Text>"
                     {postAttribution.creatorNotes}"
@@ -625,7 +780,11 @@ export default function CrumbDetailScreen() {
 
               {restaurant.editorialSummary && !postAttribution?.creatorNotes ? (
                 <View style={styles.tipRow}>
-                  <Text style={styles.tipEmoji}>📖</Text>
+                  <BookOpenIcon
+                    size={16}
+                    color={Theme.colors.textMuted}
+                    weight="bold"
+                  />
                   <Text style={styles.tipText}>
                     {restaurant.editorialSummary}
                   </Text>
@@ -637,7 +796,14 @@ export default function CrumbDetailScreen() {
           {/* Guides Section */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>🗺️ IN YOUR GUIDES</Text>
+              <View style={styles.sectionTitleWithIcon}>
+                <FolderSimpleIcon
+                  size={15}
+                  color={Theme.colors.textMuted}
+                  weight="bold"
+                />
+                <Text style={styles.sectionTitle}>IN YOUR GUIDES</Text>
+              </View>
               <TouchableOpacity
                 onPress={() => {
                   haptics.primary();
@@ -669,7 +835,14 @@ export default function CrumbDetailScreen() {
 
           {/* Personal Notes & Inline Editor */}
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>📝 YOUR PERSONAL NOTES</Text>
+            <View style={styles.sectionTitleWithIcon}>
+              <NotePencilIcon
+                size={15}
+                color={Theme.colors.textMuted}
+                weight="bold"
+              />
+              <Text style={styles.sectionTitle}>YOUR PERSONAL NOTES</Text>
+            </View>
             <Textarea
               value={notes}
               onChangeText={setNotes}
@@ -702,9 +875,8 @@ export default function CrumbDetailScreen() {
               accessibilityRole="button"
               accessibilityLabel="Remove crumb"
             >
-              <Text style={styles.deleteButtonText}>
-                🗑️ Remove from My Crumbs
-              </Text>
+              <TrashIcon size={16} color={Theme.colors.error} weight="bold" />
+              <Text style={styles.deleteButtonText}>Remove from My Crumbs</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -790,11 +962,13 @@ const styles = StyleSheet.create({
     gap: Theme.spacing.sm,
   },
   floatingActionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     height: 38,
     paddingHorizontal: 14,
     borderRadius: Theme.radii.pill,
     backgroundColor: Theme.colors.primary,
-    alignItems: 'center',
     justifyContent: 'center',
     shadowColor: Theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
@@ -847,6 +1021,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   creatorGlassBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.92)',
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -855,11 +1032,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
+    maxWidth: '90%',
   },
   creatorBadgeText: {
     fontSize: 12,
     fontWeight: '700',
     color: Theme.colors.text,
+    flexShrink: 1,
   },
   thumbnailStrip: {
     paddingHorizontal: Theme.spacing.md,
@@ -912,11 +1091,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Theme.colors.textSubtle,
   },
+  locationSubtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
   locationSubtitle: {
     fontSize: 13,
     fontWeight: '600',
     color: Theme.colors.text,
-    marginTop: 2,
   },
   addressDetail: {
     fontSize: 12,
@@ -942,17 +1126,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  hoursIcon: {
-    fontSize: 14,
-  },
   hoursHeaderText: {
     fontSize: 13,
     fontWeight: '600',
     color: Theme.colors.text,
   },
-  hoursChevron: {
-    fontSize: 14,
-    color: Theme.colors.textMuted,
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginLeft: 2,
+  },
+  statusDotOpen: {
+    backgroundColor: '#3B6B38',
+  },
+  statusDotClosed: {
+    backgroundColor: Theme.colors.textSubtle,
   },
   hoursDropdown: {
     paddingHorizontal: Theme.spacing.md,
@@ -962,10 +1151,32 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     gap: 4,
   },
+  hoursRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    borderRadius: 4,
+  },
+  hoursRowToday: {
+    backgroundColor: 'rgba(124, 144, 112, 0.12)',
+  },
   hoursRowText: {
     fontSize: 12,
     color: Theme.colors.textMuted,
     lineHeight: 18,
+  },
+  hoursRowTextToday: {
+    color: Theme.colors.text,
+    fontWeight: '700',
+  },
+  todayBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#3B6B38',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   actionCapsuleRow: {
     flexDirection: 'row',
@@ -973,13 +1184,15 @@ const styles = StyleSheet.create({
     gap: Theme.spacing.sm,
   },
   actionCapsule: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: Theme.colors.cardBackground,
     borderRadius: Theme.radii.pill,
     borderWidth: 1,
     borderColor: Theme.colors.cardBorder,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    alignItems: 'center',
     justifyContent: 'center',
     shadowColor: Theme.colors.shadow,
     shadowOffset: { width: 0, height: 1 },
@@ -1004,13 +1217,15 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   visitedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     width: '100%',
     backgroundColor: Theme.colors.inputBackground,
     borderRadius: Theme.radii.lg,
     borderWidth: 1,
     borderColor: Theme.colors.inputBorder,
     paddingVertical: 12,
-    alignItems: 'center',
     justifyContent: 'center',
   },
   visitedButtonActive: {
@@ -1041,6 +1256,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  sectionTitleWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   sectionTitle: {
     fontSize: 11,
@@ -1172,6 +1392,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingVertical: 12,
     paddingHorizontal: 20,
   },

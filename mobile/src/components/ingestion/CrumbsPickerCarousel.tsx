@@ -12,11 +12,12 @@ import { Theme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { Button } from '@/components/ui/Button';
 import { IngestionCrumbCard } from './IngestionCrumbCard';
+import { PlusIcon, TrayIcon } from 'phosphor-react-native';
 import type { UnifiedRestaurantSpot } from '@/types/ingest';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH - Theme.spacing.lg * 2;
-const CARD_SPACING = Theme.spacing.md;
+const CARD_WIDTH = Math.min(SCREEN_WIDTH - 64, 340);
+const CARD_SPACING = 12;
 
 export interface CrumbsPickerCarouselProps {
   crumbs: UnifiedRestaurantSpot[];
@@ -34,29 +35,27 @@ export function CrumbsPickerCarousel({
   onViewInInbox,
 }: CrumbsPickerCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const lastReportedIndex = useRef(0);
+  const scrollRef = useRef<ScrollView>(null);
 
-  const selectedCrumbs = crumbs.filter((c) =>
-    selectedCrumbIds.has(c.crumbId || c.id || c.name),
-  );
-  const selectedCount = selectedCrumbs.length;
+  const selectedCount = selectedCrumbIds.size;
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
-    const newIndex = Math.round(offsetX / (CARD_WIDTH + CARD_SPACING));
+    const nextIndex = Math.round(offsetX / (CARD_WIDTH + CARD_SPACING));
     if (
-      newIndex >= 0 &&
-      newIndex < crumbs.length &&
-      newIndex !== lastReportedIndex.current
+      nextIndex !== activeIndex &&
+      nextIndex >= 0 &&
+      nextIndex < crumbs.length
     ) {
-      lastReportedIndex.current = newIndex;
-      setActiveIndex(newIndex);
-      haptics.selection();
+      setActiveIndex(nextIndex);
     }
   };
 
   const handleAddSelected = () => {
-    if (selectedCount === 0) return;
+    haptics.primary();
+    const selectedCrumbs = crumbs.filter((c) =>
+      selectedCrumbIds.has(c.crumbId || c.id || c.name),
+    );
     onAddSelectedToGuide(selectedCrumbs);
   };
 
@@ -68,6 +67,7 @@ export function CrumbsPickerCarousel({
     <View style={styles.container}>
       {/* Horizontal Carousel */}
       <ScrollView
+        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         snapToInterval={CARD_WIDTH + CARD_SPACING}
@@ -121,7 +121,15 @@ export function CrumbsPickerCarousel({
           size="lg"
           onPress={handleAddSelected}
           disabled={selectedCount === 0}
-          leftIcon={selectedCount > 0 ? <Text>🗺️ </Text> : undefined}
+          leftIcon={
+            selectedCount > 0 ? (
+              <PlusIcon
+                size={18}
+                color={Theme.colors.onPrimary}
+                weight="bold"
+              />
+            ) : undefined
+          }
           accessibilityLabel={`Add ${selectedCount} ${selectedCount === 1 ? 'Crumb' : 'Crumbs'} to Guide`}
         >
           {selectedCount > 0
@@ -133,7 +141,9 @@ export function CrumbsPickerCarousel({
           variant="secondary"
           size="lg"
           onPress={handleViewAll}
-          leftIcon={<Text>📥 </Text>}
+          leftIcon={
+            <TrayIcon size={18} color={Theme.colors.text} weight="bold" />
+          }
           accessibilityLabel="View All in Inbox"
         >
           View All in Inbox

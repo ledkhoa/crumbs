@@ -9,6 +9,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { Theme } from '@/theme/tokens';
+import { SparkleIcon, CheckIcon } from 'phosphor-react-native';
 import type { IngestionStep } from '@/types/ingest';
 
 interface IngestionProgressStepsProps {
@@ -67,7 +68,7 @@ export function IngestionProgressSteps({
       {/* Animated Bread Icon */}
       <View style={styles.breadWrapper}>
         <Animated.View style={[styles.breadCircle, breadAnimatedStyle]}>
-          <Text style={styles.breadEmoji}>🍞</Text>
+          <SparkleIcon size={32} color={Theme.colors.primary} weight="fill" />
         </Animated.View>
       </View>
 
@@ -93,7 +94,11 @@ export function IngestionProgressSteps({
                 <View style={styles.indicatorNode}>
                   {isCompleted && (
                     <View style={styles.completedCircle}>
-                      <Text style={styles.completedCheck}>✓</Text>
+                      <CheckIcon
+                        size={12}
+                        color={Theme.colors.onPrimary}
+                        weight="bold"
+                      />
                     </View>
                   )}
                   {isActive && (

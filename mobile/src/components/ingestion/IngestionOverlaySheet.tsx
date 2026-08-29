@@ -24,6 +24,8 @@ import { IngestionErrorState } from './IngestionErrorState';
 import { GrabHandle } from '@/components/ui/GrabHandle';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { SocialPlatformIcon } from '@/components/ui/SocialPlatformIcon';
+import { PlusIcon, TrayIcon } from 'phosphor-react-native';
 import type { UnifiedRestaurantSpot } from '@/types/ingest';
 
 export interface IngestionOverlaySheetProps {
@@ -248,7 +250,14 @@ export function IngestionOverlaySheet({
                           <Badge
                             variant="default"
                             corner="pill"
-                            label={`@${result.authorUsername} 📸`}
+                            icon={
+                              <SocialPlatformIcon
+                                platform={parsedUrl.platform}
+                                size={12}
+                                color={Theme.colors.text}
+                              />
+                            }
+                            label={`@${result.authorUsername}`}
                             style={styles.authorBadge}
                             textStyle={styles.authorText}
                           />
@@ -256,6 +265,13 @@ export function IngestionOverlaySheet({
                           <Badge
                             variant="default"
                             corner="pill"
+                            icon={
+                              <SocialPlatformIcon
+                                platform={parsedUrl.platform}
+                                size={12}
+                                color={Theme.colors.text}
+                              />
+                            }
                             label={
                               parsedUrl.platform === 'tiktok'
                                 ? 'TikTok'
@@ -310,7 +326,13 @@ export function IngestionOverlaySheet({
                             onPress={() =>
                               handleSingleAddToGuide(result.spots[0])
                             }
-                            leftIcon={<Text>🗺️ </Text>}
+                            leftIcon={
+                              <PlusIcon
+                                size={18}
+                                color={Theme.colors.onPrimary}
+                                weight="bold"
+                              />
+                            }
                             style={styles.primaryButton}
                           >
                             Add Crumb to Guide
@@ -324,7 +346,13 @@ export function IngestionOverlaySheet({
                                 result.spots[0]?.crumbId || result.spots[0]?.id,
                               );
                             }}
-                            leftIcon={<Text>📥 </Text>}
+                            leftIcon={
+                              <TrayIcon
+                                size={18}
+                                color={Theme.colors.text}
+                                weight="bold"
+                              />
+                            }
                             style={styles.secondaryButton}
                           >
                             View in Inbox

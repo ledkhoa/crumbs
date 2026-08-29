@@ -9,7 +9,14 @@ import { Image } from 'expo-image';
 import { Theme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { formatPriceLevel } from '@/utils/price';
-import { StarRating } from '@/components/ui';
+import { StarRating, SocialPlatformIcon } from '@/components/ui';
+import {
+  ForkKnifeIcon,
+  PlusIcon,
+  WineIcon,
+  NavigationArrowIcon,
+  SparkleIcon,
+} from 'phosphor-react-native';
 import type { EnrichedUserCrumb } from '@api/modules/crumbs/crumbs.types';
 
 export interface CompactCrumbCardProps {
@@ -79,16 +86,18 @@ export function CompactCrumbCard({
           />
         ) : (
           <View style={styles.imagePlaceholder}>
-            <Text style={styles.placeholderEmoji}>🍽️</Text>
+            <ForkKnifeIcon size={32} color={Theme.colors.textSubtle} />
           </View>
         )}
 
         {/* Platform Watermark Badge */}
         {sourcePost?.platform && (
           <View style={styles.platformBadge}>
-            <Text style={styles.platformEmoji}>
-              {sourcePost.platform === 'tiktok' ? '🎵' : '📸'}
-            </Text>
+            <SocialPlatformIcon
+              platform={sourcePost.platform}
+              size={12}
+              color={Theme.colors.text}
+            />
           </View>
         )}
       </View>
@@ -133,18 +142,24 @@ export function CompactCrumbCard({
         {/* Row 3: Hero Dish Callout */}
         <View style={styles.dishRow}>
           {effectiveHeroDish ? (
-            <Text style={styles.heroDishText} numberOfLines={1}>
-              🍝 MUST-ORDER: {effectiveHeroDish}
-            </Text>
+            <View style={styles.heroDishRow}>
+              <SparkleIcon
+                size={11}
+                color={Theme.colors.primary}
+                weight="fill"
+              />
+              <Text style={styles.heroDishText} numberOfLines={1}>
+                {effectiveHeroDish}
+              </Text>
+            </View>
           ) : restaurant.cuisine ? (
-            <Text style={styles.cuisineText} numberOfLines={1}>
-              🍴 {restaurant.cuisine}
-            </Text>
-          ) : (
-            <Text style={styles.cuisineText} numberOfLines={1}>
-              🌿 Saved to Inbox
-            </Text>
-          )}
+            <View style={styles.cuisineRow}>
+              <ForkKnifeIcon size={11} color={Theme.colors.textMuted} />
+              <Text style={styles.cuisineText} numberOfLines={1}>
+                {restaurant.cuisine}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Row 4: Vibe Tags & Mini-Action Buttons */}
@@ -170,7 +185,12 @@ export function CompactCrumbCard({
               accessibilityRole="button"
               accessibilityLabel="Add to Guide"
             >
-              <Text style={styles.guideMiniText}>🗺️ +</Text>
+              <PlusIcon
+                size={10}
+                color={Theme.colors.onPrimary}
+                weight="bold"
+              />
+              <Text style={styles.guideMiniText}>Guide</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -186,9 +206,21 @@ export function CompactCrumbCard({
                 hasReservation ? 'Book Reservation' : 'Open in Maps'
               }
             >
-              <Text style={styles.bookMiniText}>
-                {hasReservation ? '🍷 Book' : '📍 Map'}
-              </Text>
+              {hasReservation ? (
+                <>
+                  <WineIcon size={11} color="#3B6B38" weight="fill" />
+                  <Text style={styles.bookMiniTextActive}>Book</Text>
+                </>
+              ) : (
+                <>
+                  <NavigationArrowIcon
+                    size={11}
+                    color={Theme.colors.text}
+                    weight="fill"
+                  />
+                  <Text style={styles.bookMiniText}>Map</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -302,16 +334,28 @@ const styles = StyleSheet.create({
   dishRow: {
     justifyContent: 'center',
   },
+  heroDishRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   heroDishText: {
     fontSize: 11,
     fontWeight: '700',
     color: Theme.colors.primary,
     letterSpacing: 0.1,
+    flexShrink: 1,
+  },
+  cuisineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   cuisineText: {
     fontSize: 11,
     fontWeight: '600',
     color: Theme.colors.textMuted,
+    flexShrink: 1,
   },
   bottomRow: {
     flexDirection: 'row',
@@ -345,12 +389,14 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   guideMiniButton: {
+    flexDirection: 'row',
     height: 24,
     paddingHorizontal: 7,
     backgroundColor: Theme.colors.primary,
     borderRadius: Theme.radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 3,
   },
   guideMiniText: {
     fontSize: 10,
@@ -358,6 +404,7 @@ const styles = StyleSheet.create({
     color: Theme.colors.onPrimary,
   },
   bookMiniButton: {
+    flexDirection: 'row',
     height: 24,
     paddingHorizontal: 7,
     backgroundColor: Theme.colors.inputBackground,
@@ -366,6 +413,7 @@ const styles = StyleSheet.create({
     borderColor: Theme.colors.inputBorder,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 3,
   },
   bookMiniButtonActive: {
     backgroundColor: 'rgba(124, 144, 112, 0.15)',
@@ -375,5 +423,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: Theme.colors.text,
+  },
+  bookMiniTextActive: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#3B6B38',
   },
 });

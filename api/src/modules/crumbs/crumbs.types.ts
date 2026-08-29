@@ -98,7 +98,7 @@ export interface UpdateCrumbInput {
 }
 
 export interface OpeningHoursInfo {
-  openNow?: boolean;
+  utcOffsetMinutes?: number;
   periods?: Array<{
     open: { day: number; time: string };
     close?: { day: number; time: string };

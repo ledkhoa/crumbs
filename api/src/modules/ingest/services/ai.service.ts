@@ -196,7 +196,7 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
     try {
       // First attempt: with loaded images (if any succeeded)
       const { output } = await generateText({
-        model: this.google('gemini-3.7-flash'),
+        model: this.google('gemini-3.6-flash'),
         output: Output.object({ schema: postExtractionSchema }),
         system: systemPrompt,
         messages: [
