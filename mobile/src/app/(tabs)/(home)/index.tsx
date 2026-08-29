@@ -314,14 +314,19 @@ export default function HomeScreen() {
           type="no_crumbs_in_viewport"
           totalSavedCount={allSavedCrumbs.length}
           onFitAllCrumbs={handleFitAllCrumbs}
+          topOffset={
+            insets.top +
+            (!isBannerDismissed && locationStatus !== 'granted' ? 148 : 98)
+          }
         />
       ) : null}
 
-      {/* Layer 3: Floating Action Controls (MyLocation & Decide Now) */}
+      {/* Layer 3: Floating Action Controls (MyLocation & Decide Now Grouped on Bottom Right) */}
       <MapFloatingControls
         onRecenterPress={handleRecenterPress}
         onDecideNowPress={handleDecideNowPress}
         isLocating={isLocating}
+        bottomOffset={insets.bottom + 160}
       />
 
       {/* Layer 4: Bottom Snapping Crumb Card Carousel */}

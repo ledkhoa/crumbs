@@ -14,6 +14,7 @@ export interface MapEmptyStateOverlayProps {
   totalSavedCount?: number;
   onFitAllCrumbs?: () => void;
   onAddCrumb?: () => void;
+  topOffset?: number;
 }
 
 export function MapEmptyStateOverlay({
@@ -21,6 +22,7 @@ export function MapEmptyStateOverlay({
   totalSavedCount = 0,
   onFitAllCrumbs,
   onAddCrumb,
+  topOffset,
 }: MapEmptyStateOverlayProps) {
   const { colors } = useTheme();
 
@@ -33,7 +35,13 @@ export function MapEmptyStateOverlay({
     };
 
     return (
-      <View style={styles.viewportBannerContainer} pointerEvents="box-none">
+      <View
+        style={[
+          styles.viewportBannerContainer,
+          topOffset !== undefined && { top: topOffset },
+        ]}
+        pointerEvents="box-none"
+      >
         <View
           style={[
             styles.viewportBanner,
@@ -135,11 +143,11 @@ export function MapEmptyStateOverlay({
 const styles = StyleSheet.create({
   viewportBannerContainer: {
     position: 'absolute',
-    top: 110,
+    top: 140,
     left: 0,
     right: 0,
     alignItems: 'center',
-    zIndex: 14,
+    zIndex: 22,
   },
   viewportBanner: {
     flexDirection: 'row',

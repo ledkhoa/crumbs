@@ -13,12 +13,14 @@ export interface MapFloatingControlsProps {
   onRecenterPress: () => void;
   onDecideNowPress: () => void;
   isLocating?: boolean;
+  bottomOffset?: number;
 }
 
 export function MapFloatingControls({
   onRecenterPress,
   onDecideNowPress,
   isLocating = false,
+  bottomOffset = 160,
 }: MapFloatingControlsProps) {
   const { colors } = useTheme();
 
@@ -28,13 +30,14 @@ export function MapFloatingControls({
   };
 
   const handleDecideNow = () => {
-    // Rolling haptic sequence handled by caller or initiated here
-    haptics.primary();
     onDecideNowPress();
   };
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <View
+      style={[styles.container, { bottom: bottomOffset }]}
+      pointerEvents="box-none"
+    >
       {/* My Location Floating Glass Button */}
       <TouchableOpacity
         style={[
@@ -53,7 +56,7 @@ export function MapFloatingControls({
         {isLocating ? (
           <ActivityIndicator size="small" color={colors.primary} />
         ) : (
-          <NavigationArrowIcon size={22} color={colors.primary} weight="fill" />
+          <NavigationArrowIcon size={20} color={colors.primary} weight="fill" />
         )}
       </TouchableOpacity>
 
@@ -84,15 +87,14 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     right: Theme.spacing.md,
-    bottom: 120, // Positioned directly above carousel
     alignItems: 'flex-end',
     gap: Theme.spacing.sm,
-    zIndex: 30,
+    zIndex: 25,
   },
   recenterButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -104,7 +106,7 @@ const styles = StyleSheet.create({
   decideButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 44,
+    height: 42,
     paddingHorizontal: 16,
     borderRadius: Theme.radii.pill,
     gap: 6,
