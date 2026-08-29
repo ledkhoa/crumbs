@@ -5,8 +5,9 @@ import {
   QueryClientProvider,
   focusManager,
 } from '@tanstack/react-query';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState, StyleSheet, type AppStateStatus } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { useShareIntent } from 'expo-share-intent';
 import { extractSocialUrl, isValidSocialUrl } from '@/utils/social-url';
@@ -162,24 +163,32 @@ export default function RootLayout() {
   };
 
   return (
-    <KeyboardProvider>
-      <QueryClientProvider client={queryClient}>
-        <StatusBar style="auto" />
-        <AppNavigator />
-        <GlobalOverlays />
-        {overlayState.visible && (
-          <IngestionOverlaySheet
-            visible={overlayState.visible}
-            sourceUrl={overlayState.sourceUrl}
-            initialCaption={overlayState.initialCaption}
-            onClose={handleCloseOverlay}
-            onNavigateToInbox={(_crumbId) => {
-              handleCloseOverlay();
-              router.push('/(tabs)/inbox');
-            }}
-          />
-        )}
-      </QueryClientProvider>
-    </KeyboardProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <KeyboardProvider>
+        <QueryClientProvider client={queryClient}>
+          <StatusBar style="auto" />
+          <AppNavigator />
+          <GlobalOverlays />
+          {overlayState.visible && (
+            <IngestionOverlaySheet
+              visible={overlayState.visible}
+              sourceUrl={overlayState.sourceUrl}
+              initialCaption={overlayState.initialCaption}
+              onClose={handleCloseOverlay}
+              onNavigateToInbox={(_crumbId) => {
+                handleCloseOverlay();
+                router.push('/(tabs)/inbox');
+              }}
+            />
+          )}
+        </QueryClientProvider>
+      </KeyboardProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});
