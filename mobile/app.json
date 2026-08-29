@@ -12,6 +12,10 @@
       "bundleIdentifier": "com.kasseling.crumbs",
       "entitlements": {
         "com.apple.security.application-groups": ["group.com.kasseling.crumbs"]
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Crumbs uses your location to show saved cravings and crumbs near you on the Cravings Map.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Crumbs uses your location to show saved cravings and crumbs near you on the Cravings Map."
       }
     },
     "android": {
@@ -22,6 +26,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
       "intentFilters": [
         {
           "action": "SEND",
@@ -68,6 +73,12 @@
               "com.ss.android.ugc.trill"
             ]
           }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Crumbs uses your location to show saved cravings and crumbs near you on the Cravings Map."
         }
       ]
     ],

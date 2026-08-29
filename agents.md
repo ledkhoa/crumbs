@@ -39,6 +39,7 @@ In addition to these global rules, always consult and follow the domain-specific
 | 2026-08-22 | Imported `@react-navigation/native` (`useFocusEffect`) in Expo SDK 57 / Expo Router v57 | As of Expo SDK 56+, Expo Router is incompatible with direct `@react-navigation/native` imports. Always import navigation hooks (`useFocusEffect`, `useRouter`, `useLocalSearchParams`) strictly from `expo-router`. |
 | 2026-08-28 | Inconsistent modal button layouts & solid red/terracotta buttons causing color-blind confusion | Standardize all modal action bars to side-by-side `[Cancel (flex:1)]` `[Save/Submit (flex:2)]`, use uniform `Switch` styling (`Theme.colors.switchTrackOff`), and style destructive delete actions as separated ghost/outline buttons with danger text/icons rather than solid filled buttons. |
 | 2026-08-29 | Relied on static StyleSheet.create for theming and attempted nested modal presentation | In React Native, static `StyleSheet.create` only evaluates once at boot time; always use `useTheme()` for dynamic colors. Never stack modal sheets on top of active modal sheets in iOS UIKit; switch views within the same modal container. |
+| 2026-08-29 | Configured iOS permissions in `app.json` only, causing missing `NSLocationWhenInUseUsageDescription` in prebuilt native project | When native directories (`ios/` / `android/`) already exist in the repository, permissions and metadata must be added directly to `ios/<AppName>/Info.plist` and `android/app/src/main/AndroidManifest.xml` in addition to `app.json`. |
 
 ---
 

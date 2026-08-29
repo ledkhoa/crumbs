@@ -161,6 +161,7 @@ export class CrumbsRepository {
           name: c.restaurant.name,
           formattedAddress: c.restaurant.formattedAddress ?? null,
           city: c.restaurant.city ?? null,
+          neighborhood: c.restaurant.neighborhood ?? null,
           state: c.restaurant.state ?? null,
           country: c.restaurant.country ?? null,
           latitude: c.restaurant.latitude
@@ -180,6 +181,9 @@ export class CrumbsRepository {
           communityFavoriteDish: c.restaurant.communityFavoriteDish ?? null,
           reservationUrl: c.restaurant.reservationUrl ?? null,
           reservationProvider: c.restaurant.reservationProvider ?? null,
+          // SAFETY: Drizzle jsonb column preserves Google Places OpeningHoursInfo structure
+          regularOpeningHours:
+            (c.restaurant.regularOpeningHours as OpeningHoursInfo) ?? null,
         },
         sourcePost: c.sourcePost
           ? {

@@ -36,6 +36,7 @@ export interface EnrichedUserCrumb {
     name: string;
     formattedAddress: string | null;
     city: string | null;
+    neighborhood: string | null;
     state: string | null;
     country: string | null;
     latitude: number | null;
@@ -51,6 +52,7 @@ export interface EnrichedUserCrumb {
     communityFavoriteDish: string | null;
     reservationUrl: string | null;
     reservationProvider: string | null;
+    regularOpeningHours: OpeningHoursInfo | null;
   };
   sourcePost: {
     id: string;

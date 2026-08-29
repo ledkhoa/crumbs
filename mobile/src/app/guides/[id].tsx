@@ -68,7 +68,7 @@ export default function GuideDetailScreen() {
     try {
       await Share.share({
         title: guide.name,
-        message: `Check out "${guide.name}" on Crumbs — ${guide.description || 'A curated collection of dining spots'}!`,
+        message: `Check out "${guide.name}" on Crumbs — ${guide.description || 'A curated collection of saved crumbs'}!`,
         url: `https://crumbs.app/guides/${guide.id}`,
       });
     } catch (err) {
@@ -403,7 +403,7 @@ export default function GuideDetailScreen() {
               />
             }
             title="No crumbs in this guide yet"
-            description="Add your favorite dining spots to curate this collection."
+            description="Add your favorite crumbs to curate this collection."
             action={
               <Button
                 variant="primary"
