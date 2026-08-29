@@ -20,6 +20,7 @@ import { CreateGuideModal } from '@/components/guides/CreateGuideModal';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Heading, MutedText } from '@/components/ui/Typography';
+import { useRouter } from 'expo-router';
 import {
   PlusIcon,
   WarningCircleIcon,
@@ -27,6 +28,7 @@ import {
 } from 'phosphor-react-native';
 
 export default function GuidesScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [modalVisible, setModalVisible] = useState(false);
   const {
@@ -47,8 +49,12 @@ export default function GuidesScreen() {
     setModalVisible(true);
   };
 
-  const handleSelectGuide = (_guide: GuideSummary) => {
-    // Navigating to guide detail will be linked here
+  const handleSelectGuide = (guide: GuideSummary) => {
+    haptics.tap();
+    router.push({
+      pathname: '/guides/[id]',
+      params: { id: guide.id },
+    });
   };
 
   const handleRefresh = () => {

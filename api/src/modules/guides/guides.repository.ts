@@ -9,6 +9,7 @@ import {
 } from '../../core/db/schemas';
 import type {
   CreateGuideInput,
+  UpdateGuideInput,
   GuideSummaryPayload,
   GuideDetailPayload,
   GuideCrumbItem,
@@ -243,5 +244,104 @@ export class GuidesRepository {
       .values(records)
       .onConflictDoNothing()
       .returning();
+  }
+
+  /**
+   * Updates an existing guide's metadata (name, description, emojiIcon, isPublic, coverImageUrl).
+   */
+  static async update(
+    db: DbInstance,
+    guideId: string,
+    userId: string,
+    data: UpdateGuideInput,
+  ): Promise<Guide | null> {
+    const updateValues: Partial<NewGuide> = {};
+    if (data.name !== undefined) updateValues.name = data.name;
+    if (data.description !== undefined)
+      updateValues.description = data.description;
+    if (data.emojiIcon !== undefined) updateValues.emojiIcon = data.emojiIcon;
+    if (data.coverImageUrl !== undefined)
+      updateValues.coverImageUrl = data.coverImageUrl;
+    if (data.isPublic !== undefined) updateValues.isPublic = data.isPublic;
+
+    const [updated] = await db
+      .update(Guides)
+      .set(updateValues)
+      .where(and(eq(Guides.id, guideId), eq(Guides.userId, userId)))
+      .returning();
+
+    return updated || null;
+  }
+
+  /**
+   * Deletes a guide created by the authenticated user.
+   */
+  static async delete(
+    db: DbInstance,
+    guideId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const [deleted] = await db
+      .delete(Guides)
+      .where(and(eq(Guides.id, guideId), eq(Guides.userId, userId)))
+      .returning();
+
+    return Boolean(deleted);
+  }
+
+  /**
+   * Removes a single crumb from a guide.
+   */
+  static async removeCrumb(
+    db: DbInstance,
+    guideId: string,
+    crumbId: string,
+    userId: string,
+  ): Promise<boolean> {
+    // Verify guide ownership
+    const guide = await db.query.Guides.findFirst({
+      where: and(eq(Guides.id, guideId), eq(Guides.userId, userId)),
+    });
+
+    if (!guide) return false;
+
+    const [deleted] = await db
+      .delete(GuideCrumbs)
+      .where(
+        and(eq(GuideCrumbs.guideId, guideId), eq(GuideCrumbs.crumbId, crumbId)),
+      )
+      .returning();
+
+    return Boolean(deleted);
+  }
+
+  /**
+   * Reorders crumbs in a guide by updating their orderIndex.
+   */
+  static async reorderCrumbs(
+    db: DbInstance,
+    guideId: string,
+    crumbIds: string[],
+    userId: string,
+  ): Promise<boolean> {
+    const guide = await db.query.Guides.findFirst({
+      where: and(eq(Guides.id, guideId), eq(Guides.userId, userId)),
+    });
+
+    if (!guide) return false;
+
+    for (let i = 0; i < crumbIds.length; i++) {
+      await db
+        .update(GuideCrumbs)
+        .set({ orderIndex: i })
+        .where(
+          and(
+            eq(GuideCrumbs.guideId, guideId),
+            eq(GuideCrumbs.crumbId, crumbIds[i]),
+          ),
+        );
+    }
+
+    return true;
   }
 }

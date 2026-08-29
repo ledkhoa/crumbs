@@ -37,10 +37,16 @@ In addition to these global rules, always consult and follow the domain-specific
 | 2026-08-21 | Used RN Modal instead of `@expo/ui` BottomSheet and standard `KeyboardAvoidingView`     | Always use `@expo/ui` `BottomSheet` for bottom sheets and `react-native-keyboard-controller` (`KeyboardAwareScrollView`) for all keyboard-managed views.                                                            |
 | 2026-08-22 | Used "spot" / "spots" in UI copy instead of canonical product terminology "crumbs"      | Always verify UI copy, entity naming, and user-facing text against `docs/app_terminology.md`. Saved dining places are strictly called **crumbs** (never "spots").                                                   |
 | 2026-08-22 | Imported `@react-navigation/native` (`useFocusEffect`) in Expo SDK 57 / Expo Router v57 | As of Expo SDK 56+, Expo Router is incompatible with direct `@react-navigation/native` imports. Always import navigation hooks (`useFocusEffect`, `useRouter`, `useLocalSearchParams`) strictly from `expo-router`. |
+| 2026-08-28 | Inconsistent modal button layouts & solid red/terracotta buttons causing color-blind confusion | Standardize all modal action bars to side-by-side `[Cancel (flex:1)]` `[Save/Submit (flex:2)]`, use uniform `Switch` styling (`Theme.colors.switchTrackOff`), and style destructive delete actions as separated ghost/outline buttons with danger text/icons rather than solid filled buttons. |
 
 ---
 
 ## Universal Code Standards
+
+- **UI Accessibility & Form Modal Consistency**:
+  - Modal form action rows must strictly follow the standard layout: side-by-side `Cancel` (secondary / outline, `flex: 1`) and `Submit/Save` (primary, `flex: 2`).
+  - **Color-Blindness & Destructive Action Safety**: Never place two solid-filled warm buttons (e.g. terracotta `#C45B3E` primary and red `#DC2626` destructive) adjacent or stacked. Destructive actions (like Delete) in edit sheets must be styled as distinct ghost/text buttons with a trash icon and separated below the primary action row.
+  - All form `Switch` rows must use the identical unboxed layout with `Theme.colors.switchTrackOff` and platform-adaptive thumb colors.
 
 - **App Terminology & Glossary Discipline**:
   - Always verify UI copy, model field names, and user-facing text against [`docs/app_terminology.md`](file:///Users/khoa/Documents/crumbs/docs/app_terminology.md).

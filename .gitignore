@@ -18,6 +18,34 @@ build/
 .next/
 .expo/
 
+# iOS native build artifacts
+ios/Pods/
+ios/build/
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+ios/Podfile.lock.backup
+ios/**/DerivedData/
+**/ios/Pods/
+**/ios/build/
+**/ios/*.xcworkspace/xcuserdata/
+**/ios/*.xcodeproj/xcuserdata/
+
+# Android native build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/.idea/
+android/*.iml
+android/**/*.iml
+android/local.properties
+android/captures/
+android/.cxx/
+**/android/.gradle/
+**/android/build/
+**/android/app/build/
+**/android/.cxx/
+
 # OS & Logs
 .DS_Store
 *.pem

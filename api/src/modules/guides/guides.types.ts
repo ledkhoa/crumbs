@@ -9,6 +9,14 @@ export interface CreateGuideInput {
   isPublic?: boolean;
 }
 
+export interface UpdateGuideInput {
+  name?: string;
+  description?: string | null;
+  emojiIcon?: string;
+  coverImageUrl?: string | null;
+  isPublic?: boolean;
+}
+
 export interface GuideSummaryPayload {
   id: string;
   name: string;

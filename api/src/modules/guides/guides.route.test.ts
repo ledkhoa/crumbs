@@ -104,4 +104,87 @@ describe('Guides Route HTTP & Auth Validation', () => {
 
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
+
+  it('should reject unauthenticated PATCH /guides/:id with 401/400', async () => {
+    const req = new Request('http://localhost/guides/test-guide-id', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Updated Guide Name',
+      }),
+    });
+
+    const res = await testApp.request(
+      req,
+      {},
+      {
+        DATABASE_URL: 'postgresql://postgres:password@localhost:5432/testdb',
+        INGEST_WORKFLOW: mockWorkflow,
+      },
+    );
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  it('should reject unauthenticated DELETE /guides/:id with 401/400', async () => {
+    const req = new Request('http://localhost/guides/test-guide-id', {
+      method: 'DELETE',
+    });
+
+    const res = await testApp.request(
+      req,
+      {},
+      {
+        DATABASE_URL: 'postgresql://postgres:password@localhost:5432/testdb',
+        INGEST_WORKFLOW: mockWorkflow,
+      },
+    );
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  it('should reject unauthenticated DELETE /guides/:id/crumbs/:crumbId with 401/400', async () => {
+    const req = new Request(
+      'http://localhost/guides/test-guide-id/crumbs/crumb-123',
+      {
+        method: 'DELETE',
+      },
+    );
+
+    const res = await testApp.request(
+      req,
+      {},
+      {
+        DATABASE_URL: 'postgresql://postgres:password@localhost:5432/testdb',
+        INGEST_WORKFLOW: mockWorkflow,
+      },
+    );
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  it('should reject unauthenticated PUT /guides/:id/reorder with 401/400', async () => {
+    const req = new Request('http://localhost/guides/test-guide-id/reorder', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        crumbIds: ['crumb-1', 'crumb-2'],
+      }),
+    });
+
+    const res = await testApp.request(
+      req,
+      {},
+      {
+        DATABASE_URL: 'postgresql://postgres:password@localhost:5432/testdb',
+        INGEST_WORKFLOW: mockWorkflow,
+      },
+    );
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
 });
