@@ -131,6 +131,7 @@ describe('Crumbs Business Logic & Specification Verification', () => {
           name: 'Trattoria Bella',
           formattedAddress: '123 Bleecker St, West Village, NY',
           city: 'New York',
+          neighborhood: 'West Village',
           state: 'NY',
           country: 'USA',
           latitude: 40.73,
@@ -146,6 +147,7 @@ describe('Crumbs Business Logic & Specification Verification', () => {
           communityFavoriteDish: 'Spicy Vodka Rigatoni',
           reservationUrl: 'https://resy.com/cities/ny/trattoria-bella',
           reservationProvider: 'resy',
+          regularOpeningHours: null,
         },
         sourcePost: {
           id: 'post-1',
@@ -190,6 +192,7 @@ describe('Crumbs Business Logic & Specification Verification', () => {
           name: 'Kyoto Tea House',
           formattedAddress: '456 Bowery, East Village, NY',
           city: 'New York',
+          neighborhood: 'East Village',
           state: 'NY',
           country: 'USA',
           latitude: 40.72,
@@ -205,6 +208,7 @@ describe('Crumbs Business Logic & Specification Verification', () => {
           communityFavoriteDish: 'Matcha Mille Crepe',
           reservationUrl: null,
           reservationProvider: null,
+          regularOpeningHours: null,
         },
         sourcePost: {
           id: 'post-2',
