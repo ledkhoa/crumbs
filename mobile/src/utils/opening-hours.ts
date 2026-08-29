@@ -187,3 +187,102 @@ export function getRestaurantOpenStatus(
     currentLocalDay: currentDay,
   };
 }
+
+export type DiningMomentSlot = 'morning' | 'lunch' | 'dinner' | 'late_night';
+
+/**
+ * Checks if a restaurant is scheduled to be open during a designated dining moment on the target day.
+ *
+ * Windows:
+ * - morning: 07:00 – 11:00 (active anytime between 7 AM and 11 AM)
+ * - lunch: 11:30 – 15:30 (active anytime between 11:30 AM and 3:30 PM)
+ * - dinner: 17:00 – 22:00 (active anytime between 5:00 PM and 10:00 PM)
+ * - late_night: 22:30 – 04:00 (active after 10:30 PM or overnight)
+ */
+export function isRestaurantOpenAtMoment(
+  hours?: OpeningHoursInfo | null,
+  momentType: DiningMomentSlot = 'lunch',
+  referenceDateUtc: number = Date.now(),
+): boolean {
+  if (!hours?.periods || hours.periods.length === 0) {
+    // If no operating hours data, allow potential match
+    return true;
+  }
+
+  // 24/7 establishment
+  if (
+    hours.periods.length === 1 &&
+    (!hours.periods[0].close ||
+      (hours.periods[0].open.time === '00:00' &&
+        hours.periods[0].close.time === '00:00'))
+  ) {
+    return true;
+  }
+
+  const offsetMs = (hours.utcOffsetMinutes ?? 0) * 60 * 1000;
+  const localDate = new Date(referenceDateUtc + offsetMs);
+  const currentDay = localDate.getUTCDay(); // 0 (Sun) - 6 (Sat)
+  const yesterdayDay = (currentDay + 6) % 7;
+
+  let slotStart = 690; // 11:30 AM default
+  let slotEnd = 930; // 3:30 PM default
+
+  if (momentType === 'morning') {
+    slotStart = 420; // 7:00 AM
+    slotEnd = 660; // 11:00 AM
+  } else if (momentType === 'lunch') {
+    slotStart = 690; // 11:30 AM
+    slotEnd = 930; // 3:30 PM
+  } else if (momentType === 'dinner') {
+    slotStart = 1020; // 5:00 PM
+    slotEnd = 1320; // 10:00 PM
+  } else if (momentType === 'late_night') {
+    slotStart = 1350; // 10:30 PM
+    slotEnd = 1440; // Midnight
+  }
+
+  for (const period of hours.periods) {
+    const openMin = parseTimeToMinutes(period.open.time);
+    const closeMin = period.close
+      ? parseTimeToMinutes(period.close.time)
+      : 1440;
+
+    // Check same-day shifts
+    if (period.open.day === currentDay) {
+      if (momentType === 'late_night') {
+        if (period.close && period.close.day !== currentDay) {
+          return true; // Overnight shift
+        }
+        if (closeMin >= 1350 || openMin >= 1320) {
+          return true;
+        }
+      } else {
+        const effectiveClose =
+          period.close && period.close.day !== currentDay ? 1440 : closeMin;
+        const hasOverlap =
+          Math.max(openMin, slotStart) < Math.min(effectiveClose, slotEnd);
+        if (hasOverlap) {
+          return true;
+        }
+      }
+    }
+
+    // Check overnight shifts starting yesterday that bleed into early morning or late night
+    if (
+      period.open.day === yesterdayDay &&
+      period.close &&
+      period.close.day === currentDay
+    ) {
+      if (momentType === 'morning' && closeMin > 420) {
+        // Must stay open past 7:00 AM into the morning window
+        return true;
+      }
+      if (momentType === 'late_night' && closeMin >= 30) {
+        // Open in the wee hours past midnight
+        return true;
+      }
+    }
+  }
+
+  return false;
+}

@@ -322,16 +322,6 @@ describe('useMapCrumbs filtering & emoji logic', () => {
       expect(result[0].id).toBe('crumb-1');
     });
 
-    it('filters by unorganized quick filter', () => {
-      const result = filterCrumbs(sampleCrumbs, {
-        searchQuery: '',
-        selectedGuideId: null,
-        quickFilter: 'unorganized',
-      });
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('crumb-3');
-    });
-
     it('filters by visited quick filter', () => {
       const result = filterCrumbs(sampleCrumbs, {
         searchQuery: '',

@@ -35,10 +35,9 @@ interface FilterChipOption {
 
 const FILTER_CHIPS: FilterChipOption[] = [
   { key: 'all', label: 'All' },
-  { key: 'open_now', label: 'Open Now 🟢' },
-  { key: 'bookable', label: 'Bookable 🍷' },
-  { key: 'unorganized', label: 'Unorganized ✨' },
-  { key: 'visited', label: 'Visited ✓' },
+  { key: 'open_now', label: 'Open Now' },
+  { key: 'bookable', label: 'Bookable' },
+  { key: 'visited', label: 'Visited' },
 ];
 
 export function MapFilterBar({
@@ -69,7 +68,11 @@ export function MapFilterBar({
 
   const handleChipPress = (filter: MapQuickFilter) => {
     haptics.tap();
-    onSelectQuickFilter(filter);
+    if (activeQuickFilter === filter && filter !== 'all') {
+      onSelectQuickFilter('all');
+    } else {
+      onSelectQuickFilter(filter);
+    }
   };
 
   return (
