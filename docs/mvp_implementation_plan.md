@@ -74,17 +74,34 @@ flowchart TD
 | **M3: Mobile Auth & Core Shell** | `mobile/src/app/(auth)/`, `mobile/src/app/(tabs)/` | 🟢 **Done** |
 | **M4: Mobile Inbox & Ingestion UI** | `mobile/src/components/ingestion/`, `mobile/src/app/(tabs)/inbox/` | 🟢 **Done** |
 | **M5: Crumb Details & Live Hours** | `mobile/src/app/crumbs/[id].tsx`, `mobile/src/utils/opening-hours.ts`, `maps.ts` | 🟢 **Done** |
-| **M6: Guides Hub & Dynamic Collages** | `mobile/src/app/(tabs)/guides/`, `mobile/src/components/guides/` | 🟢 **Done** |
+| **M6: Guides Hub & Detail Collection View** | `mobile/src/app/guides/[id].tsx`, `api/src/modules/guides/` (Full CRUD + Modals) | 🟢 **Done** |
 | **M7: Cravings Map Polish** | `mobile/src/app/(tabs)/(home)/` | 🟡 **In Progress** |
-| **M8: Food Crawl Sequencing Engine** | `api/src/modules/crawl/` + Mobile Timeline View | 🔴 **Next Sprint** |
+| **M8: Food Crawl Sequencing & Route Engine** | Progressive Dinner & Walking Tasting Trail | 🔴 **Next Sprint** |
 | **M9: Digital Tasting Menu & 1-Tap Clone** | `api/src/modules/guides/` clone + Mobile Export Sheet | 🔴 **Next Sprint** |
 
 ---
 
-## 5. Next Focus: Food Crawl & Tasting Menu
-1. **Food Crawl Sequencing**:
-   - Backend logic in `api/src/modules/crawl/` to sequence spots by course type (`aperitif` $\rightarrow$ `main` $\rightarrow$ `digestif_dessert`) and compute walking distance between coordinates.
-   - UI on mobile to toggle a Guide into an interactive crawl timeline.
-2. **Digital Tasting Menu & Clone**:
-   - `POST /guides/:id/clone` API to clone a guide and its crumbs.
-   - Story card exporter for sharing curated guides on Instagram Stories and messaging apps.
+## 5. Next Focus: Food Crawl Engine & Digital Tasting Menu
+
+### A. Food Crawl Engine Architecture
+Food Crawl transforms a static collection of crumbs into an intentional, step-by-step culinary outing:
+
+1. **Dual-Mode Crawl Engine**:
+   - **Mode 1 — Progressive Dinner (Diverse Venue Types)**:
+     - For guides containing diverse spot types (e.g. Cocktail Lounge + Pasta Trattoria + Gelateria), the engine sequences stops by dining course:
+       $$\text{Apéritif / Drinks} \longrightarrow \text{Main Course} \longrightarrow \text{Digestif / Dessert}$$
+   - **Mode 2 — Tasting Trail (Same-Category / Casual Venues)**:
+     - For single-theme guides (e.g., 4 Taco Trucks, 5 Coffee Shops, or multiple dinner spots), the engine treats the list as a walking crawl:
+     - Calculates optimal walking sequence via Haversine distance between coordinates.
+     - Displays estimated walking times and distances between consecutive stops (e.g., `4 min walk · 0.2 mi`).
+     - Highlights the single **Must-Order Bite** at each stop.
+
+2. **Interactive Route Customization**:
+   - Interactive reordering and stop selection (select which 3 of 6 spots to visit tonight).
+   - Live turn-by-turn routing deeplinks (Apple Maps / Google Maps).
+
+### B. Digital Tasting Menu & 1-Tap Clone
+1. **1-Tap Clone**:
+   - `POST /guides/:id/clone` to duplicate public guides and copy crumbs into the user's library.
+2. **Visual Export Sheet**:
+   - Native Instagram Story card exporter rendering high-res graphic snapshots of curated guides.
