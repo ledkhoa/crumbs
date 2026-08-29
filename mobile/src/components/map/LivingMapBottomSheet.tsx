@@ -22,12 +22,11 @@ import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { GrabHandle } from '@/components/ui/GrabHandle';
 import { SearchInput } from '@/components/ui/SearchInput';
-import { CompactCrumbCard } from '@/components/crumbs/CompactCrumbCard';
+import { MapCrumbDetailCard } from '@/components/map/MapCrumbDetailCard';
 import {
   SparkleIcon,
   NavigationArrowIcon,
   CaretRightIcon,
-  XIcon,
 } from 'phosphor-react-native';
 import { haversineDistanceMiles } from '@/utils/map-clustering';
 import { getRestaurantOpenStatus } from '@/utils/opening-hours';
@@ -40,7 +39,7 @@ import type {
 import type { GuideSummary } from '@/hooks/useMapCrumbs';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-export const PEEK_HEIGHT = 168;
+export const PEEK_HEIGHT = 200;
 export const MID_HEIGHT = Math.round(SCREEN_HEIGHT * 0.48);
 export const FULL_HEIGHT = Math.round(SCREEN_HEIGHT * 0.84);
 
@@ -304,158 +303,143 @@ export function LivingMapBottomSheet({
         <View style={styles.dragHeader}>
           <GrabHandle style={styles.grabHandle} />
 
-          {/* If a pin is selected on the map */}
-          {selectedCrumb ? (
-            <View style={styles.selectedHeaderRow}>
-              <Text
-                style={[styles.selectedHeaderTitle, { color: colors.text }]}
-                numberOfLines={1}
-              >
-                {selectedCrumb.restaurant.name}
-              </Text>
-              <TouchableOpacity
-                style={[
-                  styles.closeSelectedButton,
-                  { backgroundColor: colors.inputBackground },
-                ]}
-                onPress={() => {
-                  haptics.tap();
-                  onDeselectCrumb();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Close selection"
-              >
-                <XIcon size={16} color={colors.textMuted} weight="bold" />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            /* Search Input & Action Buttons in Thumb Zone */
-            <View style={styles.searchBarRow}>
-              <SearchInput
-                value={searchQuery}
-                onChangeText={onSearchChange}
-                placeholder="Search cravings, dishes, vibes..."
-                onFocus={handleSearchFocus}
-                containerStyle={[
-                  styles.searchInput,
-                  {
-                    backgroundColor: colors.inputBackground,
-                    borderColor: colors.inputBorder,
-                  },
-                ]}
-              />
+          {/* If NO pin is selected, show Search Input & Action Buttons in Thumb Zone */}
+          {!selectedCrumb && (
+            <>
+              <View style={styles.searchBarRow}>
+                <SearchInput
+                  value={searchQuery}
+                  onChangeText={onSearchChange}
+                  placeholder="Search cravings, dishes, vibes..."
+                  onFocus={handleSearchFocus}
+                  containerStyle={[
+                    styles.searchInput,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      borderColor: colors.inputBorder,
+                    },
+                  ]}
+                />
 
-              {/* Decide Now Action Button */}
-              <TouchableOpacity
-                style={[
-                  styles.iconActionButton,
-                  {
-                    backgroundColor: colors.primary,
-                    borderColor: colors.primary,
-                  },
-                ]}
-                onPress={() => {
-                  haptics.primary();
-                  onDecideNowPress();
-                }}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel="Decide a craving for me"
-              >
-                <SparkleIcon size={18} color={colors.onPrimary} weight="fill" />
-              </TouchableOpacity>
-
-              {/* My Location Button */}
-              <TouchableOpacity
-                style={[
-                  styles.iconActionButton,
-                  {
-                    backgroundColor: colors.inputBackground,
-                    borderColor: colors.inputBorder,
-                  },
-                ]}
-                onPress={() => {
-                  haptics.selection();
-                  onRecenterPress();
-                }}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel="Recenter to my location"
-              >
-                {isLocating ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <NavigationArrowIcon
+                {/* Decide Now Action Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.iconActionButton,
+                    {
+                      backgroundColor: colors.primary,
+                      borderColor: colors.primary,
+                    },
+                  ]}
+                  onPress={() => {
+                    haptics.primary();
+                    onDecideNowPress();
+                  }}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel="Decide a craving for me"
+                >
+                  <SparkleIcon
                     size={18}
-                    color={colors.primary}
+                    color={colors.onPrimary}
                     weight="fill"
                   />
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
+                </TouchableOpacity>
 
-          {/* Quick Filter Chips Carousel */}
-          {!selectedCrumb && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chipsScrollContainer}
-            >
-              {FILTER_CHIPS.map((chip) => {
-                const isActive = activeQuickFilter === chip.key;
-                const label =
-                  chip.key === 'all' ? `All (${crumbs.length})` : chip.label;
+                {/* My Location Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.iconActionButton,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      borderColor: colors.inputBorder,
+                    },
+                  ]}
+                  onPress={() => {
+                    haptics.selection();
+                    onRecenterPress();
+                  }}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Recenter to my location"
+                >
+                  {isLocating ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <NavigationArrowIcon
+                      size={18}
+                      color={colors.primary}
+                      weight="fill"
+                    />
+                  )}
+                </TouchableOpacity>
+              </View>
 
-                return (
-                  <TouchableOpacity
-                    key={chip.key}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: isActive
-                          ? colors.primary
-                          : colors.inputBackground,
-                        borderColor: isActive
-                          ? colors.primary
-                          : colors.inputBorder,
-                      },
-                    ]}
-                    onPress={() => handleChipPress(chip.key)}
-                    activeOpacity={0.8}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isActive }}
-                    accessibilityLabel={label}
-                  >
-                    <Text
+              {/* Quick Filter Chips Carousel */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chipsScrollContainer}
+              >
+                {FILTER_CHIPS.map((chip) => {
+                  const isActive = activeQuickFilter === chip.key;
+                  const label =
+                    chip.key === 'all' ? `All (${crumbs.length})` : chip.label;
+
+                  return (
+                    <TouchableOpacity
+                      key={chip.key}
                       style={[
-                        styles.chipText,
+                        styles.chip,
                         {
-                          color: isActive ? colors.onPrimary : colors.text,
-                          fontWeight: isActive ? '700' : '500',
+                          backgroundColor: isActive
+                            ? colors.primary
+                            : colors.inputBackground,
+                          borderColor: isActive
+                            ? colors.primary
+                            : colors.inputBorder,
                         },
                       ]}
+                      onPress={() => handleChipPress(chip.key)}
+                      activeOpacity={0.8}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isActive }}
+                      accessibilityLabel={label}
                     >
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+                      <Text
+                        style={[
+                          styles.chipText,
+                          {
+                            color: isActive ? colors.onPrimary : colors.text,
+                            fontWeight: isActive ? '700' : '500',
+                          },
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </>
           )}
         </View>
       </GestureDetector>
 
-      {/* Sheet Body: Selected Crumb Card OR Mock 5.6 Discovery Sections */}
+      {/* Sheet Body: Selected Crumb Detail Card OR Discovery Sections */}
       {selectedCrumb ? (
-        <View style={styles.selectedCardWrapper}>
-          <CompactCrumbCard
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.selectedCardScroll}
+          nestedScrollEnabled
+        >
+          <MapCrumbDetailCard
             crumb={selectedCrumb}
-            onPress={() => onCardPress(selectedCrumb)}
-            onAddToGuide={() => onAddToGuidePress(selectedCrumb)}
-            onBookOrMapPress={() => onBookOrMapPress(selectedCrumb)}
+            onPress={onCardPress}
+            onAddToGuide={onAddToGuidePress}
+            onBookOrMapPress={onBookOrMapPress}
+            onClose={onDeselectCrumb}
           />
-        </View>
+        </ScrollView>
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -761,9 +745,8 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 12,
   },
-  selectedCardWrapper: {
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Theme.spacing.xs,
+  selectedCardScroll: {
+    paddingBottom: Theme.spacing.xxl,
   },
   scrollContent: {
     paddingHorizontal: Theme.spacing.md,
