@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { View, StyleSheet, Linking, type FlatList } from 'react-native';
+import { View, StyleSheet, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import type MapView from 'react-native-maps';
@@ -14,15 +14,9 @@ import {
   USER_NEIGHBORHOOD_ZOOM_DELTA,
   type MapRegion,
 } from '@/types/map';
-import {
-  getBoundingRegionForCoordinates,
-  pickRandomCraving,
-  isCoordinateInRegion,
-} from '@/utils/map-clustering';
+import { pickRandomCraving } from '@/utils/map-clustering';
 import { LiveCravingsMapView } from '@/components/map/LiveCravingsMapView';
-import { MapFilterBar } from '@/components/map/MapFilterBar';
-import { MapCrumbCarousel } from '@/components/map/MapCrumbCarousel';
-import { MapFloatingControls } from '@/components/map/MapFloatingControls';
+import { LivingMapBottomSheet } from '@/components/map/LivingMapBottomSheet';
 import { LocationPermissionBanner } from '@/components/map/LocationPermissionBanner';
 import { MapEmptyStateOverlay } from '@/components/map/MapEmptyStateOverlay';
 import { QuickAddToGuideModal } from '@/components/ingestion/QuickAddToGuideModal';
@@ -34,7 +28,6 @@ export default function HomeScreen() {
   const { colors } = useTheme();
 
   const mapRef = useRef<MapView | null>(null);
-  const carouselRef = useRef<FlatList<EnrichedUserCrumb> | null>(null);
   const isProgrammaticMoveRef = useRef(false);
 
   const [selectedCrumbId, setSelectedCrumbId] = useState<string | null>(null);
@@ -67,6 +60,11 @@ export default function HomeScreen() {
     guides,
   } = useMapCrumbs();
 
+  const selectedCrumb = useMemo(() => {
+    if (!selectedCrumbId) return null;
+    return allSavedCrumbs.find((c) => c.id === selectedCrumbId) || null;
+  }, [selectedCrumbId, allSavedCrumbs]);
+
   // Initial camera sync when user location resolves
   const hasCenteredInitialLocationRef = useRef(false);
   useEffect(() => {
@@ -87,26 +85,7 @@ export default function HomeScreen() {
     }
   }, [userCoords]);
 
-  // Determine which crumbs are within the current map viewport
-  const crumbsInViewport = useMemo(() => {
-    return filteredCrumbs.filter((crumb) => {
-      if (
-        !Number.isFinite(crumb.restaurant?.latitude) ||
-        !Number.isFinite(crumb.restaurant?.longitude)
-      ) {
-        return false;
-      }
-      return isCoordinateInRegion(
-        {
-          latitude: crumb.restaurant.latitude!,
-          longitude: crumb.restaurant.longitude!,
-        },
-        currentRegion,
-      );
-    });
-  }, [filteredCrumbs, currentRegion]);
-
-  // Smooth camera animator with vertical offset so bottom carousel doesn't cover pin
+  // Smooth camera animator with vertical offset so bottom sheet doesn't cover pin
   const animateCameraToCrumb = useCallback((crumb: EnrichedUserCrumb) => {
     if (
       !mapRef.current ||
@@ -120,7 +99,7 @@ export default function HomeScreen() {
     const lng = crumb.restaurant.longitude!;
     const latDelta = USER_NEIGHBORHOOD_ZOOM_DELTA.latitudeDelta;
     const lngDelta = USER_NEIGHBORHOOD_ZOOM_DELTA.longitudeDelta;
-    const targetLat = lat - latDelta * 0.15; // Shift pin into upper visible viewport
+    const targetLat = lat - latDelta * 0.18; // Shift pin into upper half of visible viewport
 
     isProgrammaticMoveRef.current = true;
     mapRef.current.animateToRegion(
@@ -141,15 +120,15 @@ export default function HomeScreen() {
   const handleMarkerSelect = useCallback(
     (crumbId: string) => {
       setSelectedCrumbId(crumbId);
-      const targetCrumb = filteredCrumbs.find((c) => c.id === crumbId);
+      const targetCrumb = allSavedCrumbs.find((c) => c.id === crumbId);
       if (targetCrumb) {
         animateCameraToCrumb(targetCrumb);
       }
     },
-    [filteredCrumbs, animateCameraToCrumb],
+    [allSavedCrumbs, animateCameraToCrumb],
   );
 
-  const handleCarouselSelect = useCallback(
+  const handleSheetSelectCrumb = useCallback(
     (crumb: EnrichedUserCrumb) => {
       setSelectedCrumbId(crumb.id);
       animateCameraToCrumb(crumb);
@@ -239,37 +218,11 @@ export default function HomeScreen() {
     }
   };
 
-  const handleFitAllCrumbs = () => {
-    const coords = allSavedCrumbs
-      .map((c) => {
-        if (
-          Number.isFinite(c.restaurant?.latitude) &&
-          Number.isFinite(c.restaurant?.longitude)
-        ) {
-          return {
-            latitude: c.restaurant.latitude!,
-            longitude: c.restaurant.longitude!,
-          };
-        }
-        return null;
-      })
-      .filter((c): c is { latitude: number; longitude: number } => c !== null);
-
-    if (coords.length > 0 && mapRef.current) {
-      const bounding = getBoundingRegionForCoordinates(coords);
-      mapRef.current.animateToRegion(bounding, 700);
-    }
-  };
-
   const isGlobalEmpty = allSavedCrumbs.length === 0;
-  const isViewportEmpty =
-    !isGlobalEmpty &&
-    filteredCrumbs.length > 0 &&
-    crumbsInViewport.length === 0;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Layer 0 & 1: Fullscreen Map & Custom Pins */}
+      {/* Layer 0 & 1: Full-Bleed Map & Custom Pins */}
       <LiveCravingsMapView
         mapRef={mapRef}
         crumbs={filteredCrumbs}
@@ -280,69 +233,49 @@ export default function HomeScreen() {
         showsUserLocation={locationStatus === 'granted'}
       />
 
-      {/* Layer 2: Floating Glass Top Header */}
-      <View style={[styles.topHeaderContainer, { top: insets.top + 8 }]}>
-        <MapFilterBar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          selectedGuideId={selectedGuideId}
-          guides={guides}
-          onSelectGuide={setSelectedGuideId}
-          activeQuickFilter={quickFilter}
-          onSelectQuickFilter={setQuickFilter}
-          totalVisibleCount={filteredCrumbs.length}
-        />
-
-        {/* Non-blocking Permission Banner */}
-        {!isBannerDismissed && (
+      {/* Floating Permission Banner (Top Center if GPS permission denied) */}
+      {!isBannerDismissed && locationStatus !== 'granted' && (
+        <View style={[styles.topBannerWrapper, { top: insets.top + 8 }]}>
           <LocationPermissionBanner
             status={locationStatus}
             onRequestPermission={requestPermission}
             onDismiss={() => setIsBannerDismissed(true)}
           />
-        )}
-      </View>
+        </View>
+      )}
 
-      {/* Empty States (Global or Viewport) */}
-      {isGlobalEmpty ? (
+      {/* Global Empty State (Brand New User) */}
+      {isGlobalEmpty && (
         <MapEmptyStateOverlay
           type="no_saved_crumbs_global"
           onAddCrumb={() => router.push('/(tabs)/inbox')}
         />
-      ) : isViewportEmpty ? (
-        <MapEmptyStateOverlay
-          type="no_crumbs_in_viewport"
-          totalSavedCount={allSavedCrumbs.length}
-          onFitAllCrumbs={handleFitAllCrumbs}
-          topOffset={
-            insets.top +
-            (!isBannerDismissed && locationStatus !== 'granted' ? 148 : 98)
-          }
-        />
-      ) : null}
+      )}
 
-      {/* Layer 3: Floating Action Controls (MyLocation & Decide Now Grouped on Bottom Right) */}
-      <MapFloatingControls
+      {/* Layer 2: Frosted Bottom Sheet Drawer (Mock 5.6 Sol Layout) */}
+      <LivingMapBottomSheet
+        crumbs={filteredCrumbs}
+        allSavedCrumbs={allSavedCrumbs}
+        selectedCrumb={selectedCrumb}
+        onDeselectCrumb={() => setSelectedCrumbId(null)}
+        onSelectCrumb={handleSheetSelectCrumb}
+        onCardPress={handleCardPress}
+        onAddToGuidePress={handleAddToGuide}
+        onBookOrMapPress={handleBookOrMapPress}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedGuideId={selectedGuideId}
+        guides={guides}
+        onSelectGuide={setSelectedGuideId}
+        activeQuickFilter={quickFilter}
+        onSelectQuickFilter={setQuickFilter}
         onRecenterPress={handleRecenterPress}
         onDecideNowPress={handleDecideNowPress}
         isLocating={isLocating}
-        bottomOffset={insets.bottom + 160}
+        userCoords={userCoords}
+        locationStatus={locationStatus}
+        bottomInset={0}
       />
-
-      {/* Layer 4: Bottom Snapping Crumb Card Carousel */}
-      <View
-        style={[styles.bottomCarouselWrapper, { bottom: insets.bottom + 8 }]}
-      >
-        <MapCrumbCarousel
-          carouselRef={carouselRef}
-          crumbs={filteredCrumbs}
-          selectedCrumbId={selectedCrumbId}
-          onSelectCrumb={handleCarouselSelect}
-          onCrumbCardPress={handleCardPress}
-          onAddToGuidePress={handleAddToGuide}
-          onBookOrMapPress={handleBookOrMapPress}
-        />
-      </View>
 
       {/* Quick Add To Guide Modal */}
       {guideModalTarget && (
@@ -362,16 +295,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  topHeaderContainer: {
+  topBannerWrapper: {
     position: 'absolute',
     left: 0,
     right: 0,
-    zIndex: 20,
-  },
-  bottomCarouselWrapper: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    zIndex: 25,
+    zIndex: 30,
   },
 });
