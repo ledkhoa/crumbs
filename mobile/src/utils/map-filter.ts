@@ -220,14 +220,6 @@ export function filterCrumbs(
       if (!isBookable) {
         return false;
       }
-    } else if (filters.quickFilter === 'unorganized') {
-      const isUnorganized =
-        crumb.status === 'inbox' ||
-        !crumb.guideIds ||
-        crumb.guideIds.length === 0;
-      if (!isUnorganized) {
-        return false;
-      }
     } else if (filters.quickFilter === 'visited') {
       const isVisited = crumb.isVisited === true || crumb.status === 'visited';
       if (!isVisited) {

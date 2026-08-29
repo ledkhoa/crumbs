@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -27,9 +26,16 @@ import {
   SparkleIcon,
   NavigationArrowIcon,
   CaretRightIcon,
+  ForkKnifeIcon,
+  StarIcon,
+  ClockIcon,
 } from 'phosphor-react-native';
 import { haversineDistanceMiles } from '@/utils/map-clustering';
-import { getRestaurantOpenStatus } from '@/utils/opening-hours';
+import {
+  getRestaurantOpenStatus,
+  isRestaurantOpenAtMoment,
+} from '@/utils/opening-hours';
+import { formatPriceLevel } from '@/utils/price';
 import type { EnrichedUserCrumb } from '@api/modules/crumbs/crumbs.types';
 import type {
   MapCoordinates,
@@ -39,15 +45,134 @@ import type {
 import type { GuideSummary } from '@/hooks/useMapCrumbs';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-export const PEEK_HEIGHT = 200;
-export const MID_HEIGHT = Math.round(SCREEN_HEIGHT * 0.48);
-export const FULL_HEIGHT = Math.round(SCREEN_HEIGHT * 0.84);
+export const PEEK_HEIGHT = 240;
+export const MID_HEIGHT = Math.round(SCREEN_HEIGHT * 0.52);
+export const FULL_HEIGHT = Math.round(SCREEN_HEIGHT * 0.86);
 
 const SPRING_CONFIG = {
   damping: 24,
   stiffness: 220,
   mass: 0.8,
 };
+
+export type DiningMomentType = 'morning' | 'lunch' | 'dinner' | 'late_night';
+
+interface DiningMomentConfig {
+  key: DiningMomentType;
+  label: string;
+  emoji: string;
+  title: string;
+  subtitle: string;
+  keywords: string[];
+}
+
+const DINING_MOMENTS: DiningMomentConfig[] = [
+  {
+    key: 'morning',
+    label: 'Morning',
+    emoji: '🥐',
+    title: 'Morning Coffee & Pastries',
+    subtitle: 'Cafes, bakeries, and morning rituals',
+    keywords: [
+      'bakery',
+      'coffee',
+      'cafe',
+      'breakfast',
+      'pastry',
+      'brunch',
+      'bagel',
+      'donut',
+      'tea',
+    ],
+  },
+  {
+    key: 'lunch',
+    label: 'Lunch',
+    emoji: '🥪',
+    title: 'Midday Fuel & Casual Lunch',
+    subtitle: 'Quick bites, sandwiches, and midday cravings',
+    keywords: [
+      'lunch',
+      'sandwich',
+      'deli',
+      'casual',
+      'salad',
+      'ramen',
+      'tacos',
+      'burger',
+      'poke',
+      'noodles',
+      'thai',
+      'mexican',
+    ],
+  },
+  {
+    key: 'dinner',
+    label: 'Dinner',
+    emoji: '🍷',
+    title: 'Dinner & Golden Hour',
+    subtitle: 'Sit-downs, wine bars, and memorable evenings',
+    keywords: [
+      'dinner',
+      'date night',
+      'wine',
+      'pasta',
+      'italian',
+      'steak',
+      'sushi',
+      'bistro',
+      'french',
+      'seafood',
+      'omakase',
+      'tasting',
+    ],
+  },
+  {
+    key: 'late_night',
+    label: 'Late Night',
+    emoji: '🍸',
+    title: 'Late Night Bites & Nightcaps',
+    subtitle: 'Speakeasies, late night snacks, and cocktails',
+    keywords: [
+      'bar',
+      'cocktail',
+      'drinks',
+      'late night',
+      'speakeasy',
+      'pizza',
+      'pub',
+      'lounge',
+      'tapas',
+      'beer',
+    ],
+  },
+];
+
+function getCurrentTimeMoment(crumbs: EnrichedUserCrumb[]): DiningMomentType {
+  const firstWithOffset = crumbs.find(
+    (c) =>
+      c.restaurant.regularOpeningHours?.utcOffsetMinutes !== undefined &&
+      c.restaurant.regularOpeningHours?.utcOffsetMinutes !== null,
+  );
+  const offsetMinutes =
+    firstWithOffset?.restaurant.regularOpeningHours?.utcOffsetMinutes;
+
+  if (offsetMinutes !== undefined && offsetMinutes !== null) {
+    const utcEpoch = Date.now();
+    const localDate = new Date(utcEpoch + offsetMinutes * 60 * 1000);
+    const hour = localDate.getUTCHours();
+    if (hour >= 5 && hour < 11) return 'morning';
+    if (hour >= 11 && hour < 16) return 'lunch';
+    if (hour >= 16 && hour < 22) return 'dinner';
+    return 'late_night';
+  }
+
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 11) return 'morning';
+  if (hour >= 11 && hour < 16) return 'lunch';
+  if (hour >= 16 && hour < 22) return 'dinner';
+  return 'late_night';
+}
 
 export interface LivingMapBottomSheetProps {
   crumbs: EnrichedUserCrumb[];
@@ -75,10 +200,9 @@ export interface LivingMapBottomSheetProps {
 
 const FILTER_CHIPS: Array<{ key: MapQuickFilter; label: string }> = [
   { key: 'all', label: 'All' },
-  { key: 'open_now', label: 'Open Now 🟢' },
-  { key: 'bookable', label: 'Bookable 🍷' },
-  { key: 'unorganized', label: 'Unorganized ✨' },
-  { key: 'visited', label: 'Visited ✓' },
+  { key: 'open_now', label: 'Open Now' },
+  { key: 'bookable', label: 'Bookable' },
+  { key: 'visited', label: 'Visited' },
 ];
 
 export function LivingMapBottomSheet({
@@ -104,56 +228,29 @@ export function LivingMapBottomSheet({
   bottomInset = 0,
 }: LivingMapBottomSheetProps) {
   const { colors } = useTheme();
-  const router = useRouter();
 
-  // Reanimated Sheet Height State - Defaults to PEEK (Map-first hero)
+  // Reanimated Sheet Height State
   const sheetHeight = useSharedValue(PEEK_HEIGHT);
   const startHeight = useSharedValue(PEEK_HEIGHT);
   const [currentDetent, setCurrentDetent] = useState<'peek' | 'mid' | 'full'>(
     'peek',
   );
 
-  // 1. Inbox Crumbs (Unorganized or status === 'inbox')
-  const inboxCrumbs = useMemo(() => {
-    return allSavedCrumbs.filter(
-      (c) => c.status === 'inbox' || !c.guideIds || c.guideIds.length === 0,
-    );
-  }, [allSavedCrumbs]);
+  // Time-Adaptive Dining Moments State (Resolved in restaurant/destination local timezone)
+  const autoMoment = useMemo(
+    () => getCurrentTimeMoment(allSavedCrumbs),
+    [allSavedCrumbs],
+  );
+  const [selectedMomentKey, setSelectedMomentKey] =
+    useState<DiningMomentType | null>(null);
 
-  // 2. Open Now & Nearby Crumbs (Sorted by proximity to user)
-  const openAndNearbyCrumbs = useMemo(() => {
-    return allSavedCrumbs
-      .map((c) => {
-        const openStatus = getRestaurantOpenStatus(
-          c.restaurant.regularOpeningHours,
-        );
-        let distanceMiles: number | null = null;
-        if (
-          userCoords &&
-          Number.isFinite(c.restaurant.latitude) &&
-          Number.isFinite(c.restaurant.longitude)
-        ) {
-          distanceMiles = haversineDistanceMiles(
-            userCoords.latitude,
-            userCoords.longitude,
-            c.restaurant.latitude!,
-            c.restaurant.longitude!,
-          );
-        }
-        return {
-          crumb: c,
-          isOpen: openStatus.isOpen,
-          distanceMiles,
-        };
-      })
-      .filter((item) => item.isOpen)
-      .sort((a, b) => {
-        if (a.distanceMiles !== null && b.distanceMiles !== null) {
-          return a.distanceMiles - b.distanceMiles;
-        }
-        return 0;
-      });
-  }, [allSavedCrumbs, userCoords]);
+  const activeMomentType = selectedMomentKey || autoMoment;
+  const activeMomentConfig = useMemo(() => {
+    return (
+      DINING_MOMENTS.find((m) => m.key === activeMomentType) ||
+      DINING_MOMENTS[2]!
+    );
+  }, [activeMomentType]);
 
   const triggerSnapHaptic = () => {
     haptics.primary();
@@ -186,12 +283,10 @@ export function LivingMapBottomSheet({
     .onUpdate((event) => {
       'worklet';
       const newHeight = startHeight.value - event.translationY;
-      // Freeform drag clamped with gentle overscroll elasticity
       if (newHeight >= PEEK_HEIGHT - 25 && newHeight <= FULL_HEIGHT + 35) {
         sheetHeight.value = newHeight;
       }
 
-      // Real-time magnetic notch crossing detection while dragging
       let currentZone: 'none' | 'peek' | 'mid' | 'full' = 'none';
       if (Math.abs(newHeight - PEEK_HEIGHT) <= SNAP_MAGNETIC_RADIUS) {
         currentZone = 'peek';
@@ -214,7 +309,6 @@ export function LivingMapBottomSheet({
       const current = sheetHeight.value;
       const velocity = -event.velocityY;
 
-      // High velocity swipes fling directly to the corresponding anchor marker
       if (velocity > 650) {
         if (current < MID_HEIGHT) {
           snapTo('mid');
@@ -232,7 +326,6 @@ export function LivingMapBottomSheet({
         return;
       }
 
-      // Check if within magnetic snap zone of any of the 3 marker anchors
       const distPeek = Math.abs(current - PEEK_HEIGHT);
       const distMid = Math.abs(current - MID_HEIGHT);
       const distFull = Math.abs(current - FULL_HEIGHT);
@@ -244,7 +337,6 @@ export function LivingMapBottomSheet({
       } else if (distFull <= SNAP_MAGNETIC_RADIUS) {
         snapTo('full');
       } else {
-        // Freeform custom position: smoothly settle at exact custom height
         const clampedHeight = Math.max(
           PEEK_HEIGHT,
           Math.min(FULL_HEIGHT, current),
@@ -272,9 +364,19 @@ export function LivingMapBottomSheet({
 
   const handleChipPress = (filter: MapQuickFilter) => {
     haptics.tap();
-    onSelectQuickFilter(filter);
-    if (currentDetent === 'peek') {
-      snapTo('mid');
+    if (activeQuickFilter === filter && filter !== 'all') {
+      onSelectQuickFilter('all');
+    } else {
+      onSelectQuickFilter(filter);
+    }
+  };
+
+  const handleGuideChipPress = (guideId: string | null) => {
+    haptics.tap();
+    if (selectedGuideId === guideId) {
+      onSelectGuide(null);
+    } else {
+      onSelectGuide(guideId);
     }
   };
 
@@ -284,6 +386,65 @@ export function LivingMapBottomSheet({
     if (miles < 1) return `· ${(miles * 5280).toFixed(0)} ft`;
     return `· ${miles.toFixed(1)} mi`;
   };
+
+  // Time-Adaptive Matching Crumbs with Operating Hours Verification
+  const timeAdaptiveCrumbs = useMemo(() => {
+    const keywords = activeMomentConfig.keywords;
+
+    // Step 1: Filter to restaurants that are scheduled to be open during this dining moment
+    const openDuringMoment = allSavedCrumbs.filter((c) => {
+      return isRestaurantOpenAtMoment(
+        c.restaurant.regularOpeningHours,
+        activeMomentType,
+      );
+    });
+
+    // Step 2: From those open spots, filter for keyword/vibe matches
+    const keywordMatches = openDuringMoment.filter((c) => {
+      const cuisine = (c.restaurant.cuisine || '').toLowerCase();
+      const name = (c.restaurant.name || '').toLowerCase();
+      const vibeTags = (c.postAttribution?.vibeTags || []).map((t) =>
+        t.toLowerCase(),
+      );
+      const course = (c.postAttribution?.courseCategory || '').toLowerCase();
+
+      return keywords.some(
+        (kw) =>
+          cuisine.includes(kw) ||
+          name.includes(kw) ||
+          course.includes(kw) ||
+          vibeTags.some((tag) => tag.includes(kw)),
+      );
+    });
+
+    // Step 3: Prioritize keyword matches; if few, show all spots open during this moment
+    const pool = keywordMatches.length >= 2 ? keywordMatches : openDuringMoment;
+
+    return pool.map((c) => {
+      const openStatus = getRestaurantOpenStatus(
+        c.restaurant.regularOpeningHours,
+      );
+      let distanceMiles: number | null = null;
+      if (
+        userCoords &&
+        Number.isFinite(c.restaurant.latitude) &&
+        Number.isFinite(c.restaurant.longitude)
+      ) {
+        distanceMiles = haversineDistanceMiles(
+          userCoords.latitude,
+          userCoords.longitude,
+          c.restaurant.latitude!,
+          c.restaurant.longitude!,
+        );
+      }
+      return {
+        crumb: c,
+        isOpen: openStatus.isOpen,
+        statusText: openStatus.statusText,
+        distanceMiles,
+      };
+    });
+  }, [allSavedCrumbs, activeMomentType, activeMomentConfig, userCoords]);
 
   return (
     <Animated.View
@@ -298,14 +459,15 @@ export function LivingMapBottomSheet({
         animatedStyle,
       ]}
     >
-      {/* Pan Gesture Header (Grab Handle & Quick Search Row) */}
+      {/* Pan Gesture Header (Grab Handle & Search/Filter Controls) */}
       <GestureDetector gesture={panGesture}>
         <View style={styles.dragHeader}>
           <GrabHandle style={styles.grabHandle} />
 
-          {/* If NO pin is selected, show Search Input & Action Buttons in Thumb Zone */}
+          {/* If NO pin is selected, show Search Input & Action Buttons */}
           {!selectedCrumb && (
             <>
+              {/* 1. Search Bar + Decide Now + Recenter Row */}
               <View style={styles.searchBarRow}>
                 <SearchInput
                   value={searchQuery}
@@ -374,7 +536,92 @@ export function LivingMapBottomSheet({
                 </TouchableOpacity>
               </View>
 
-              {/* Quick Filter Chips Carousel */}
+              {/* 2. My Guides Selector Chips (Above the carousel) */}
+              {guides.length > 0 && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.guidesScrollContainer}
+                >
+                  {/* All Guides Chip */}
+                  <TouchableOpacity
+                    style={[
+                      styles.guideChip,
+                      {
+                        backgroundColor:
+                          selectedGuideId === null
+                            ? colors.primary
+                            : colors.inputBackground,
+                        borderColor:
+                          selectedGuideId === null
+                            ? colors.primary
+                            : colors.inputBorder,
+                      },
+                    ]}
+                    onPress={() => handleGuideChipPress(null)}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel="All Guides"
+                  >
+                    <Text
+                      style={[
+                        styles.guideChipText,
+                        {
+                          color:
+                            selectedGuideId === null
+                              ? colors.onPrimary
+                              : colors.text,
+                          fontWeight: selectedGuideId === null ? '700' : '500',
+                        },
+                      ]}
+                    >
+                      📑 All ({allSavedCrumbs.length})
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Individual Guide Chips */}
+                  {guides.map((guide) => {
+                    const isSelected = selectedGuideId === guide.id;
+                    return (
+                      <TouchableOpacity
+                        key={guide.id}
+                        style={[
+                          styles.guideChip,
+                          {
+                            backgroundColor: isSelected
+                              ? colors.primary
+                              : colors.inputBackground,
+                            borderColor: isSelected
+                              ? colors.primary
+                              : colors.inputBorder,
+                          },
+                        ]}
+                        onPress={() => handleGuideChipPress(guide.id)}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel={guide.name}
+                      >
+                        <Text
+                          style={[
+                            styles.guideChipText,
+                            {
+                              color: isSelected
+                                ? colors.onPrimary
+                                : colors.text,
+                              fontWeight: isSelected ? '700' : '500',
+                            },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {guide.emojiIcon || '📑'} {guide.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              )}
+
+              {/* 3. Quick Status Filter Chips (All, Open Now, Bookable, Unorganized, Visited) */}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -425,7 +672,7 @@ export function LivingMapBottomSheet({
         </View>
       </GestureDetector>
 
-      {/* Sheet Body: Selected Crumb Detail Card OR Discovery Sections */}
+      {/* Sheet Body: Selected Crumb Detail Card OR Filtered Carousel + Time-Adaptive Moments */}
       {selectedCrumb ? (
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -446,184 +693,219 @@ export function LivingMapBottomSheet({
           contentContainerStyle={styles.scrollContent}
           nestedScrollEnabled
         >
-          {/* SECTION 1: Recent Inbox */}
-          {inboxCrumbs.length > 0 && (
-            <View style={styles.sectionContainer}>
-              <TouchableOpacity
-                style={styles.sectionHeader}
-                onPress={() => router.push('/(tabs)/inbox')}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    {
-                      color: colors.text,
-                      fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-                    },
-                  ]}
-                >
-                  Recent inbox
-                </Text>
+          {/* 4. Filtered Photo Carousel (Quick Horizontal Browsing) */}
+          {crumbs.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.carouselCardsContainer}
+            >
+              {crumbs.map((crumb) => {
+                const imageUrl =
+                  crumb.restaurant.photoUrl || crumb.sourcePost?.mediaUrls?.[0];
+                const effectiveHeroDish =
+                  crumb.effectiveHeroDish ||
+                  crumb.userHeroDishOverride ||
+                  crumb.postAttribution?.heroDish ||
+                  crumb.restaurant.communityFavoriteDish ||
+                  null;
+                const priceFormatted = formatPriceLevel(
+                  crumb.restaurant.priceLevel,
+                );
+                const areaName =
+                  crumb.restaurant.neighborhood ||
+                  crumb.restaurant.city ||
+                  null;
 
-                <View style={styles.badgeArrowRow}>
-                  <View
+                return (
+                  <TouchableOpacity
+                    key={crumb.id}
                     style={[
-                      styles.inboxCountBadge,
-                      { backgroundColor: colors.primary },
+                      styles.carouselCard,
+                      {
+                        backgroundColor: colors.inputBackground,
+                        borderColor: colors.cardBorder,
+                      },
+                    ]}
+                    onPress={() => {
+                      haptics.tap();
+                      onSelectCrumb(crumb);
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    {/* Thumbnail Image */}
+                    {imageUrl ? (
+                      <Image
+                        source={{ uri: imageUrl }}
+                        style={styles.carouselCardImage}
+                        contentFit="cover"
+                        transition={200}
+                      />
+                    ) : (
+                      <View style={styles.carouselCardPlaceholder}>
+                        <ForkKnifeIcon size={24} color={colors.textMuted} />
+                      </View>
+                    )}
+
+                    {/* Meta Overlay */}
+                    <View style={styles.carouselCardOverlay}>
+                      <Text style={styles.carouselCardName} numberOfLines={1}>
+                        {crumb.restaurant.name}
+                      </Text>
+
+                      <View style={styles.carouselCardMetaRow}>
+                        {crumb.restaurant.rating !== null &&
+                          crumb.restaurant.rating !== undefined && (
+                            <View style={styles.carouselCardRating}>
+                              <StarIcon
+                                size={10}
+                                color="#DFB064"
+                                weight="fill"
+                              />
+                              <Text style={styles.carouselCardRatingText}>
+                                {crumb.restaurant.rating.toFixed(1)}
+                              </Text>
+                            </View>
+                          )}
+
+                        {Boolean(priceFormatted) && (
+                          <Text style={styles.carouselCardDot}>·</Text>
+                        )}
+                        {Boolean(priceFormatted) && (
+                          <Text style={styles.carouselCardMetaText}>
+                            {priceFormatted}
+                          </Text>
+                        )}
+
+                        {Boolean(areaName) && (
+                          <Text style={styles.carouselCardDot}>·</Text>
+                        )}
+                        {Boolean(areaName) && (
+                          <Text
+                            style={styles.carouselCardMetaText}
+                            numberOfLines={1}
+                          >
+                            {areaName}
+                          </Text>
+                        )}
+                      </View>
+
+                      {/* Hero Dish Highlight Tag */}
+                      {effectiveHeroDish && (
+                        <Text style={styles.carouselCardDish} numberOfLines={1}>
+                          ✨ {effectiveHeroDish}
+                        </Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          ) : (
+            <View style={styles.emptyResultsWrapper}>
+              <Text
+                style={[styles.emptyResultsText, { color: colors.textMuted }]}
+              >
+                No saved cravings match this filter.
+              </Text>
+            </View>
+          )}
+
+          {/* 5. Time-Adaptive Dining Moments Section */}
+          <View style={styles.momentSection}>
+            <View style={styles.momentHeaderRow}>
+              <View style={styles.momentTitleGroup}>
+                <View style={styles.momentHeadingRow}>
+                  <Text
+                    style={[
+                      styles.momentTitle,
+                      {
+                        color: colors.text,
+                        fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+                      },
                     ]}
                   >
-                    <Text style={styles.inboxCountText}>
-                      {inboxCrumbs.length}
-                    </Text>
-                  </View>
-                  <CaretRightIcon size={14} color={colors.textMuted} />
+                    {activeMomentConfig.emoji} {activeMomentConfig.title}
+                  </Text>
                 </View>
-              </TouchableOpacity>
+                <Text
+                  style={[styles.momentSubtitle, { color: colors.textMuted }]}
+                >
+                  {activeMomentConfig.subtitle}
+                </Text>
+              </View>
+            </View>
 
-              {/* Inbox Photo Cards Carousel */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.inboxCardsContainer}
-              >
-                {inboxCrumbs.slice(0, 8).map((crumb) => {
-                  const imageUrl =
-                    crumb.restaurant.photoUrl ||
-                    crumb.sourcePost?.mediaUrls?.[0];
+            {/* Time-of-Day Quick Switcher Tabs */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.momentTabsContainer}
+            >
+              {DINING_MOMENTS.map((m) => {
+                const isActive = activeMomentType === m.key;
+                return (
+                  <TouchableOpacity
+                    key={m.key}
+                    style={[
+                      styles.momentTab,
+                      {
+                        backgroundColor: isActive
+                          ? colors.primary
+                          : colors.inputBackground,
+                        borderColor: isActive
+                          ? colors.primary
+                          : colors.cardBorder,
+                      },
+                    ]}
+                    onPress={() => {
+                      haptics.selection();
+                      setSelectedMomentKey(m.key);
+                    }}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={m.label}
+                  >
+                    <Text
+                      style={[
+                        styles.momentTabText,
+                        {
+                          color: isActive ? colors.onPrimary : colors.text,
+                          fontWeight: isActive ? '700' : '500',
+                        },
+                      ]}
+                    >
+                      {m.emoji} {m.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Matching Moments Cards List */}
+            <View style={styles.momentList}>
+              {timeAdaptiveCrumbs
+                .slice(0, 6)
+                .map(({ crumb, isOpen, statusText, distanceMiles }) => {
+                  const effectiveHeroDish =
+                    crumb.effectiveHeroDish ||
+                    crumb.userHeroDishOverride ||
+                    crumb.postAttribution?.heroDish ||
+                    crumb.restaurant.communityFavoriteDish ||
+                    null;
+                  const areaName =
+                    crumb.restaurant.neighborhood ||
+                    crumb.restaurant.city ||
+                    null;
 
                   return (
                     <TouchableOpacity
                       key={crumb.id}
                       style={[
-                        styles.inboxCard,
+                        styles.momentCardRow,
                         {
-                          backgroundColor: colors.inputBackground,
-                          borderColor: colors.cardBorder,
+                          borderBottomColor: colors.cardBorder,
                         },
-                      ]}
-                      onPress={() => {
-                        haptics.tap();
-                        onSelectCrumb(crumb);
-                      }}
-                      activeOpacity={0.85}
-                    >
-                      {imageUrl ? (
-                        <Image
-                          source={{ uri: imageUrl }}
-                          style={styles.inboxCardImage}
-                          contentFit="cover"
-                          transition={200}
-                        />
-                      ) : (
-                        <View style={styles.inboxCardPlaceholder}>
-                          <Text style={styles.inboxCardEmoji}>🍴</Text>
-                        </View>
-                      )}
-
-                      {/* Gradient Overlay & Name */}
-                      <View style={styles.inboxCardOverlay}>
-                        <Text style={styles.inboxCardName} numberOfLines={1}>
-                          {crumb.restaurant.name}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* SECTION 2: My Guides */}
-          {guides.length > 0 && (
-            <View style={styles.sectionContainer}>
-              <TouchableOpacity
-                style={styles.sectionHeader}
-                onPress={() => router.push('/(tabs)/guides')}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    {
-                      color: colors.text,
-                      fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-                    },
-                  ]}
-                >
-                  My guides
-                </Text>
-                <CaretRightIcon size={14} color={colors.textMuted} />
-              </TouchableOpacity>
-
-              <View style={styles.guidesList}>
-                {guides.slice(0, 4).map((guide) => (
-                  <TouchableOpacity
-                    key={guide.id}
-                    style={[
-                      styles.guideRow,
-                      {
-                        borderBottomColor: colors.cardBorder,
-                        backgroundColor:
-                          selectedGuideId === guide.id
-                            ? colors.inputBackground
-                            : 'transparent',
-                      },
-                    ]}
-                    onPress={() => {
-                      haptics.tap();
-                      if (selectedGuideId === guide.id) {
-                        onSelectGuide(null);
-                      } else {
-                        onSelectGuide(guide.id);
-                      }
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.guideRowLeft}>
-                      <Text style={styles.guideRowEmoji}>
-                        {guide.emojiIcon || '📑'}
-                      </Text>
-                      <Text
-                        style={[styles.guideRowName, { color: colors.text }]}
-                        numberOfLines={1}
-                      >
-                        {guide.name}
-                      </Text>
-                    </View>
-                    <CaretRightIcon size={14} color={colors.textSubtle} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* SECTION 3: Open Now & Nearby */}
-          {openAndNearbyCrumbs.length > 0 && (
-            <View style={styles.sectionContainer}>
-              <View style={styles.sectionHeader}>
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    {
-                      color: colors.text,
-                      fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-                    },
-                  ]}
-                >
-                  Open now & nearby
-                </Text>
-              </View>
-
-              <View style={styles.nearbyList}>
-                {openAndNearbyCrumbs
-                  .slice(0, 5)
-                  .map(({ crumb, distanceMiles }) => (
-                    <TouchableOpacity
-                      key={crumb.id}
-                      style={[
-                        styles.nearbyRow,
-                        { borderBottomColor: colors.cardBorder },
                       ]}
                       onPress={() => {
                         haptics.tap();
@@ -631,31 +913,115 @@ export function LivingMapBottomSheet({
                       }}
                       activeOpacity={0.7}
                     >
-                      <View style={styles.nearbyRowLeft}>
-                        <View style={styles.openIndicatorDot} />
-                        <Text
-                          style={[styles.nearbyRowName, { color: colors.text }]}
-                          numberOfLines={1}
+                      {/* Left Thumbnail */}
+                      {crumb.restaurant.photoUrl ||
+                      crumb.sourcePost?.mediaUrls?.[0] ? (
+                        <Image
+                          source={{
+                            uri:
+                              crumb.restaurant.photoUrl ||
+                              crumb.sourcePost?.mediaUrls?.[0],
+                          }}
+                          style={styles.momentThumb}
+                          contentFit="cover"
+                          transition={150}
+                        />
+                      ) : (
+                        <View
+                          style={[
+                            styles.momentThumbPlaceholder,
+                            { backgroundColor: colors.inputBackground },
+                          ]}
                         >
-                          {crumb.restaurant.name}
-                        </Text>
-                        {distanceMiles !== null && (
+                          <ForkKnifeIcon size={16} color={colors.textMuted} />
+                        </View>
+                      )}
+
+                      {/* Info Column */}
+                      <View style={styles.momentInfoCol}>
+                        <View style={styles.momentRowTop}>
                           <Text
                             style={[
-                              styles.nearbyRowDistance,
-                              { color: colors.textMuted },
+                              styles.momentRestaurantName,
+                              { color: colors.text },
                             ]}
+                            numberOfLines={1}
                           >
-                            {formatDistance(distanceMiles)}
+                            {crumb.restaurant.name}
                           </Text>
-                        )}
+
+                          {Boolean(areaName) && (
+                            <Text
+                              style={[
+                                styles.momentNeighborhood,
+                                { color: colors.textMuted },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {areaName}
+                            </Text>
+                          )}
+                        </View>
+
+                        {/* Hero Dish Highlight or Status */}
+                        <View style={styles.momentRowBottom}>
+                          {effectiveHeroDish ? (
+                            <Text
+                              style={[
+                                styles.momentDishText,
+                                { color: colors.primary },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              ✨ {effectiveHeroDish}
+                            </Text>
+                          ) : (
+                            <View style={styles.statusInlineRow}>
+                              <View
+                                style={[
+                                  styles.statusDotSmall,
+                                  {
+                                    backgroundColor: isOpen
+                                      ? colors.success
+                                      : colors.textMuted,
+                                  },
+                                ]}
+                              />
+                              <Text
+                                style={[
+                                  styles.statusInlineText,
+                                  {
+                                    color: isOpen
+                                      ? colors.success
+                                      : colors.textMuted,
+                                  },
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {statusText}
+                              </Text>
+                            </View>
+                          )}
+
+                          {distanceMiles !== null && (
+                            <Text
+                              style={[
+                                styles.momentDistanceText,
+                                { color: colors.textSubtle },
+                              ]}
+                            >
+                              {formatDistance(distanceMiles)}
+                            </Text>
+                          )}
+                        </View>
                       </View>
+
                       <CaretRightIcon size={14} color={colors.textSubtle} />
                     </TouchableOpacity>
-                  ))}
-              </View>
+                  );
+                })}
             </View>
-          )}
+          </View>
         </ScrollView>
       )}
     </Animated.View>
@@ -683,35 +1049,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: Theme.spacing.md,
     paddingTop: Theme.spacing.sm,
     paddingBottom: Theme.spacing.xs,
+    gap: 6,
   },
   grabHandle: {
-    marginBottom: Theme.spacing.xs,
-  },
-  selectedHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Theme.spacing.xs,
-    paddingHorizontal: Theme.spacing.xs,
-  },
-  selectedHeaderTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    flex: 1,
-    marginRight: Theme.spacing.sm,
-  },
-  closeSelectedButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: 2,
   },
   searchBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: Theme.spacing.xs,
   },
   searchInput: {
     flex: 1,
@@ -730,11 +1076,27 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  guidesScrollContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 2,
+  },
+  guideChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Theme.radii.pill,
+    borderWidth: 1,
+    maxWidth: 160,
+  },
+  guideChipText: {
+    fontSize: 11,
+  },
   chipsScrollContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   chip: {
     paddingHorizontal: 12,
@@ -753,130 +1115,191 @@ const styles = StyleSheet.create({
     paddingBottom: Theme.spacing.xxl,
     gap: Theme.spacing.md,
   },
-  sectionContainer: {
-    marginTop: 4,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Theme.spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  badgeArrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  inboxCountBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inboxCountText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  inboxCardsContainer: {
+  carouselCardsContainer: {
     gap: Theme.spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: 4,
   },
-  inboxCard: {
-    width: 108,
-    height: 128,
+  carouselCard: {
+    width: 170,
+    height: 124,
     borderRadius: Theme.radii.lg,
     borderWidth: 1,
     overflow: 'hidden',
     position: 'relative',
   },
-  inboxCardImage: {
+  carouselCardImage: {
     width: '100%',
     height: '100%',
   },
-  inboxCardPlaceholder: {
+  carouselCardPlaceholder: {
     width: '100%',
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  inboxCardEmoji: {
-    fontSize: 32,
-  },
-  inboxCardOverlay: {
+  carouselCardOverlay: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
     paddingHorizontal: 8,
     paddingVertical: 6,
+    gap: 2,
   },
-  inboxCardName: {
+  carouselCardName: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
   },
-  guidesList: {
-    borderRadius: Theme.radii.lg,
-    overflow: 'hidden',
-  },
-  guideRow: {
+  carouselCardMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 3,
   },
-  guideRowLeft: {
+  carouselCardRating: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    flex: 1,
+    gap: 2,
   },
-  guideRowEmoji: {
-    fontSize: 18,
+  carouselCardRatingText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
-  guideRowName: {
-    fontSize: 14,
-    fontWeight: '500',
-    flex: 1,
+  carouselCardDot: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 9,
   },
-  nearbyList: {
-    borderRadius: Theme.radii.lg,
-    overflow: 'hidden',
-  },
-  nearbyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  nearbyRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
-  openIndicatorDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: '#7C9070', // Sage/Pistachio Green
-  },
-  nearbyRowName: {
-    fontSize: 14,
+  carouselCardMetaText: {
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 10,
     fontWeight: '500',
   },
-  nearbyRowDistance: {
+  carouselCardDish: {
+    color: '#E89078',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  emptyResultsWrapper: {
+    paddingVertical: Theme.spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyResultsText: {
     fontSize: 13,
+    fontStyle: 'italic',
+  },
+  momentSection: {
+    marginTop: Theme.spacing.xs,
+    gap: Theme.spacing.sm,
+  },
+  momentHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  momentTitleGroup: {
+    gap: 2,
+  },
+  momentHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  momentTitle: {
+    fontSize: 17,
+    fontWeight: 'bold',
+  },
+  momentSubtitle: {
+    fontSize: 12,
+  },
+  momentTabsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 2,
+  },
+  momentTab: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Theme.radii.pill,
+    borderWidth: 1,
+  },
+  momentTabText: {
+    fontSize: 11,
+  },
+  momentList: {
+    borderRadius: Theme.radii.lg,
+    overflow: 'hidden',
+  },
+  momentCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 10,
+  },
+  momentThumb: {
+    width: 46,
+    height: 46,
+    borderRadius: Theme.radii.md,
+  },
+  momentThumbPlaceholder: {
+    width: 46,
+    height: 46,
+    borderRadius: Theme.radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  momentInfoCol: {
+    flex: 1,
+    gap: 3,
+  },
+  momentRowTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  momentRestaurantName: {
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+  },
+  momentNeighborhood: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  momentRowBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  momentDishText: {
+    fontSize: 11,
+    fontWeight: '600',
+    flex: 1,
+  },
+  statusInlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+  },
+  statusDotSmall: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusInlineText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  momentDistanceText: {
+    fontSize: 11,
   },
 });

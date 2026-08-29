@@ -27,8 +27,7 @@ export interface UserLocationState {
   errorMessage: string | null;
 }
 
-export type MapQuickFilter =
-  'all' | 'open_now' | 'bookable' | 'unorganized' | 'visited';
+export type MapQuickFilter = 'all' | 'open_now' | 'bookable' | 'visited';
 
 export interface MapFilterState {
   searchQuery: string;

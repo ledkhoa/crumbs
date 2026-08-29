@@ -3,6 +3,7 @@ import {
   getRestaurantOpenStatus,
   formatDisplayTime,
   parseTimeToMinutes,
+  isRestaurantOpenAtMoment,
 } from './opening-hours';
 
 describe('formatDisplayTime', () => {
@@ -120,5 +121,127 @@ describe('getRestaurantOpenStatus', () => {
     const status = getRestaurantOpenStatus(hours);
     expect(status.isOpen).toBe(true);
     expect(status.statusText).toBe('Open 24 hours');
+  });
+});
+
+describe('isRestaurantOpenAtMoment', () => {
+  // Wednesday 15:00 UTC (11:00 AM NYC EDT, Day 3)
+  const testUtc = new Date('2026-08-26T15:00:00Z').getTime();
+
+  it('correctly filters dinner-only restaurant out of lunch and morning', () => {
+    const dinnerOnlyHours = {
+      utcOffsetMinutes: -240,
+      periods: [
+        {
+          open: { day: 3, time: '17:00' }, // 5:00 PM
+          close: { day: 3, time: '22:00' }, // 10:00 PM
+        },
+      ],
+    };
+
+    expect(isRestaurantOpenAtMoment(dinnerOnlyHours, 'morning', testUtc)).toBe(
+      false,
+    );
+    expect(isRestaurantOpenAtMoment(dinnerOnlyHours, 'lunch', testUtc)).toBe(
+      false,
+    );
+    expect(isRestaurantOpenAtMoment(dinnerOnlyHours, 'dinner', testUtc)).toBe(
+      true,
+    );
+    expect(
+      isRestaurantOpenAtMoment(dinnerOnlyHours, 'late_night', testUtc),
+    ).toBe(false);
+  });
+
+  it('correctly identifies lunch & dinner spots', () => {
+    const allDayHours = {
+      utcOffsetMinutes: -240,
+      periods: [
+        {
+          open: { day: 3, time: '11:30' },
+          close: { day: 3, time: '22:00' },
+        },
+      ],
+    };
+
+    expect(isRestaurantOpenAtMoment(allDayHours, 'morning', testUtc)).toBe(
+      false,
+    );
+    expect(isRestaurantOpenAtMoment(allDayHours, 'lunch', testUtc)).toBe(true);
+    expect(isRestaurantOpenAtMoment(allDayHours, 'dinner', testUtc)).toBe(true);
+  });
+
+  it('correctly identifies morning bakeries & coffee shops', () => {
+    const morningBakeryHours = {
+      utcOffsetMinutes: -240,
+      periods: [
+        {
+          open: { day: 3, time: '07:00' },
+          close: { day: 3, time: '14:00' },
+        },
+      ],
+    };
+
+    expect(
+      isRestaurantOpenAtMoment(morningBakeryHours, 'morning', testUtc),
+    ).toBe(true);
+    expect(isRestaurantOpenAtMoment(morningBakeryHours, 'lunch', testUtc)).toBe(
+      true,
+    );
+    expect(
+      isRestaurantOpenAtMoment(morningBakeryHours, 'dinner', testUtc),
+    ).toBe(false);
+  });
+
+  it('correctly identifies late-night bars and overnight speakeasies', () => {
+    const lateBarHours = {
+      utcOffsetMinutes: -240,
+      periods: [
+        {
+          open: { day: 3, time: '18:00' },
+          close: { day: 4, time: '02:00' }, // Closes Thursday 2 AM
+        },
+      ],
+    };
+
+    expect(isRestaurantOpenAtMoment(lateBarHours, 'morning', testUtc)).toBe(
+      false,
+    );
+    expect(isRestaurantOpenAtMoment(lateBarHours, 'lunch', testUtc)).toBe(
+      false,
+    );
+    expect(isRestaurantOpenAtMoment(lateBarHours, 'dinner', testUtc)).toBe(
+      true,
+    );
+    expect(isRestaurantOpenAtMoment(lateBarHours, 'late_night', testUtc)).toBe(
+      true,
+    );
+  });
+
+  it('verifies 4 PM - 2 AM bar is NEVER marked as morning on the next day', () => {
+    // Thursday morning 13:00 UTC (9:00 AM NYC EDT, Day 4)
+    const thursdayMorningUtc = new Date('2026-08-27T13:00:00Z').getTime();
+    const wednesdayBarHours = {
+      utcOffsetMinutes: -240,
+      periods: [
+        {
+          open: { day: 3, time: '16:00' }, // Wed 4 PM
+          close: { day: 4, time: '02:00' }, // Thu 2 AM (closed 7 hours ago!)
+        },
+      ],
+    };
+
+    expect(
+      isRestaurantOpenAtMoment(
+        wednesdayBarHours,
+        'morning',
+        thursdayMorningUtc,
+      ),
+    ).toBe(false);
+  });
+
+  it('returns true when hours data is missing / unverified', () => {
+    expect(isRestaurantOpenAtMoment(null, 'lunch')).toBe(true);
+    expect(isRestaurantOpenAtMoment(undefined, 'dinner')).toBe(true);
   });
 });
