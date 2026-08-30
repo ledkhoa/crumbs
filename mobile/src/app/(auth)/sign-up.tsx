@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -28,6 +29,8 @@ import {
   EyeIcon,
   EyeSlashIcon,
 } from 'phosphor-react-native';
+
+const HERO_IMAGE = require('../../../assets/images/hero.jpg');
 
 const signUpSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -90,234 +93,267 @@ export default function SignUpScreen() {
   });
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.canvas }]}
-    >
-      <KeyboardAwareScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Brand Header */}
-        <View style={styles.header}>
-          <SparkleIcon size={36} color={colors.primary} weight="fill" />
-          <Text style={[styles.logoText, { color: colors.background }]}>
-            Crumbs
-          </Text>
-        </View>
+    <View style={styles.container}>
+      {/* Background Hero Image */}
+      <Image
+        source={HERO_IMAGE}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        contentPosition="bottom"
+        transition={200}
+      />
 
-        {/* Auth Bottom Sheet Container */}
-        <Card style={styles.card}>
-          <GrabHandle />
+      {/* Dark Moody Scrim Overlay */}
+      <View style={styles.darkScrim} />
 
-          <Heading style={styles.title}>Create Account</Heading>
-          <MutedText style={styles.subtitle}>
-            Join Crumbs to start saving and organizing dining recommendations.
-          </MutedText>
-
-          {/* Error Banner */}
-          {authError && (
-            <View
-              style={[
-                styles.errorContainer,
-                {
-                  backgroundColor: colors.errorBackground,
-                  borderColor: colors.errorBorder,
-                },
-              ]}
-            >
-              <Text style={[styles.errorText, { color: colors.error }]}>
-                {authError}
-              </Text>
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAwareScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Brand Header */}
+          <View style={styles.header}>
+            <View style={styles.logoBadge}>
+              <SparkleIcon size={34} color={colors.primary} weight="fill" />
             </View>
-          )}
+            <Text style={styles.logoText}>Crumbs</Text>
+            <Text style={styles.taglineText}>Your Living Cravings Guide</Text>
+          </View>
 
-          {/* Name Input */}
-          <form.Field name="name">
-            {(field) => (
-              <Input
-                label="Full Name"
-                placeholder="Jane Doe"
-                value={field.state.value}
-                onChangeText={field.handleChange}
-                onBlur={field.handleBlur}
-                error={field.state.meta.errors?.[0]?.message}
-                autoCapitalize="words"
-                autoCorrect={false}
-                leftIcon={
-                  <UserIcon size={18} color={colors.textSubtle} weight="bold" />
-                }
-              />
-            )}
-          </form.Field>
+          {/* Auth Bottom Sheet Container */}
+          <Card
+            style={[styles.card, { backgroundColor: colors.cardBackground }]}
+          >
+            <GrabHandle />
 
-          {/* Email Input */}
-          <form.Field name="email">
-            {(field) => (
-              <Input
-                label="Email"
-                placeholder="you@example.com"
-                value={field.state.value}
-                onChangeText={field.handleChange}
-                onBlur={field.handleBlur}
-                error={field.state.meta.errors?.[0]?.message}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                leftIcon={
-                  <EnvelopeSimpleIcon
-                    size={18}
-                    color={colors.textSubtle}
-                    weight="bold"
-                  />
-                }
-              />
-            )}
-          </form.Field>
+            <Heading style={styles.title}>Create Account</Heading>
+            <MutedText style={styles.subtitle}>
+              Join Crumbs to start saving and organizing dining recommendations.
+            </MutedText>
 
-          {/* Password Input */}
-          <form.Field name="password">
-            {(field) => (
-              <Input
-                label="Password"
-                placeholder="Create a strong password"
-                value={field.state.value}
-                onChangeText={field.handleChange}
-                onBlur={field.handleBlur}
-                error={field.state.meta.errors?.[0]?.message}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                leftIcon={
-                  <LockKeyIcon
-                    size={18}
-                    color={colors.textSubtle}
-                    weight="bold"
-                  />
-                }
-                rightIcon={
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeButton}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      showPassword ? 'Hide password' : 'Show password'
-                    }
-                  >
-                    {showPassword ? (
-                      <EyeSlashIcon
-                        size={18}
-                        color={colors.textSubtle}
-                        weight="bold"
-                      />
-                    ) : (
-                      <EyeIcon
-                        size={18}
-                        color={colors.textSubtle}
-                        weight="bold"
-                      />
-                    )}
-                  </TouchableOpacity>
-                }
-              />
-            )}
-          </form.Field>
-
-          {/* Terms Agreement */}
-          <form.Field name="agreeToTerms">
-            {(field) => (
-              <TouchableOpacity
-                style={styles.checkboxRow}
-                onPress={() => {
-                  haptics.selection();
-                  field.handleChange(!field.state.value);
-                }}
-                activeOpacity={0.8}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: field.state.value }}
+            {/* Error Banner */}
+            {authError && (
+              <View
+                style={[
+                  styles.errorContainer,
+                  {
+                    backgroundColor: colors.errorBackground,
+                    borderColor: colors.errorBorder,
+                  },
+                ]}
               >
-                <View
-                  style={[
-                    styles.checkbox,
-                    {
-                      borderColor: colors.cardBorder,
-                      backgroundColor: colors.inputBackground,
-                    },
-                    field.state.value && [
-                      styles.checkboxChecked,
-                      {
-                        backgroundColor: colors.primary,
-                        borderColor: colors.primary,
-                      },
-                    ],
-                  ]}
-                >
-                  {field.state.value && (
-                    <Text
-                      style={[styles.checkmark, { color: colors.onPrimary }]}
-                    >
-                      ✓
-                    </Text>
-                  )}
-                </View>
-                <Text style={[styles.termsText, { color: colors.textMuted }]}>
-                  I agree to the{' '}
-                  <Text style={[styles.termsLink, { color: colors.text }]}>
-                    Terms of Service
-                  </Text>{' '}
-                  and{' '}
-                  <Text style={[styles.termsLink, { color: colors.text }]}>
-                    Privacy Policy
-                  </Text>
+                <Text style={[styles.errorText, { color: colors.error }]}>
+                  {authError}
                 </Text>
-              </TouchableOpacity>
+              </View>
             )}
-          </form.Field>
 
-          {/* Sign Up Button */}
-          <form.Subscribe
-            selector={(state) => ({
-              canSubmit: state.canSubmit,
-              isSubmitting: state.isSubmitting,
-            })}
-          >
-            {({ canSubmit, isSubmitting }) => (
-              <Button
-                variant="primary"
-                size="lg"
-                onPress={() => form.handleSubmit()}
-                disabled={!canSubmit}
-                loading={isSubmitting}
-                style={styles.primaryButton}
-              >
-                Create Account
-              </Button>
-            )}
-          </form.Subscribe>
+            {/* Name Input */}
+            <form.Field name="name">
+              {(field) => (
+                <Input
+                  label="Full Name"
+                  placeholder="Jane Doe"
+                  value={field.state.value}
+                  onChangeText={field.handleChange}
+                  onBlur={field.handleBlur}
+                  error={field.state.meta.errors?.[0]?.message}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  leftIcon={
+                    <UserIcon
+                      size={18}
+                      color={colors.textSubtle}
+                      weight="bold"
+                    />
+                  }
+                />
+              )}
+            </form.Field>
 
-          {/* Switch to Sign In */}
-          <TouchableOpacity
-            style={styles.footerToggle}
-            onPress={() => {
-              haptics.tap();
-              router.back();
-            }}
-          >
-            <Text style={[styles.footerText, { color: colors.textMuted }]}>
-              Already have an account?{' '}
-              <Text style={[styles.footerHighlight, { color: colors.primary }]}>
-                Sign in
+            {/* Email Input */}
+            <form.Field name="email">
+              {(field) => (
+                <Input
+                  label="Email"
+                  placeholder="you@example.com"
+                  value={field.state.value}
+                  onChangeText={field.handleChange}
+                  onBlur={field.handleBlur}
+                  error={field.state.meta.errors?.[0]?.message}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  leftIcon={
+                    <EnvelopeSimpleIcon
+                      size={18}
+                      color={colors.textSubtle}
+                      weight="bold"
+                    />
+                  }
+                />
+              )}
+            </form.Field>
+
+            {/* Password Input */}
+            <form.Field name="password">
+              {(field) => (
+                <Input
+                  label="Password"
+                  placeholder="Create a strong password"
+                  value={field.state.value}
+                  onChangeText={field.handleChange}
+                  onBlur={field.handleBlur}
+                  error={field.state.meta.errors?.[0]?.message}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  leftIcon={
+                    <LockKeyIcon
+                      size={18}
+                      color={colors.textSubtle}
+                      weight="bold"
+                    />
+                  }
+                  rightIcon={
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeButton}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        showPassword ? 'Hide password' : 'Show password'
+                      }
+                    >
+                      {showPassword ? (
+                        <EyeSlashIcon
+                          size={18}
+                          color={colors.textSubtle}
+                          weight="bold"
+                        />
+                      ) : (
+                        <EyeIcon
+                          size={18}
+                          color={colors.textSubtle}
+                          weight="bold"
+                        />
+                      )}
+                    </TouchableOpacity>
+                  }
+                />
+              )}
+            </form.Field>
+
+            {/* Terms Agreement */}
+            <form.Field name="agreeToTerms">
+              {(field) => (
+                <TouchableOpacity
+                  style={styles.checkboxRow}
+                  onPress={() => {
+                    haptics.selection();
+                    field.handleChange(!field.state.value);
+                  }}
+                  activeOpacity={0.8}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: field.state.value }}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      {
+                        borderColor: colors.cardBorder,
+                        backgroundColor: colors.inputBackground,
+                      },
+                      field.state.value && [
+                        styles.checkboxChecked,
+                        {
+                          backgroundColor: colors.primary,
+                          borderColor: colors.primary,
+                        },
+                      ],
+                    ]}
+                  >
+                    {field.state.value && (
+                      <Text
+                        style={[styles.checkmark, { color: colors.onPrimary }]}
+                      >
+                        ✓
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={[styles.termsText, { color: colors.textMuted }]}>
+                    I agree to the{' '}
+                    <Text style={[styles.termsLink, { color: colors.text }]}>
+                      Terms of Service
+                    </Text>{' '}
+                    and{' '}
+                    <Text style={[styles.termsLink, { color: colors.text }]}>
+                      Privacy Policy
+                    </Text>
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </form.Field>
+
+            {/* Sign Up Button */}
+            <form.Subscribe
+              selector={(state) => ({
+                canSubmit: state.canSubmit,
+                isSubmitting: state.isSubmitting,
+              })}
+            >
+              {({ canSubmit, isSubmitting }) => (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onPress={() => form.handleSubmit()}
+                  disabled={!canSubmit}
+                  loading={isSubmitting}
+                  style={styles.primaryButton}
+                >
+                  Create Account
+                </Button>
+              )}
+            </form.Subscribe>
+
+            {/* Switch to Sign In */}
+            <TouchableOpacity
+              style={styles.footerToggle}
+              onPress={() => {
+                haptics.tap();
+                router.back();
+              }}
+            >
+              <Text style={[styles.footerText, { color: colors.textMuted }]}>
+                Already have an account?{' '}
+                <Text
+                  style={[styles.footerHighlight, { color: colors.primary }]}
+                >
+                  Sign in
+                </Text>
               </Text>
-            </Text>
-          </TouchableOpacity>
-        </Card>
-      </KeyboardAwareScrollView>
-    </SafeAreaView>
+            </TouchableOpacity>
+          </Card>
+        </KeyboardAwareScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#0D0A08',
+  },
+  darkScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(12, 10, 9, 0.58)',
+  },
+  safeArea: {
     flex: 1,
   },
   scrollContent: {
@@ -328,15 +364,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: Theme.spacing.xl,
     paddingBottom: Theme.spacing.lg,
+    gap: 4,
   },
-  logoIcon: {
-    fontSize: 42,
-    marginBottom: Theme.spacing.xs,
+  logoBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   logoText: {
     fontSize: 38,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     fontWeight: 'bold',
+    color: '#FFFDFC',
+    letterSpacing: -0.5,
+  },
+  taglineText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: 'rgba(255, 253, 252, 0.75)',
+    letterSpacing: 0.2,
   },
   card: {
     borderTopLeftRadius: Theme.radii.sheet,

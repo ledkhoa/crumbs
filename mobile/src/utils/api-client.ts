@@ -23,15 +23,28 @@ export const getApiBaseUrl = (): string => {
  *
  * Dynamically provides the Authorization Bearer token from Zustand session state.
  */
+export interface ApiClientHeaders {
+  Origin: string;
+  Authorization?: string;
+  [header: string]: string | undefined;
+}
+
+function getClientHeaders(): ApiClientHeaders {
+  const token = useSessionStore.getState().token;
+  if (token) {
+    return {
+      Origin: getApiBaseUrl(),
+      Authorization: `Bearer ${token}`,
+    };
+  }
+  return {
+    Origin: getApiBaseUrl(),
+  };
+}
+
 export const apiClient = hc<AppType>(getApiBaseUrl(), {
-  headers: () => {
-    const token = useSessionStore.getState().token;
-    const h: Record<string, string> = {};
-    if (token) {
-      h.Authorization = `Bearer ${token}`;
-    }
-    return h;
-  },
+  // SAFETY: Hono Client requires Record<string, string> callback contract matching ApiClientHeaders
+  headers: getClientHeaders as () => Record<string, string>,
 });
 
 export interface RequestOptions extends RequestInit {
@@ -52,6 +65,9 @@ export async function apiRequest<T>(
   const requestHeaders = new Headers(headers);
   if (!requestHeaders.has('Content-Type')) {
     requestHeaders.set('Content-Type', 'application/json');
+  }
+  if (!requestHeaders.has('Origin')) {
+    requestHeaders.set('Origin', baseUrl);
   }
 
   if (requiresAuth) {
