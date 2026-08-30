@@ -30,6 +30,7 @@ export const CrumbMapMarker = memo(function CrumbMapMarker({
   const { colors, isDark } = useTheme();
   const scaleAnim = useRef(new Animated.Value(isSelected ? 1.15 : 1)).current;
   const [tracksViewChanges, setTracksViewChanges] = useState(true);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Manage tracksViewChanges to guarantee image bitmap decoding without permanent render loops
   useEffect(() => {
@@ -41,19 +42,29 @@ export const CrumbMapMarker = memo(function CrumbMapMarker({
       tension: 100,
     }).start(() => {
       // Settle marker texture after spring animation
-      const timer = setTimeout(() => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
         setTracksViewChanges(false);
       }, 250);
-      return () => clearTimeout(timer);
     });
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
   }, [isSelected, scaleAnim]);
 
   const handleImageLoad = useCallback(() => {
     setTracksViewChanges(true);
-    const timer = setTimeout(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
       setTracksViewChanges(false);
     }, 200);
-    return () => clearTimeout(timer);
   }, []);
 
   const { restaurant, sourcePost } = crumb;
@@ -89,7 +100,6 @@ export const CrumbMapMarker = memo(function CrumbMapMarker({
 
   const formattedPrice = formatPriceLevel(restaurant.priceLevel);
   const ratingText = restaurant.rating ? `${restaurant.rating}★` : null;
-  const metaParts = [formattedPrice, ratingText].filter(Boolean).join(' · ');
 
   return (
     <Marker
