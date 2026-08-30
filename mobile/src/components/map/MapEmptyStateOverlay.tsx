@@ -7,74 +7,17 @@ import {
 } from 'react-native';
 import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
-import { SparkleIcon, CompassIcon } from 'phosphor-react-native';
+import { SparkleIcon } from 'phosphor-react-native';
 
 export interface MapEmptyStateOverlayProps {
-  type: 'no_saved_crumbs_global' | 'no_crumbs_in_viewport';
-  totalSavedCount?: number;
-  onFitAllCrumbs?: () => void;
+  type?: 'no_saved_crumbs_global';
   onAddCrumb?: () => void;
-  topOffset?: number;
 }
 
 export function MapEmptyStateOverlay({
-  type,
-  totalSavedCount = 0,
-  onFitAllCrumbs,
   onAddCrumb,
-  topOffset,
 }: MapEmptyStateOverlayProps) {
   const { colors } = useTheme();
-
-  if (type === 'no_crumbs_in_viewport') {
-    if (totalSavedCount === 0) return null;
-
-    const handleZoomAll = () => {
-      haptics.primary();
-      onFitAllCrumbs?.();
-    };
-
-    return (
-      <View
-        style={[
-          styles.viewportBannerContainer,
-          topOffset !== undefined && { top: topOffset },
-        ]}
-        pointerEvents="box-none"
-      >
-        <View
-          style={[
-            styles.viewportBanner,
-            {
-              backgroundColor: colors.cardBackground,
-              borderColor: colors.cardBorder,
-              shadowColor: colors.shadow,
-            },
-          ]}
-        >
-          <CompassIcon size={16} color={colors.primary} weight="fill" />
-          <Text
-            style={[styles.viewportBannerText, { color: colors.text }]}
-            numberOfLines={1}
-          >
-            No saved cravings in this area
-          </Text>
-
-          <TouchableOpacity
-            style={[styles.fitButton, { backgroundColor: colors.primary }]}
-            onPress={handleZoomAll}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel={`Zoom to all ${totalSavedCount} saved cravings`}
-          >
-            <Text style={[styles.fitButtonText, { color: colors.onPrimary }]}>
-              View All ({totalSavedCount})
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
 
   // Global Empty State (Brand new user with zero crumbs)
   const handleAddCrumbPress = () => {
@@ -141,41 +84,6 @@ export function MapEmptyStateOverlay({
 }
 
 const styles = StyleSheet.create({
-  viewportBannerContainer: {
-    position: 'absolute',
-    top: 140,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 22,
-  },
-  viewportBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: Theme.radii.pill,
-    borderWidth: 1,
-    gap: 8,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
-    maxWidth: '90%',
-  },
-  viewportBannerText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  fitButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Theme.radii.pill,
-  },
-  fitButtonText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
   globalContainer: {
     ...StyleSheet.absoluteFill,
     justifyContent: 'center',
