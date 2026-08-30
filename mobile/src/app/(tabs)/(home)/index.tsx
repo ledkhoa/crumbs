@@ -18,7 +18,7 @@ import { pickRandomCraving } from '@/utils/map-clustering';
 import { LiveCravingsMapView } from '@/components/map/LiveCravingsMapView';
 import { LivingMapBottomSheet } from '@/components/map/LivingMapBottomSheet';
 import { LocationPermissionBanner } from '@/components/map/LocationPermissionBanner';
-import { MapEmptyStateOverlay } from '@/components/map/MapEmptyStateOverlay';
+import { IngestionOverlaySheet } from '@/components/ingestion/IngestionOverlaySheet';
 import { QuickAddToGuideModal } from '@/components/ingestion/QuickAddToGuideModal';
 import type { EnrichedUserCrumb } from '@api/modules/crumbs/crumbs.types';
 
@@ -38,6 +38,13 @@ export default function HomeScreen() {
   const [guideModalTarget, setGuideModalTarget] =
     useState<EnrichedUserCrumb | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [ingestOverlayState, setIngestOverlayState] = useState<{
+    visible: boolean;
+    sourceUrl: string;
+  }>({
+    visible: false,
+    sourceUrl: '',
+  });
 
   const addCrumbMutation = useAddCrumbToGuideMutation();
 
@@ -218,8 +225,6 @@ export default function HomeScreen() {
     }
   };
 
-  const isGlobalEmpty = allSavedCrumbs.length === 0;
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Layer 0 & 1: Full-Bleed Map & Custom Pins */}
@@ -244,14 +249,6 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Global Empty State (Brand New User) */}
-      {isGlobalEmpty && (
-        <MapEmptyStateOverlay
-          type="no_saved_crumbs_global"
-          onAddCrumb={() => router.push('/(tabs)/inbox')}
-        />
-      )}
-
       {/* Layer 2: Frosted Bottom Sheet Drawer (Mock 5.6 Sol Layout) */}
       <LivingMapBottomSheet
         crumbs={filteredCrumbs}
@@ -262,6 +259,9 @@ export default function HomeScreen() {
         onCardPress={handleCardPress}
         onAddToGuidePress={handleAddToGuide}
         onBookOrMapPress={handleBookOrMapPress}
+        onIngestUrl={(url) =>
+          setIngestOverlayState({ visible: true, sourceUrl: url })
+        }
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         selectedGuideId={selectedGuideId}
@@ -285,6 +285,21 @@ export default function HomeScreen() {
           crumbId={guideModalTarget.id}
           onClose={() => setGuideModalTarget(null)}
           onGuideSelected={handleGuideSelected}
+        />
+      )}
+
+      {/* Ingestion Extraction Overlay (when link pasted in fresh map sheet) */}
+      {ingestOverlayState.visible && (
+        <IngestionOverlaySheet
+          visible={ingestOverlayState.visible}
+          sourceUrl={ingestOverlayState.sourceUrl}
+          onClose={() =>
+            setIngestOverlayState({ visible: false, sourceUrl: '' })
+          }
+          onNavigateToInbox={() => {
+            setIngestOverlayState({ visible: false, sourceUrl: '' });
+            router.push('/(tabs)/inbox');
+          }}
         />
       )}
     </View>

@@ -25,6 +25,8 @@ In addition to these global rules, always consult and follow the domain-specific
 4. **Failure & Mistake Tracking**:
    - Whenever the user corrects you or points out a mistake/oversight, **immediately** log the incident in the **Mistakes & Failure Log** below (recording Date, Mistake, and Root Cause / Correct Rule).
    - Review this log before every task to ensure you never repeat past mistakes.
+5. **Dead & Cold Code Elimination**:
+   - **Always** delete superseded, orphaned, unused, or cold code, components, files, and types when refactoring or implementing features. Never leave lingering, unused, or commented-out code in the codebase.
 
 ---
 
@@ -67,5 +69,8 @@ In addition to these global rules, always consult and follow the domain-specific
 - **Type Safety & Native Inference**:
   - Rely on TypeScript's native return type inference from async callbacks and functions.
   - Avoid redundant manual type casting (`as SomeType`) when types are already preserved.
+- **Aggressive Dead Code Elimination**:
+  - Whenever a component, helper, or feature is unified, superseded, or refactored, immediately delete the old source files, unreferenced exports, and orphaned assets.
+  - Do not retain deprecated variants or unmounted placeholder branches "just in case". Git history is the archive.
 - **Automated Verification**:
   - Run `bun run check` (`tsc --noEmit && oxlint . && prettier . --check`) after every modification.
