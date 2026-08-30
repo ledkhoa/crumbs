@@ -28,7 +28,6 @@ import {
   CaretRightIcon,
   ForkKnifeIcon,
   StarIcon,
-  ClockIcon,
 } from 'phosphor-react-native';
 import { haversineDistanceMiles } from '@/utils/map-clustering';
 import {

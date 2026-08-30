@@ -4,6 +4,8 @@ import {
   getBoundingRegionForCoordinates,
   isCoordinateInRegion,
   pickRandomCraving,
+  getClusteredCrumbs,
+  getClusterExpansionRegion,
 } from './map-clustering';
 import type { EnrichedUserCrumb } from '@api/modules/crumbs/crumbs.types';
 
@@ -229,6 +231,126 @@ describe('map-clustering utils', () => {
       };
       const picked = pickRandomCraving([crumb1], region);
       expect(picked?.id).toBe('paris-1');
+    });
+  });
+
+  describe('Spatial grid clustering', () => {
+    const nearbyCrumbs = [
+      createMockCrumb({
+        id: 'c-1',
+        restaurant: {
+          id: 'r-1',
+          googlePlaceId: null,
+          name: 'Spot 1',
+          formattedAddress: null,
+          city: null,
+          neighborhood: null,
+          state: null,
+          country: null,
+          latitude: 40.7282,
+          longitude: -73.9942,
+          cuisine: null,
+          rating: null,
+          userRatingCount: null,
+          priceLevel: null,
+          mapsUrl: null,
+          websiteUrl: null,
+          photoUrl: null,
+          editorialSummary: null,
+          communityFavoriteDish: null,
+          reservationUrl: null,
+          reservationProvider: null,
+          regularOpeningHours: null,
+        },
+      }),
+      createMockCrumb({
+        id: 'c-2',
+        restaurant: {
+          id: 'r-2',
+          googlePlaceId: null,
+          name: 'Spot 2',
+          formattedAddress: null,
+          city: null,
+          neighborhood: null,
+          state: null,
+          country: null,
+          latitude: 40.7283,
+          longitude: -73.9941,
+          cuisine: null,
+          rating: null,
+          userRatingCount: null,
+          priceLevel: null,
+          mapsUrl: null,
+          websiteUrl: null,
+          photoUrl: null,
+          editorialSummary: null,
+          communityFavoriteDish: null,
+          reservationUrl: null,
+          reservationProvider: null,
+          regularOpeningHours: null,
+        },
+      }),
+      createMockCrumb({
+        id: 'c-3',
+        restaurant: {
+          id: 'r-3',
+          googlePlaceId: null,
+          name: 'Spot 3',
+          formattedAddress: null,
+          city: null,
+          neighborhood: null,
+          state: null,
+          country: null,
+          latitude: 40.768,
+          longitude: -73.964,
+          cuisine: null,
+          rating: null,
+          userRatingCount: null,
+          priceLevel: null,
+          mapsUrl: null,
+          websiteUrl: null,
+          photoUrl: null,
+          editorialSummary: null,
+          communityFavoriteDish: null,
+          reservationUrl: null,
+          reservationProvider: null,
+          regularOpeningHours: null,
+        },
+      }),
+    ];
+
+    it('clusters tightly placed crumbs when zoomed out', () => {
+      const zoomedOutRegion = {
+        latitude: 40.74,
+        longitude: -73.98,
+        latitudeDelta: 0.5,
+        longitudeDelta: 0.5,
+      };
+
+      const clusters = getClusteredCrumbs(nearbyCrumbs, zoomedOutRegion);
+      expect(clusters.length).toBeLessThan(3);
+    });
+
+    it('unclusters points when zoomed in to street level', () => {
+      const streetRegion = {
+        latitude: 40.7282,
+        longitude: -73.9942,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
+      };
+
+      const items = getClusteredCrumbs(nearbyCrumbs, streetRegion);
+      expect(items.length).toBe(3);
+    });
+
+    it('computes expansion bounding region for cluster', () => {
+      const region = getClusterExpansionRegion([
+        nearbyCrumbs[0],
+        nearbyCrumbs[1],
+      ]);
+      expect(region.latitude).toBeCloseTo(40.72825, 3);
+      expect(region.longitude).toBeCloseTo(-73.99415, 3);
+      expect(region.latitudeDelta).toBeGreaterThanOrEqual(0.012);
     });
   });
 });
