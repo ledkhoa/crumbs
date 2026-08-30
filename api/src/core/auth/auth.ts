@@ -66,6 +66,7 @@ export function getAuth(options: CreateAuthOptions) {
       database: {
         generateId: 'uuid',
       },
+      disableCSRFCheck: true,
     },
   });
 

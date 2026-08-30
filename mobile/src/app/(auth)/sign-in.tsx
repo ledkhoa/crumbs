@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -27,6 +28,8 @@ import {
   EyeIcon,
   EyeSlashIcon,
 } from 'phosphor-react-native';
+
+const HERO_IMAGE = require('../../../assets/images/hero.jpg');
 
 const signInSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -82,177 +85,206 @@ export default function SignInScreen() {
   });
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.canvas }]}
-    >
-      <KeyboardAwareScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Brand Header */}
-        <View style={styles.header}>
-          <SparkleIcon size={36} color={colors.primary} weight="fill" />
-          <Text style={[styles.logoText, { color: colors.background }]}>
-            Crumbs
-          </Text>
-        </View>
+    <View style={styles.container}>
+      {/* Background Hero Image */}
+      <Image
+        source={HERO_IMAGE}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        contentPosition="bottom"
+        transition={200}
+      />
 
-        {/* Auth Bottom Sheet Container */}
-        <Card style={styles.card}>
-          <GrabHandle />
+      {/* Dark Moody Scrim Overlay */}
+      <View style={styles.darkScrim} />
 
-          <Heading style={styles.title}>Welcome back</Heading>
-          <MutedText style={styles.subtitle}>
-            Sign in to access your curated food collections.
-          </MutedText>
-
-          {/* Error Banner */}
-          {authError && (
-            <View
-              style={[
-                styles.errorContainer,
-                {
-                  backgroundColor: colors.errorBackground,
-                  borderColor: colors.errorBorder,
-                },
-              ]}
-            >
-              <Text style={[styles.errorText, { color: colors.error }]}>
-                {authError}
-              </Text>
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAwareScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Brand Header */}
+          <View style={styles.header}>
+            <View style={styles.logoBadge}>
+              <SparkleIcon size={34} color={colors.primary} weight="fill" />
             </View>
-          )}
+            <Text style={styles.logoText}>Crumbs</Text>
+            <Text style={styles.taglineText}>Your Living Cravings Guide</Text>
+          </View>
 
-          {/* Email Input */}
-          <form.Field name="email">
-            {(field) => (
-              <Input
-                label="Email"
-                placeholder="you@example.com"
-                value={field.state.value}
-                onChangeText={field.handleChange}
-                onBlur={field.handleBlur}
-                error={field.state.meta.errors?.[0]?.message}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                leftIcon={
-                  <EnvelopeSimpleIcon
-                    size={18}
-                    color={colors.textSubtle}
-                    weight="bold"
-                  />
-                }
-              />
-            )}
-          </form.Field>
-
-          {/* Password Input */}
-          <form.Field name="password">
-            {(field) => (
-              <Input
-                label="Password"
-                placeholder="Enter your password"
-                value={field.state.value}
-                onChangeText={field.handleChange}
-                onBlur={field.handleBlur}
-                error={field.state.meta.errors?.[0]?.message}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                leftIcon={
-                  <LockKeyIcon
-                    size={18}
-                    color={colors.textSubtle}
-                    weight="bold"
-                  />
-                }
-                rightIcon={
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeButton}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      showPassword ? 'Hide password' : 'Show password'
-                    }
-                  >
-                    {showPassword ? (
-                      <EyeSlashIcon
-                        size={18}
-                        color={colors.textSubtle}
-                        weight="bold"
-                      />
-                    ) : (
-                      <EyeIcon
-                        size={18}
-                        color={colors.textSubtle}
-                        weight="bold"
-                      />
-                    )}
-                  </TouchableOpacity>
-                }
-              />
-            )}
-          </form.Field>
-
-          {/* Forgot Password */}
-          <TouchableOpacity
-            style={styles.forgotPassword}
-            onPress={() => haptics.tap()}
-            accessibilityRole="button"
+          {/* Auth Bottom Sheet Container */}
+          <Card
+            style={[styles.card, { backgroundColor: colors.cardBackground }]}
           >
-            <Text
-              style={[styles.forgotPasswordText, { color: colors.textMuted }]}
-            >
-              Forgot password?
-            </Text>
-          </TouchableOpacity>
+            <GrabHandle />
 
-          {/* Sign In Button */}
-          <form.Subscribe
-            selector={(state) => ({
-              canSubmit: state.canSubmit,
-              isSubmitting: state.isSubmitting,
-            })}
-          >
-            {({ canSubmit, isSubmitting }) => (
-              <Button
-                variant="primary"
-                size="lg"
-                onPress={() => form.handleSubmit()}
-                disabled={!canSubmit}
-                loading={isSubmitting}
-                style={styles.primaryButton}
+            <Heading style={styles.title}>Welcome back</Heading>
+            <MutedText style={styles.subtitle}>
+              Sign in to access your curated food collections.
+            </MutedText>
+
+            {/* Error Banner */}
+            {authError && (
+              <View
+                style={[
+                  styles.errorContainer,
+                  {
+                    backgroundColor: colors.errorBackground,
+                    borderColor: colors.errorBorder,
+                  },
+                ]}
               >
-                Sign in
-              </Button>
+                <Text style={[styles.errorText, { color: colors.error }]}>
+                  {authError}
+                </Text>
+              </View>
             )}
-          </form.Subscribe>
 
-          {/* Switch to Sign Up */}
-          <TouchableOpacity
-            style={styles.footerToggle}
-            onPress={() => {
-              haptics.tap();
-              router.push('/(auth)/sign-up');
-            }}
-          >
-            <Text style={[styles.footerText, { color: colors.textMuted }]}>
-              New to Crumbs?{' '}
-              <Text style={[styles.footerHighlight, { color: colors.primary }]}>
-                Create account
+            {/* Email Input */}
+            <form.Field name="email">
+              {(field) => (
+                <Input
+                  label="Email"
+                  placeholder="you@example.com"
+                  value={field.state.value}
+                  onChangeText={field.handleChange}
+                  onBlur={field.handleBlur}
+                  error={field.state.meta.errors?.[0]?.message}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  leftIcon={
+                    <EnvelopeSimpleIcon
+                      size={18}
+                      color={colors.textSubtle}
+                      weight="bold"
+                    />
+                  }
+                />
+              )}
+            </form.Field>
+
+            {/* Password Input */}
+            <form.Field name="password">
+              {(field) => (
+                <Input
+                  label="Password"
+                  placeholder="Enter your password"
+                  value={field.state.value}
+                  onChangeText={field.handleChange}
+                  onBlur={field.handleBlur}
+                  error={field.state.meta.errors?.[0]?.message}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  leftIcon={
+                    <LockKeyIcon
+                      size={18}
+                      color={colors.textSubtle}
+                      weight="bold"
+                    />
+                  }
+                  rightIcon={
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeButton}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        showPassword ? 'Hide password' : 'Show password'
+                      }
+                    >
+                      {showPassword ? (
+                        <EyeSlashIcon
+                          size={18}
+                          color={colors.textSubtle}
+                          weight="bold"
+                        />
+                      ) : (
+                        <EyeIcon
+                          size={18}
+                          color={colors.textSubtle}
+                          weight="bold"
+                        />
+                      )}
+                    </TouchableOpacity>
+                  }
+                />
+              )}
+            </form.Field>
+
+            {/* Forgot Password */}
+            <TouchableOpacity
+              style={styles.forgotPassword}
+              onPress={() => haptics.tap()}
+              accessibilityRole="button"
+            >
+              <Text
+                style={[styles.forgotPasswordText, { color: colors.textMuted }]}
+              >
+                Forgot password?
               </Text>
-            </Text>
-          </TouchableOpacity>
-        </Card>
-      </KeyboardAwareScrollView>
-    </SafeAreaView>
+            </TouchableOpacity>
+
+            {/* Sign In Button */}
+            <form.Subscribe
+              selector={(state) => ({
+                canSubmit: state.canSubmit,
+                isSubmitting: state.isSubmitting,
+              })}
+            >
+              {({ canSubmit, isSubmitting }) => (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onPress={() => form.handleSubmit()}
+                  disabled={!canSubmit}
+                  loading={isSubmitting}
+                  style={styles.primaryButton}
+                >
+                  Sign in
+                </Button>
+              )}
+            </form.Subscribe>
+
+            {/* Switch to Sign Up */}
+            <TouchableOpacity
+              style={styles.footerToggle}
+              onPress={() => {
+                haptics.tap();
+                router.push('/(auth)/sign-up');
+              }}
+            >
+              <Text style={[styles.footerText, { color: colors.textMuted }]}>
+                New to Crumbs?{' '}
+                <Text
+                  style={[styles.footerHighlight, { color: colors.primary }]}
+                >
+                  Create account
+                </Text>
+              </Text>
+            </TouchableOpacity>
+          </Card>
+        </KeyboardAwareScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#0D0A08',
+  },
+  darkScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(12, 10, 9, 0.58)',
+  },
+  safeArea: {
     flex: 1,
   },
   scrollContent: {
@@ -263,15 +295,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: Theme.spacing.xl,
     paddingBottom: Theme.spacing.lg,
+    gap: 4,
   },
-  logoIcon: {
-    fontSize: 42,
-    marginBottom: Theme.spacing.xs,
+  logoBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   logoText: {
     fontSize: 38,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     fontWeight: 'bold',
+    color: '#FFFDFC',
+    letterSpacing: -0.5,
+  },
+  taglineText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: 'rgba(255, 253, 252, 0.75)',
+    letterSpacing: 0.2,
   },
   card: {
     borderTopLeftRadius: Theme.radii.sheet,
