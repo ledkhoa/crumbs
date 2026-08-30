@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
   guideTitle: {
     fontSize: 26,
     fontWeight: '700',
-    fontFamily: 'Georgia',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     textAlign: 'center',
     marginBottom: 6,
   },

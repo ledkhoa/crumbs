@@ -1,5 +1,11 @@
 import { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
@@ -242,7 +248,7 @@ const styles = StyleSheet.create({
   restaurantName: {
     fontSize: 16,
     fontWeight: '700',
-    fontFamily: 'Georgia',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
   metaRow: {
     flexDirection: 'row',

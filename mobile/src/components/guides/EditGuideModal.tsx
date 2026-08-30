@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    fontFamily: 'Georgia',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
   closeButton: {
     padding: 6,
