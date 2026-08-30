@@ -38,6 +38,11 @@ export default function TabLayout() {
           </NativeTabs.Trigger.Badge>
         )}
       </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="profile">
+        <NativeTabs.Trigger.Icon sf="person.crop.circle.fill" md="person" />
+        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
