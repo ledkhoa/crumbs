@@ -248,16 +248,43 @@ describe('useMapCrumbs filtering & emoji logic', () => {
   });
 
   describe('getCrumbPinType', () => {
-    it('identifies visited crumbs', () => {
+    it('identifies visited crumbs regardless of guide association', () => {
       expect(getCrumbPinType(sampleCrumbs[1])).toBe('visited');
+      expect(
+        getCrumbPinType(
+          createMockCrumb({
+            status: 'visited',
+            isVisited: true,
+            guideIds: [],
+          }),
+        ),
+      ).toBe('visited');
     });
 
-    it('identifies inbox / unorganized crumbs', () => {
+    it('identifies inbox / unorganized crumbs (guideIds empty)', () => {
       expect(getCrumbPinType(sampleCrumbs[2])).toBe('inbox');
+      expect(
+        getCrumbPinType(
+          createMockCrumb({
+            status: 'saved',
+            isVisited: false,
+            guideIds: [],
+          }),
+        ),
+      ).toBe('inbox');
     });
 
-    it('identifies saved organized crumbs', () => {
+    it('identifies saved organized crumbs (guideIds not empty)', () => {
       expect(getCrumbPinType(sampleCrumbs[0])).toBe('saved');
+      expect(
+        getCrumbPinType(
+          createMockCrumb({
+            status: 'inbox',
+            isVisited: false,
+            guideIds: ['guide-123'],
+          }),
+        ),
+      ).toBe('saved');
     });
   });
 

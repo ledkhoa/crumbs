@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -259,6 +259,17 @@ export function LivingMapBottomSheet({
   const [currentDetent, setCurrentDetent] = useState<'peek' | 'mid' | 'full'>(
     'peek',
   );
+
+  // If sheet height is greater than mid height when a crumb is selected, snap down to mid height
+  useEffect(() => {
+    if (selectedCrumb) {
+      if (sheetHeight.value > MID_HEIGHT) {
+        sheetHeight.value = withSpring(MID_HEIGHT, SPRING_CONFIG);
+        setCurrentDetent('mid');
+        haptics.primary();
+      }
+    }
+  }, [selectedCrumb, sheetHeight]);
 
   // Time-Adaptive Dining Moments State (Resolved in restaurant/destination local timezone)
   const autoMoment = useMemo(

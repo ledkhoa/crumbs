@@ -110,6 +110,7 @@ export interface OpeningHoursInfo {
 
 export interface CrumbDetail {
   id: string;
+  status: string;
   isVisited: boolean;
   userNotes: string | null;
   userHeroDishOverride: string | null;
@@ -150,6 +151,7 @@ export interface CrumbDetail {
     summary: string | null;
   } | null;
   postAttribution: CrumbPostAttribution | null;
+  guideIds: string[];
   guides: Array<{
     id: string;
     name: string;

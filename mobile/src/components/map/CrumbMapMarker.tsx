@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Marker } from 'react-native-maps';
 import { Image } from 'expo-image';
-import { StarIcon } from 'phosphor-react-native';
+import { StarIcon, CheckIcon } from 'phosphor-react-native';
 import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { deduceHeroEmoji, getCrumbPinType } from '@/utils/map-filter';
@@ -32,7 +32,6 @@ export const CrumbMapMarker = memo(function CrumbMapMarker({
   const [tracksViewChanges, setTracksViewChanges] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Manage tracksViewChanges to guarantee image bitmap decoding without permanent render loops
   useEffect(() => {
     setTracksViewChanges(true);
     Animated.spring(scaleAnim, {
@@ -41,7 +40,6 @@ export const CrumbMapMarker = memo(function CrumbMapMarker({
       friction: 6,
       tension: 100,
     }).start(() => {
-      // Settle marker texture after spring animation
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
@@ -86,11 +84,11 @@ export const CrumbMapMarker = memo(function CrumbMapMarker({
   const heroEmoji = deduceHeroEmoji(crumb);
   const imageUrl = restaurant?.photoUrl || sourcePost?.mediaUrls?.[0] || null;
 
-  let statusColor = colors.primary; // Saved -> Terracotta (#C45B3E)
+  let statusColor = colors.primary;
   if (pinType === 'visited') {
-    statusColor = colors.success; // Visited -> Sage (#4A7C59)
+    statusColor = colors.success;
   } else if (pinType === 'inbox') {
-    statusColor = colors.accent; // Inbox -> Warm Gold (#D99B26)
+    statusColor = colors.accent;
   }
 
   const handlePress = () => {
@@ -100,6 +98,7 @@ export const CrumbMapMarker = memo(function CrumbMapMarker({
 
   const formattedPrice = formatPriceLevel(restaurant.priceLevel);
   const ratingText = restaurant.rating ? `${restaurant.rating}★` : null;
+  const heroDish = crumb.effectiveHeroDish;
 
   return (
     <Marker
@@ -130,96 +129,165 @@ export const CrumbMapMarker = memo(function CrumbMapMarker({
           ]}
         >
           {isSelected ? (
-            /* Selected Expanded Card View (Option 2: Adaptive Card) */
+            /* ── Selected: Premium Detail Card ── */
             <View style={styles.selectedContainer}>
               <View
                 style={[
                   styles.selectedCard,
                   {
                     backgroundColor: colors.cardBackground,
-                    borderColor: statusColor,
-                    shadowOpacity: isDark ? 0.45 : 0.2,
+                    borderColor: isDark
+                      ? 'rgba(255,255,255,0.12)'
+                      : 'rgba(0,0,0,0.08)',
+                    shadowColor: statusColor,
+                    shadowOpacity: isDark ? 0.5 : 0.3,
                   },
                 ]}
               >
-                {/* Rounded Square Photo / Emoji */}
+                {/* Status accent stripe along the top */}
                 <View
                   style={[
-                    styles.selectedPhotoWrapper,
-                    {
-                      backgroundColor: colors.inputBackground,
-                      borderColor: statusColor,
-                    },
+                    styles.accentStripe,
+                    { backgroundColor: statusColor },
                   ]}
-                >
-                  {imageUrl ? (
-                    <Image
-                      source={{ uri: imageUrl }}
-                      style={StyleSheet.absoluteFill}
-                      contentFit="cover"
-                      transition={150}
-                      onLoad={handleImageLoad}
-                    />
-                  ) : (
+                />
+
+                <View style={styles.selectedCardInner}>
+                  {/* Rounded Square Photo */}
+                  <View style={styles.selectedPhotoOuter}>
                     <View
                       style={[
-                        styles.emojiCircleFallback,
-                        { backgroundColor: statusColor },
+                        styles.selectedPhotoWrapper,
+                        {
+                          backgroundColor: colors.inputBackground,
+                        },
                       ]}
                     >
-                      <Text style={styles.selectedEmojiFallback}>
-                        {heroEmoji}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Details Column */}
-                <View style={styles.selectedInfoColumn}>
-                  <Text
-                    style={[styles.selectedTitle, { color: colors.text }]}
-                    numberOfLines={1}
-                  >
-                    {restaurant.name}
-                  </Text>
-                  <View style={styles.selectedMetaRow}>
-                    {Boolean(formattedPrice) && (
-                      <Text
-                        style={[
-                          styles.selectedPriceText,
-                          { color: colors.textMuted },
-                        ]}
-                      >
-                        {formattedPrice}
-                      </Text>
-                    )}
-                    {Boolean(formattedPrice) && Boolean(restaurant.rating) && (
-                      <Text
-                        style={[
-                          styles.selectedDotText,
-                          { color: colors.textSubtle },
-                        ]}
-                      >
-                        ·
-                      </Text>
-                    )}
-                    {Boolean(restaurant.rating) && (
-                      <View style={styles.selectedRatingBadge}>
-                        <StarIcon
-                          size={11}
-                          color={colors.accent}
-                          weight="fill"
+                      {imageUrl ? (
+                        <Image
+                          source={{ uri: imageUrl }}
+                          style={StyleSheet.absoluteFill}
+                          contentFit="cover"
+                          transition={150}
+                          onLoad={handleImageLoad}
                         />
-                        <Text
+                      ) : (
+                        <View
                           style={[
-                            styles.selectedRatingText,
-                            { color: colors.text },
+                            styles.emojiSquareFallback,
+                            { backgroundColor: statusColor },
                           ]}
                         >
-                          {restaurant.rating!.toFixed(1)}
-                        </Text>
+                          <Text style={styles.selectedEmojiFallback}>
+                            {heroEmoji}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Visited badge on selected photo */}
+                    {pinType === 'visited' && (
+                      <View
+                        style={[
+                          styles.selectedPhotoBadge,
+                          { backgroundColor: colors.success },
+                        ]}
+                      >
+                        <CheckIcon size={9} color="#FFFFFF" weight="bold" />
                       </View>
                     )}
+                  </View>
+
+                  {/* Details Column */}
+                  <View style={styles.selectedInfoColumn}>
+                    <Text
+                      style={[styles.selectedTitle, { color: colors.text }]}
+                      numberOfLines={1}
+                    >
+                      {restaurant.name}
+                    </Text>
+
+                    {/* Hero Dish Subtitle (3-tier resolved) */}
+                    {Boolean(heroDish) && (
+                      <Text
+                        style={[
+                          styles.selectedHeroDish,
+                          { color: colors.textMuted },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {heroDish}
+                      </Text>
+                    )}
+
+                    <View style={styles.selectedMetaRow}>
+                      {Boolean(formattedPrice) && (
+                        <Text
+                          style={[
+                            styles.selectedPriceText,
+                            { color: colors.textMuted },
+                          ]}
+                        >
+                          {formattedPrice}
+                        </Text>
+                      )}
+                      {Boolean(formattedPrice) &&
+                        Boolean(restaurant.rating) && (
+                          <Text
+                            style={[
+                              styles.selectedDotText,
+                              { color: colors.textSubtle },
+                            ]}
+                          >
+                            ·
+                          </Text>
+                        )}
+                      {Boolean(restaurant.rating) && (
+                        <View style={styles.selectedRatingBadge}>
+                          <StarIcon
+                            size={11}
+                            color={colors.accent}
+                            weight="fill"
+                          />
+                          <Text
+                            style={[
+                              styles.selectedRatingText,
+                              { color: colors.text },
+                            ]}
+                          >
+                            {restaurant.rating!.toFixed(1)}
+                          </Text>
+                        </View>
+                      )}
+
+                      {/* Visited pill in meta row */}
+                      {pinType === 'visited' && (
+                        <View
+                          style={[
+                            styles.visitedPill,
+                            {
+                              backgroundColor: isDark
+                                ? 'rgba(140, 164, 126, 0.2)'
+                                : 'rgba(124, 144, 112, 0.15)',
+                            },
+                          ]}
+                        >
+                          <CheckIcon
+                            size={8}
+                            color={colors.success}
+                            weight="bold"
+                          />
+                          <Text
+                            style={[
+                              styles.visitedPillText,
+                              { color: colors.success },
+                            ]}
+                          >
+                            Visited
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </View>
               </View>
@@ -235,17 +303,19 @@ export const CrumbMapMarker = memo(function CrumbMapMarker({
               />
             </View>
           ) : (
-            /* Unselected Photo-First Pin View */
+            /* ── Unselected: Glazed Squircle Photo Pin ── */
             <View style={styles.unselectedContainer}>
-              {/* Circular Photo Badge */}
+              {/* Squircle Photo Tile */}
               <View
                 style={[
-                  styles.photoCircle,
+                  styles.photoSquircle,
                   {
                     borderColor: statusColor,
                     backgroundColor: isDark
                       ? colors.inputBackground
                       : colors.cardBackground,
+                    shadowColor: statusColor,
+                    shadowOpacity: isDark ? 0.45 : 0.35,
                   },
                 ]}
               >
@@ -260,13 +330,23 @@ export const CrumbMapMarker = memo(function CrumbMapMarker({
                 ) : (
                   <View
                     style={[
-                      styles.emojiCircleFallback,
+                      styles.emojiSquareFallback,
                       { backgroundColor: statusColor },
                     ]}
                   >
                     <Text style={styles.unselectedEmojiText}>{heroEmoji}</Text>
                   </View>
                 )}
+
+                {/* Visited ✓ badge overlay */}
+                {pinType === 'visited' && (
+                  <View style={styles.visitedBadge}>
+                    <CheckIcon size={9} color="#FFFFFF" weight="bold" />
+                  </View>
+                )}
+
+                {/* Inbox "new" dot */}
+                {pinType === 'inbox' && <View style={styles.inboxDot} />}
               </View>
 
               {/* Triangle Pointer */}
@@ -279,7 +359,7 @@ export const CrumbMapMarker = memo(function CrumbMapMarker({
                 ]}
               />
 
-              {/* Compact Name Capsule Below Marker */}
+              {/* Compact Name Capsule */}
               <View
                 style={[
                   styles.nameCapsule,
@@ -323,25 +403,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  // ── Unselected Pin Styles ──
   unselectedContainer: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  photoCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 2.5,
+  photoSquircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 3,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2.5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 6,
   },
-  emojiCircleFallback: {
+  emojiSquareFallback: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -353,14 +433,40 @@ const styles = StyleSheet.create({
   unselectedEmojiText: {
     fontSize: 18,
   },
+  visitedBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#7C9070',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  inboxDot: {
+    position: 'absolute',
+    top: -1,
+    right: -1,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#DFB064',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    zIndex: 10,
+  },
   trianglePointer: {
     width: 0,
     height: 0,
     backgroundColor: 'transparent',
     borderStyle: 'solid',
-    borderLeftWidth: 4.5,
-    borderRightWidth: 4.5,
-    borderTopWidth: 5,
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderTopWidth: 6,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     alignSelf: 'center',
@@ -386,37 +492,56 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Selected State Styles
+  // ── Selected State Styles ──
   selectedContainer: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   selectedCard: {
+    width: 210,
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  accentStripe: {
+    height: 2.5,
+    width: '100%',
+  },
+  selectedCardInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 6,
-    borderRadius: 14,
-    borderWidth: 2,
-    width: 190,
+    padding: 8,
     gap: 8,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 8,
+  },
+  selectedPhotoOuter: {
+    position: 'relative',
   },
   selectedPhotoWrapper: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.7)',
+    width: 52,
+    height: 52,
+    borderRadius: 12,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  selectedPhotoBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
   selectedEmojiFallback: {
-    fontSize: 20,
+    fontSize: 22,
   },
   selectedInfoColumn: {
     flex: 1,
@@ -428,11 +553,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
+  selectedHeroDish: {
+    fontSize: 10,
+    fontWeight: '500',
+    fontStyle: 'italic',
+    marginTop: 1,
+  },
   selectedMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    marginTop: 3,
     gap: 3,
+    flexWrap: 'wrap',
   },
   selectedPriceText: {
     fontSize: 10,
@@ -449,6 +581,19 @@ const styles = StyleSheet.create({
   selectedRatingText: {
     fontSize: 10,
     fontWeight: '800',
+  },
+  visitedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    marginLeft: 2,
+  },
+  visitedPillText: {
+    fontSize: 9,
+    fontWeight: '700',
   },
   trianglePointerSelected: {
     width: 0,

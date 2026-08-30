@@ -179,7 +179,7 @@ describe('Crumbs Business Logic & Specification Verification', () => {
         userId: 'user-1',
         restaurantId: 'rest-2',
         sourcePostId: 'post-2',
-        status: 'inbox',
+        status: 'saved',
         isVisited: false,
         userNotes: null,
         userHeroDishOverride: 'Matcha Soft Serve',
@@ -260,6 +260,16 @@ describe('Crumbs Business Logic & Specification Verification', () => {
       expect(filtered.length).toBe(1);
       expect(filtered[0].id).toBe('crumb-1');
       expect(filtered[0].restaurant.reservationProvider).toBe('resy');
+    });
+
+    it('filters by status: inbox (unorganized) and saved (in guides)', () => {
+      const inboxResult = filterCrumbs(mockCrumbs, { status: 'inbox' });
+      expect(inboxResult.filtered.length).toBe(1);
+      expect(inboxResult.filtered[0].id).toBe('crumb-1');
+
+      const savedResult = filterCrumbs(mockCrumbs, { status: 'saved' });
+      expect(savedResult.filtered.length).toBe(1);
+      expect(savedResult.filtered[0].id).toBe('crumb-2');
     });
 
     it('filters by neighborhood substring match in formattedAddress', () => {
