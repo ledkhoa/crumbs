@@ -168,11 +168,8 @@ export function getCrumbPinType(
   if (crumb.isVisited || crumb.status === 'visited') {
     return 'visited';
   }
-  if (
-    crumb.status === 'inbox' ||
-    !crumb.guideIds ||
-    crumb.guideIds.length === 0
-  ) {
+  const isInGuide = Boolean(crumb.guideIds && crumb.guideIds.length > 0);
+  if (!isInGuide) {
     return 'inbox';
   }
   return 'saved';

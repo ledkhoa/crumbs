@@ -143,12 +143,15 @@ export class CrumbsRepository {
           emojiIcon: gc.guide.emojiIcon || '🗺️',
         }));
 
+      const resolvedStatus =
+        c.status === 'visited' ? 'visited' : isUnorganized ? 'inbox' : 'saved';
+
       enrichedList.push({
         id: c.id,
         userId: c.userId,
         restaurantId: c.restaurantId,
         sourcePostId: c.sourcePostId,
-        status: c.status,
+        status: resolvedStatus,
         isVisited: c.status === 'visited',
         userNotes: c.userNotes ?? null,
         userHeroDishOverride: c.userHeroDishOverride ?? null,
@@ -356,7 +359,17 @@ export class CrumbsRepository {
         }
       : null;
 
-    const guides = (rawCrumb.guideCrumbs || [])
+    const guideItems = rawCrumb.guideCrumbs || [];
+    const guideIds = guideItems.map((gc) => gc.guideId);
+    const isUnorganized = guideIds.length === 0;
+    const resolvedStatus =
+      rawCrumb.status === 'visited'
+        ? 'visited'
+        : isUnorganized
+          ? 'inbox'
+          : 'saved';
+
+    const guides = guideItems
       .filter((gc) => Boolean(gc.guide))
       .map((gc) => ({
         id: gc.guide.id,
@@ -366,6 +379,7 @@ export class CrumbsRepository {
 
     return {
       id: rawCrumb.id,
+      status: resolvedStatus,
       isVisited: rawCrumb.status === 'visited',
       userNotes: rawCrumb.userNotes ?? null,
       userHeroDishOverride: rawCrumb.userHeroDishOverride ?? null,
@@ -417,6 +431,7 @@ export class CrumbsRepository {
           }
         : null,
       postAttribution,
+      guideIds,
       guides,
     };
   }
