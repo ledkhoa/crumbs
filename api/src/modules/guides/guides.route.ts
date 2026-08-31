@@ -141,7 +141,7 @@ export const guidesRouter = new Hono<AppEnv>()
 
       const targetIds = [...(crumbId ? [crumbId] : []), ...(crumbIds || [])];
 
-      await GuidesRepository.addCrumbsBatch(db, guideId, targetIds);
+      await GuidesRepository.addCrumbsBatch(db, guideId, targetIds, user.id);
 
       return c.json({
         success: true,

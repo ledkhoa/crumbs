@@ -62,6 +62,7 @@ export function BackgroundIngestionPoller() {
             if (firstRest) {
               const spot: UnifiedRestaurantSpot = {
                 id: firstRest.id,
+                crumbId: firstRest.crumbId,
                 name: firstRest.name,
                 googlePlaceId: firstRest.placeDetails?.placeId,
                 formattedAddress:

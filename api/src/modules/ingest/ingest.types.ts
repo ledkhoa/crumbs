@@ -5,6 +5,8 @@ import type { PlaceDetails } from './services/places.service';
  * An extracted restaurant entity combined with resolved Google Places metadata.
  */
 export interface EnrichedRestaurant extends ExtractedRestaurant {
+  id?: string;
+  crumbId?: string;
   placeDetails: PlaceDetails;
 }
 

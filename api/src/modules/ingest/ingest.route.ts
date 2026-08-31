@@ -207,13 +207,41 @@ export const ingestRouter = new Hono<AppEnv>()
         });
 
         if (post) {
+          const user = c.get('user');
+          const crumbMap = new Map<string, string>();
+
+          if (user && post.postRestaurants && post.postRestaurants.length > 0) {
+            for (const pr of post.postRestaurants) {
+              const [savedCrumb] = await db
+                .insert(Crumbs)
+                .values({
+                  userId: user.id,
+                  restaurantId: pr.restaurantId,
+                  sourcePostId: post.id,
+                  status: 'inbox',
+                })
+                .onConflictDoUpdate({
+                  target: [Crumbs.userId, Crumbs.restaurantId],
+                  set: {
+                    sourcePostId: post.id,
+                    updatedAt: new Date(),
+                  },
+                })
+                .returning();
+
+              if (savedCrumb) {
+                crumbMap.set(pr.restaurantId, savedCrumb.id);
+              }
+            }
+          }
+
           return c.json({
             success: true,
             workflowId: instanceId,
             status: 'complete',
             output: {
               url: post.originalUrl,
-              userId: null,
+              userId: user?.id ?? null,
               platform: post.platform,
               postType: post.postType,
               platformPostId: post.platformPostId,
@@ -230,6 +258,7 @@ export const ingestRouter = new Hono<AppEnv>()
               summary: post.summary || '',
               restaurants: (post.postRestaurants || []).map((pr) => ({
                 ...pr.restaurant,
+                crumbId: crumbMap.get(pr.restaurantId) || undefined,
                 heroDish:
                   pr.heroDish ||
                   pr.restaurant.communityFavoriteDish ||

@@ -190,6 +190,7 @@ export function useIngestion(
           const spots: UnifiedRestaurantSpot[] = (output.restaurants || []).map(
             (r) => ({
               id: r.id,
+              crumbId: r.crumbId,
               name: r.name,
               googlePlaceId: r.placeDetails?.placeId,
               formattedAddress:

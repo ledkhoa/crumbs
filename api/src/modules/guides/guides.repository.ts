@@ -1,9 +1,11 @@
-import { eq, and, desc, asc, inArray } from 'drizzle-orm';
+import { eq, and, or, desc, asc, inArray } from 'drizzle-orm';
 import type { getDb } from '../../core/db/client';
 import {
   Guides,
   GuideCrumbs,
   PostRestaurants,
+  Crumbs,
+  Restaurants,
   type Guide,
   type NewGuide,
 } from '../../core/db/schemas';
@@ -225,18 +227,93 @@ export class GuidesRepository {
 
   /**
    * Links multiple crumbs to a guide in a single batch.
+   * Resolves IDs whether provided as direct Crumbs.id or Restaurants.id.
    */
   static async addCrumbsBatch(
     db: DbInstance,
     guideId: string,
     crumbIds: string[],
+    userId?: string,
   ) {
     if (crumbIds.length === 0) return [];
 
-    const records = crumbIds.map((crumbId, index) => ({
+    let finalCrumbIds: string[] = [];
+
+    if (userId) {
+      // Find existing crumbs for this user matching either Crumbs.id or Crumbs.restaurantId
+      const matchingCrumbs = await db.query.Crumbs.findMany({
+        where: and(
+          eq(Crumbs.userId, userId),
+          or(
+            inArray(Crumbs.id, crumbIds),
+            inArray(Crumbs.restaurantId, crumbIds),
+          ),
+        ),
+      });
+
+      const matchedCrumbIdSet = new Set(matchingCrumbs.map((c) => c.id));
+      const matchedRestIdMap = new Map(
+        matchingCrumbs.map((c) => [c.restaurantId, c.id]),
+      );
+
+      for (const id of crumbIds) {
+        if (matchedCrumbIdSet.has(id)) {
+          finalCrumbIds.push(id);
+        } else if (matchedRestIdMap.has(id)) {
+          finalCrumbIds.push(matchedRestIdMap.get(id)!);
+        } else {
+          // Check if `id` is a valid restaurant ID that the user hasn't saved yet
+          try {
+            const rest = await db.query.Restaurants.findFirst({
+              where: eq(Restaurants.id, id),
+            });
+            if (rest) {
+              const [createdCrumb] = await db
+                .insert(Crumbs)
+                .values({
+                  userId,
+                  restaurantId: rest.id,
+                  status: 'inbox',
+                })
+                .onConflictDoUpdate({
+                  target: [Crumbs.userId, Crumbs.restaurantId],
+                  set: { updatedAt: new Date() },
+                })
+                .returning();
+              if (createdCrumb) {
+                finalCrumbIds.push(createdCrumb.id);
+                matchedRestIdMap.set(rest.id, createdCrumb.id);
+              }
+            } else {
+              finalCrumbIds.push(id);
+            }
+          } catch {
+            finalCrumbIds.push(id);
+          }
+        }
+      }
+    } else {
+      finalCrumbIds = crumbIds;
+    }
+
+    finalCrumbIds = Array.from(new Set(finalCrumbIds));
+    if (finalCrumbIds.length === 0) return [];
+
+    // Get current max orderIndex for this guide so new additions append sequentially
+    const existingGuideCrumbs = await db.query.GuideCrumbs.findMany({
+      where: eq(GuideCrumbs.guideId, guideId),
+      orderBy: [desc(GuideCrumbs.orderIndex)],
+      limit: 1,
+    });
+    const currentMaxIndex =
+      existingGuideCrumbs.length > 0 && existingGuideCrumbs[0]
+        ? existingGuideCrumbs[0].orderIndex + 1
+        : 0;
+
+    const records = finalCrumbIds.map((crumbId, index) => ({
       guideId,
       crumbId,
-      orderIndex: index,
+      orderIndex: currentMaxIndex + index,
     }));
 
     return db

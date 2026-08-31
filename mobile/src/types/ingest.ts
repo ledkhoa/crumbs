@@ -51,6 +51,7 @@ export interface PostAttribution {
 
 export interface EnrichedRestaurant {
   id?: string;
+  crumbId?: string;
   name: string;
   cuisine?: string;
   address?: string;

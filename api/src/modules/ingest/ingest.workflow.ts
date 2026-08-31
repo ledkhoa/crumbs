@@ -467,6 +467,8 @@ export class IngestWorkflow extends WorkflowEntrypoint<
               })
               .returning();
 
+            const persistedRestaurants: EnrichedRestaurant[] = [];
+
             for (const item of result.restaurants) {
               let restaurantRecord = null;
 
@@ -549,6 +551,8 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                   .returning();
               }
 
+              let savedCrumbRecord = null;
+
               if (restaurantRecord && savedPost) {
                 await db
                   .insert(PostRestaurants)
@@ -580,7 +584,7 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                   });
 
                 if (userId) {
-                  await db
+                  [savedCrumbRecord] = await db
                     .insert(Crumbs)
                     .values({
                       userId,
@@ -594,10 +598,19 @@ export class IngestWorkflow extends WorkflowEntrypoint<
                         sourcePostId: savedPost.id,
                         updatedAt: new Date(),
                       },
-                    });
+                    })
+                    .returning();
                 }
               }
+
+              persistedRestaurants.push({
+                ...item,
+                id: restaurantRecord?.id,
+                crumbId: savedCrumbRecord?.id,
+              });
             }
+
+            result.restaurants = persistedRestaurants;
 
             console.log(
               `✅ [Step 5/5 SUCCESS] Persisted post, restaurants, and user crumbs to Neon DB!`,
