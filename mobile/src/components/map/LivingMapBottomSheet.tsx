@@ -18,6 +18,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { GrabHandle } from '@/components/ui/GrabHandle';
@@ -51,7 +52,7 @@ import type {
 import type { GuideSummary } from '@/hooks/useMapCrumbs';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-export const PEEK_HEIGHT = 240;
+export const PEEK_HEIGHT = 25;
 export const MID_HEIGHT = Math.round(SCREEN_HEIGHT * 0.52);
 export const FULL_HEIGHT = Math.round(SCREEN_HEIGHT * 0.86);
 
@@ -258,23 +259,40 @@ export function LivingMapBottomSheet({
     }
   };
 
+  const insets = useSafeAreaInsets();
+  const tabHeight = Platform.OS === 'ios' ? 49 : 56;
+  const navBarOffset =
+    bottomInset > 0 ? bottomInset : tabHeight + insets.bottom;
+
+  const peekHeight = PEEK_HEIGHT + navBarOffset;
+  const midHeight = Math.max(
+    peekHeight + 120,
+    Math.round(SCREEN_HEIGHT * 0.52),
+  );
+  const fullHeight = Math.round(SCREEN_HEIGHT * 0.86);
+
   // Reanimated Sheet Height State
-  const sheetHeight = useSharedValue(PEEK_HEIGHT);
-  const startHeight = useSharedValue(PEEK_HEIGHT);
+  const sheetHeight = useSharedValue(peekHeight);
+  const startHeight = useSharedValue(peekHeight);
   const [_currentDetent, setCurrentDetent] = useState<'peek' | 'mid' | 'full'>(
     'peek',
   );
 
-  // If sheet height is greater than mid height when a crumb is selected, snap down to mid height
+  // Sync peek height on layout / insets update
+  useEffect(() => {
+    if (_currentDetent === 'peek') {
+      sheetHeight.value = withSpring(peekHeight, SPRING_CONFIG);
+    }
+  }, [peekHeight, _currentDetent, sheetHeight]);
+
+  // When a crumb pin is selected on the map, open sheet to mid height
   useEffect(() => {
     if (selectedCrumb) {
-      if (sheetHeight.value > MID_HEIGHT) {
-        sheetHeight.value = withSpring(MID_HEIGHT, SPRING_CONFIG);
-        setCurrentDetent('mid');
-        haptics.primary();
-      }
+      sheetHeight.value = withSpring(midHeight, SPRING_CONFIG);
+      setCurrentDetent('mid');
+      haptics.primary();
     }
-  }, [selectedCrumb, sheetHeight]);
+  }, [selectedCrumb, midHeight, sheetHeight]);
 
   // Time-Adaptive Dining Moments State (Resolved in restaurant/destination local timezone)
   const autoMoment = useMemo(
@@ -299,10 +317,10 @@ export function LivingMapBottomSheet({
   // Gesture Handling for Smooth Snapping
   const snapTo = (detent: 'peek' | 'mid' | 'full') => {
     'worklet';
-    let target = PEEK_HEIGHT;
-    if (detent === 'peek') target = PEEK_HEIGHT;
-    if (detent === 'mid') target = MID_HEIGHT;
-    if (detent === 'full') target = FULL_HEIGHT;
+    let target = peekHeight;
+    if (detent === 'peek') target = peekHeight;
+    if (detent === 'mid') target = midHeight;
+    if (detent === 'full') target = fullHeight;
 
     sheetHeight.value = withSpring(target, SPRING_CONFIG);
     scheduleOnRN(setCurrentDetent, detent);
@@ -323,16 +341,16 @@ export function LivingMapBottomSheet({
     .onUpdate((event) => {
       'worklet';
       const newHeight = startHeight.value - event.translationY;
-      if (newHeight >= PEEK_HEIGHT - 25 && newHeight <= FULL_HEIGHT + 35) {
+      if (newHeight >= peekHeight - 25 && newHeight <= fullHeight + 35) {
         sheetHeight.value = newHeight;
       }
 
       let currentZone: 'none' | 'peek' | 'mid' | 'full' = 'none';
-      if (Math.abs(newHeight - PEEK_HEIGHT) <= SNAP_MAGNETIC_RADIUS) {
+      if (Math.abs(newHeight - peekHeight) <= SNAP_MAGNETIC_RADIUS) {
         currentZone = 'peek';
-      } else if (Math.abs(newHeight - MID_HEIGHT) <= SNAP_MAGNETIC_RADIUS) {
+      } else if (Math.abs(newHeight - midHeight) <= SNAP_MAGNETIC_RADIUS) {
         currentZone = 'mid';
-      } else if (Math.abs(newHeight - FULL_HEIGHT) <= SNAP_MAGNETIC_RADIUS) {
+      } else if (Math.abs(newHeight - fullHeight) <= SNAP_MAGNETIC_RADIUS) {
         currentZone = 'full';
       }
 
@@ -350,7 +368,7 @@ export function LivingMapBottomSheet({
       const velocity = -event.velocityY;
 
       if (velocity > 650) {
-        if (current < MID_HEIGHT) {
+        if (current < midHeight) {
           snapTo('mid');
         } else {
           snapTo('full');
@@ -358,7 +376,7 @@ export function LivingMapBottomSheet({
         return;
       }
       if (velocity < -650) {
-        if (current > MID_HEIGHT) {
+        if (current > midHeight) {
           snapTo('mid');
         } else {
           snapTo('peek');
@@ -366,9 +384,9 @@ export function LivingMapBottomSheet({
         return;
       }
 
-      const distPeek = Math.abs(current - PEEK_HEIGHT);
-      const distMid = Math.abs(current - MID_HEIGHT);
-      const distFull = Math.abs(current - FULL_HEIGHT);
+      const distPeek = Math.abs(current - peekHeight);
+      const distMid = Math.abs(current - midHeight);
+      const distFull = Math.abs(current - fullHeight);
 
       if (distPeek <= SNAP_MAGNETIC_RADIUS) {
         snapTo('peek');
@@ -378,13 +396,13 @@ export function LivingMapBottomSheet({
         snapTo('full');
       } else {
         const clampedHeight = Math.max(
-          PEEK_HEIGHT,
-          Math.min(FULL_HEIGHT, current),
+          peekHeight,
+          Math.min(fullHeight, current),
         );
         sheetHeight.value = withSpring(clampedHeight, SPRING_CONFIG);
-        if (clampedHeight > MID_HEIGHT + 40) {
+        if (clampedHeight > midHeight + 40) {
           scheduleOnRN(setCurrentDetent, 'full');
-        } else if (clampedHeight > PEEK_HEIGHT + 40) {
+        } else if (clampedHeight > peekHeight + 40) {
           scheduleOnRN(setCurrentDetent, 'mid');
         } else {
           scheduleOnRN(setCurrentDetent, 'peek');
@@ -528,7 +546,15 @@ export function LivingMapBottomSheet({
             <>
               {/* 1. Top Context & Action Bar */}
               <View style={styles.topContextRow}>
-                <View style={styles.titleContainer}>
+                <TouchableOpacity
+                  style={styles.titleContainer}
+                  onPress={() => {
+                    if (sheetHeight.value <= peekHeight + 35) {
+                      snapTo('mid');
+                    }
+                  }}
+                  activeOpacity={0.85}
+                >
                   {selectedGuideId === 'uncategorized' ? (
                     <View style={styles.activeGuideTitleRow}>
                       <Text
@@ -637,7 +663,7 @@ export function LivingMapBottomSheet({
                       </View>
                     </View>
                   )}
-                </View>
+                </TouchableOpacity>
 
                 {/* Quick Action Buttons */}
                 <View style={styles.actionButtonsRow}>
@@ -977,7 +1003,10 @@ export function LivingMapBottomSheet({
       {selectedCrumb ? (
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.selectedCardScroll}
+          contentContainerStyle={[
+            styles.selectedCardScroll,
+            { paddingBottom: navBarOffset + Theme.spacing.xl },
+          ]}
           nestedScrollEnabled
         >
           <MapCrumbDetailCard
@@ -991,7 +1020,10 @@ export function LivingMapBottomSheet({
       ) : allSavedCrumbs.length === 0 ? (
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.freshScrollContent}
+          contentContainerStyle={[
+            styles.freshScrollContent,
+            { paddingBottom: navBarOffset + Theme.spacing.xl },
+          ]}
           nestedScrollEnabled
         >
           <View style={styles.freshCardContainer}>
@@ -1199,7 +1231,10 @@ export function LivingMapBottomSheet({
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: navBarOffset + Theme.spacing.xl },
+          ]}
           nestedScrollEnabled
         >
           {/* 4. Filtered Photo Carousel (Quick Horizontal Browsing) */}
