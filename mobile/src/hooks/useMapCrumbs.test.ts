@@ -498,5 +498,68 @@ describe('useMapCrumbs filtering & emoji logic', () => {
       expect(resultCuisine).toHaveLength(1);
       expect(resultCuisine[0].id).toBe('crumb-3');
     });
+
+    it('filters by multiple quick filters simultaneously using AND logic', () => {
+      // sampleCrumbs:
+      // crumb-1: bookable (has reservationUrl), not visited (isVisited: false)
+      // crumb-2: not bookable, visited (isVisited: true)
+      // crumb-3: not bookable, not visited
+
+      const bookableAndVisited = filterCrumbs(sampleCrumbs, {
+        searchQuery: '',
+        selectedGuideId: null,
+        quickFilters: ['bookable', 'visited'],
+      });
+      expect(bookableAndVisited).toHaveLength(0);
+
+      const bookableOnly = filterCrumbs(sampleCrumbs, {
+        searchQuery: '',
+        selectedGuideId: null,
+        quickFilters: ['bookable'],
+      });
+      expect(bookableOnly).toHaveLength(1);
+      expect(bookableOnly[0].id).toBe('crumb-1');
+
+      // Now create a crumb that is both bookable and visited
+      const bookableAndVisitedCrumb = createMockCrumb({
+        id: 'crumb-both',
+        isVisited: true,
+        restaurant: {
+          id: 'rest-both',
+          googlePlaceId: null,
+          name: 'Both Deli',
+          formattedAddress: '200 Main St',
+          city: 'New York',
+          neighborhood: 'East Village',
+          state: 'NY',
+          country: 'US',
+          latitude: 40.7285,
+          longitude: -73.9945,
+          cuisine: 'Italian',
+          rating: null,
+          userRatingCount: null,
+          priceLevel: null,
+          mapsUrl: null,
+          websiteUrl: null,
+          photoUrl: null,
+          editorialSummary: null,
+          communityFavoriteDish: null,
+          reservationUrl: 'https://resy.com/cities/ny/both',
+          reservationProvider: 'resy',
+          regularOpeningHours: null,
+        },
+      });
+
+      const multiMatch = filterCrumbs(
+        [...sampleCrumbs, bookableAndVisitedCrumb],
+        {
+          searchQuery: '',
+          selectedGuideId: null,
+          quickFilters: ['bookable', 'visited'],
+        },
+      );
+      expect(multiMatch).toHaveLength(1);
+      expect(multiMatch[0].id).toBe('crumb-both');
+    });
   });
 });
