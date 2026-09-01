@@ -198,6 +198,11 @@ export function useAddCrumbToGuideMutation() {
         queryKey: QUERY_KEYS.guides.detail(variables.guideId),
       });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.crumbs.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.crumbs.allList() });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.crumbs.uncategorized(),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.crumbs.counts() });
     },
     onError: () => {
       haptics.error();
@@ -238,6 +243,11 @@ export function useRemoveCrumbFromGuideMutation() {
         queryKey: QUERY_KEYS.guides.detail(variables.guideId),
       });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.crumbs.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.crumbs.allList() });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.crumbs.uncategorized(),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.crumbs.counts() });
     },
     onError: () => {
       haptics.error();

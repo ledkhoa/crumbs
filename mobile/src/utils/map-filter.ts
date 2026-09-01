@@ -168,7 +168,10 @@ export function getCrumbPinType(
   if (crumb.isVisited || crumb.status === 'visited') {
     return 'visited';
   }
-  const isInGuide = Boolean(crumb.guideIds && crumb.guideIds.length > 0);
+  const isInGuide = Boolean(
+    (crumb.guideIds && crumb.guideIds.length > 0) ||
+    (crumb.guides && crumb.guides.length > 0),
+  );
   if (!isInGuide) {
     return 'inbox';
   }
@@ -186,20 +189,36 @@ export function filterCrumbs(
   const query = filters.searchQuery.trim().toLowerCase();
 
   return crumbs.filter((crumb) => {
-    // Must have valid coordinates
+    // Must have valid non-null coordinates (supporting both string and number representations)
     if (
-      !Number.isFinite(crumb.restaurant?.latitude) ||
-      !Number.isFinite(crumb.restaurant?.longitude)
+      crumb.restaurant?.latitude == null ||
+      crumb.restaurant?.longitude == null
     ) {
       return false;
     }
 
-    // Guide filtering
+    const lat = Number(crumb.restaurant.latitude);
+    const lng = Number(crumb.restaurant.longitude);
     if (
-      filters.selectedGuideId &&
-      (!crumb.guideIds || !crumb.guideIds.includes(filters.selectedGuideId))
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng) ||
+      (lat === 0 && lng === 0)
     ) {
       return false;
+    }
+
+    // Guide filtering: Check both guideIds array and populated guides object array
+    if (filters.selectedGuideId) {
+      const matchesGuideIds = Boolean(
+        crumb.guideIds && crumb.guideIds.includes(filters.selectedGuideId),
+      );
+      const matchesGuides = Boolean(
+        crumb.guides &&
+        crumb.guides.some((g) => g.id === filters.selectedGuideId),
+      );
+      if (!matchesGuideIds && !matchesGuides) {
+        return false;
+      }
     }
 
     // Quick filter

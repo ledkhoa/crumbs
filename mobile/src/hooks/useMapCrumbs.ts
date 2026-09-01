@@ -74,11 +74,13 @@ export function useMapCrumbs(
   }, [crumbsData]);
 
   const allSavedCrumbs = useMemo(() => {
-    return rawCrumbs.filter(
-      (c) =>
-        Number.isFinite(c.restaurant?.latitude) &&
-        Number.isFinite(c.restaurant?.longitude),
-    );
+    return rawCrumbs.filter((c) => {
+      const lat = Number(c.restaurant?.latitude);
+      const lng = Number(c.restaurant?.longitude);
+      return (
+        Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0
+      );
+    });
   }, [rawCrumbs]);
 
   const filteredCrumbs = useMemo(() => {
@@ -92,8 +94,8 @@ export function useMapCrumbs(
   const pinData = useMemo<CrumbPinData[]>(() => {
     return filteredCrumbs.map((crumb) => {
       const coordinate: MapCoordinates = {
-        latitude: crumb.restaurant.latitude!,
-        longitude: crumb.restaurant.longitude!,
+        latitude: Number(crumb.restaurant.latitude),
+        longitude: Number(crumb.restaurant.longitude),
       };
       return {
         crumb,

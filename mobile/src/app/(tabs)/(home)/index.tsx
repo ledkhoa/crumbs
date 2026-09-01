@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet, Linking } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import type MapView from 'react-native-maps';
 import { useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
@@ -60,7 +60,15 @@ export default function HomeScreen() {
     quickFilter,
     setQuickFilter,
     guides,
+    refetch: refetchMapCrumbs,
   } = useMapCrumbs();
+
+  // Refetch map crumbs and guides on tab focus to reflect new additions immediately
+  useFocusEffect(
+    useCallback(() => {
+      refetchMapCrumbs();
+    }, [refetchMapCrumbs]),
+  );
 
   const selectedCrumb = useMemo(() => {
     if (!selectedCrumbId) return null;

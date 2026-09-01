@@ -329,7 +329,7 @@ describe('useMapCrumbs filtering & emoji logic', () => {
       expect(result[0].id).toBe('crumb-1');
     });
 
-    it('filters by selected guide ID', () => {
+    it('filters by selected guide ID via guideIds or guides summary list', () => {
       const result = filterCrumbs(sampleCrumbs, {
         searchQuery: '',
         selectedGuideId: 'guide-101',
@@ -337,6 +337,44 @@ describe('useMapCrumbs filtering & emoji logic', () => {
       });
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('crumb-1');
+
+      const crumbWithGuideObject = createMockCrumb({
+        id: 'crumb-guide-obj',
+        guideIds: [],
+        guides: [
+          {
+            id: 'guide-custom-1',
+            name: 'Pizza Tour',
+            emojiIcon: '🍕',
+          },
+        ],
+      });
+      const resultObj = filterCrumbs([crumbWithGuideObject], {
+        searchQuery: '',
+        selectedGuideId: 'guide-custom-1',
+        quickFilter: 'all',
+      });
+      expect(resultObj).toHaveLength(1);
+      expect(resultObj[0].id).toBe('crumb-guide-obj');
+    });
+
+    it('correctly handles string and numeric coordinates without dropping crumbs', () => {
+      const mockCrumb = createMockCrumb({
+        id: 'crumb-str-coords',
+      });
+      // Emulate untyped JSON server response where latitude/longitude arrive as decimal strings
+      Object.assign(mockCrumb.restaurant, {
+        latitude: '40.7128',
+        longitude: '-74.0060',
+      });
+
+      const result = filterCrumbs([mockCrumb], {
+        searchQuery: '',
+        selectedGuideId: null,
+        quickFilter: 'all',
+      });
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('crumb-str-coords');
     });
 
     it('filters by bookable quick filter', () => {

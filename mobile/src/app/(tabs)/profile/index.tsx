@@ -153,17 +153,17 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Curation Overview Stats */}
-        <View style={styles.statsRow}>
-          <View
-            style={[
-              styles.statBox,
-              {
-                backgroundColor: colors.inputBackground,
-                borderColor: colors.cardBorder,
-              },
-            ]}
-          >
+        {/* Curation Overview Stats Card */}
+        <View
+          style={[
+            styles.statsCard,
+            {
+              backgroundColor: colors.cardBackground,
+              borderColor: colors.cardBorder,
+            },
+          ]}
+        >
+          <View style={styles.statCol}>
             <View style={styles.statIconBadge}>
               <SparkleIcon size={16} color={colors.primary} weight="fill" />
             </View>
@@ -176,14 +176,10 @@ export default function ProfileScreen() {
           </View>
 
           <View
-            style={[
-              styles.statBox,
-              {
-                backgroundColor: colors.inputBackground,
-                borderColor: colors.cardBorder,
-              },
-            ]}
-          >
+            style={[styles.statDivider, { backgroundColor: colors.cardBorder }]}
+          />
+
+          <View style={styles.statCol}>
             <View style={styles.statIconBadge}>
               <BookmarkSimpleIcon
                 size={16}
@@ -353,17 +349,23 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 13,
   },
-  statsRow: {
+  statsCard: {
     flexDirection: 'row',
-    gap: Theme.spacing.md,
-  },
-  statBox: {
-    flex: 1,
-    padding: Theme.spacing.md,
-    borderRadius: Theme.radii.lg,
-    borderWidth: 1,
     alignItems: 'center',
+    paddingVertical: Theme.spacing.lg,
+    paddingHorizontal: Theme.spacing.md,
+    borderRadius: Theme.radii.xl,
+    borderWidth: 1,
+  },
+  statCol: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
+  },
+  statDivider: {
+    width: 1,
+    height: 44,
   },
   statIconBadge: {
     marginBottom: 2,
