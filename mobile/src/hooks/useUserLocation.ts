@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Linking } from 'react-native';
+import { Linking, Alert } from 'react-native';
 import * as Location from 'expo-location';
 import type {
   MapCoordinates,
@@ -55,21 +55,12 @@ export function useUserLocation(): UseUserLocationResult {
     setErrorMessage(null);
 
     try {
-      // Check existing permission first
+      // Check existing permission without aggressively prompting on startup
       const currentPerm = await Location.getForegroundPermissionsAsync();
-
-      let permissionResult = currentPerm;
-      if (
-        currentPerm.status === Location.PermissionStatus.UNDETERMINED ||
-        (currentPerm.status !== Location.PermissionStatus.GRANTED &&
-          currentPerm.canAskAgain)
-      ) {
-        permissionResult = await Location.requestForegroundPermissionsAsync();
-      }
 
       if (!isMountedRef.current) return;
 
-      if (permissionResult.status === Location.PermissionStatus.GRANTED) {
+      if (currentPerm.status === Location.PermissionStatus.GRANTED) {
         try {
           const userCoords = await fetchPositionWithTimeout();
           if (!isMountedRef.current) return;
@@ -86,12 +77,12 @@ export function useUserLocation(): UseUserLocationResult {
           setIsLoading(false);
           return;
         }
-      } else if (permissionResult.status === Location.PermissionStatus.DENIED) {
+      } else if (currentPerm.status === Location.PermissionStatus.DENIED) {
         setStatus('denied');
         setIsLoading(false);
         return;
       } else {
-        setStatus('restricted');
+        setStatus('undetermined');
         setIsLoading(false);
         return;
       }
@@ -100,7 +91,7 @@ export function useUserLocation(): UseUserLocationResult {
       const message =
         err instanceof Error ? err.message : 'Unknown location error';
       setErrorMessage(message);
-      setStatus('timeout_fallback');
+      setStatus('undetermined');
       setIsLoading(false);
     }
   }, [fetchPositionWithTimeout]);
@@ -109,11 +100,63 @@ export function useUserLocation(): UseUserLocationResult {
     initializeLocation();
   }, [initializeLocation]);
 
+  const openAppSettings = useCallback(async () => {
+    try {
+      await Linking.openSettings();
+    } catch {
+      // Ignore linking errors
+    }
+  }, []);
+
   const requestPermission = useCallback(async (): Promise<boolean> => {
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
+      const currentPerm = await Location.getForegroundPermissionsAsync();
+      if (currentPerm.status === Location.PermissionStatus.GRANTED) {
+        try {
+          const userCoords = await fetchPositionWithTimeout();
+          if (isMountedRef.current) {
+            setCoords(userCoords);
+            setStatus('granted');
+            setIsLoading(false);
+          }
+          return true;
+        } catch {
+          if (isMountedRef.current) {
+            setStatus('timeout_fallback');
+            setIsLoading(false);
+          }
+          return false;
+        }
+      }
+
+      // If already denied and cannot ask again via native dialog, guide user to Settings
+      if (
+        !currentPerm.canAskAgain &&
+        currentPerm.status !== Location.PermissionStatus.UNDETERMINED
+      ) {
+        if (isMountedRef.current) {
+          setStatus('denied');
+          setIsLoading(false);
+        }
+        Alert.alert(
+          'Location Permission Required',
+          'To center the map on your current location and find nearby cravings, please enable Location Services in your settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Open Settings',
+              onPress: () => {
+                openAppSettings();
+              },
+            },
+          ],
+        );
+        return false;
+      }
+
       const result = await Location.requestForegroundPermissionsAsync();
 
       if (result.status === Location.PermissionStatus.GRANTED) {
@@ -155,23 +198,18 @@ export function useUserLocation(): UseUserLocationResult {
       }
       return false;
     }
-  }, [fetchPositionWithTimeout]);
-
-  const openAppSettings = useCallback(async () => {
-    try {
-      await Linking.openSettings();
-    } catch {
-      // Ignore linking errors
-    }
-  }, []);
+  }, [fetchPositionWithTimeout, openAppSettings]);
 
   const recenterToUser =
     useCallback(async (): Promise<MapCoordinates | null> => {
-      if (status === 'granted') {
+      // Check current permission state in case user enabled it in background or Settings
+      const currentPerm = await Location.getForegroundPermissionsAsync();
+      if (currentPerm.status === Location.PermissionStatus.GRANTED) {
         try {
           const userCoords = await fetchPositionWithTimeout();
           if (userCoords && isMountedRef.current) {
             setCoords(userCoords);
+            setStatus('granted');
           }
           return userCoords || coords;
         } catch {
@@ -185,6 +223,7 @@ export function useUserLocation(): UseUserLocationResult {
           const userCoords = await fetchPositionWithTimeout();
           if (userCoords && isMountedRef.current) {
             setCoords(userCoords);
+            setStatus('granted');
           }
           return userCoords;
         } catch {
@@ -193,7 +232,7 @@ export function useUserLocation(): UseUserLocationResult {
       }
 
       return null;
-    }, [status, coords, fetchPositionWithTimeout, requestPermission]);
+    }, [coords, fetchPositionWithTimeout, requestPermission]);
 
   return {
     coords,

@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet, Linking } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import type MapView from 'react-native-maps';
 import { useTheme } from '@/theme/tokens';
@@ -17,13 +16,11 @@ import {
 import { pickRandomCraving } from '@/utils/map-clustering';
 import { LiveCravingsMapView } from '@/components/map/LiveCravingsMapView';
 import { LivingMapBottomSheet } from '@/components/map/LivingMapBottomSheet';
-import { LocationPermissionBanner } from '@/components/map/LocationPermissionBanner';
 import { IngestionOverlaySheet } from '@/components/ingestion/IngestionOverlaySheet';
 import { QuickAddToGuideModal } from '@/components/ingestion/QuickAddToGuideModal';
 import type { EnrichedUserCrumb } from '@api/modules/crumbs/crumbs.types';
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors } = useTheme();
 
@@ -34,7 +31,6 @@ export default function HomeScreen() {
   const [currentRegion, setCurrentRegion] = useState<MapRegion>(
     DEFAULT_NYC_COORDINATES,
   );
-  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [guideModalTarget, setGuideModalTarget] =
     useState<EnrichedUserCrumb | null>(null);
   const [isLocating, setIsLocating] = useState(false);
@@ -51,7 +47,6 @@ export default function HomeScreen() {
   const {
     coords: userCoords,
     status: locationStatus,
-    requestPermission,
     recenterToUser,
   } = useUserLocation();
 
@@ -238,17 +233,6 @@ export default function HomeScreen() {
         showsUserLocation={locationStatus === 'granted'}
       />
 
-      {/* Floating Permission Banner (Top Center if GPS permission denied) */}
-      {!isBannerDismissed && locationStatus !== 'granted' && (
-        <View style={[styles.topBannerWrapper, { top: insets.top + 8 }]}>
-          <LocationPermissionBanner
-            status={locationStatus}
-            onRequestPermission={requestPermission}
-            onDismiss={() => setIsBannerDismissed(true)}
-          />
-        </View>
-      )}
-
       {/* Layer 2: Frosted Bottom Sheet Drawer (Mock 5.6 Sol Layout) */}
       <LivingMapBottomSheet
         crumbs={filteredCrumbs}
@@ -309,11 +293,5 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  topBannerWrapper: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    zIndex: 30,
   },
 });
