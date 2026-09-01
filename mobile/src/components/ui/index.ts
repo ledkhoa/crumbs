@@ -12,3 +12,4 @@ export * from './InAppToast';
 export * from './Skeleton';
 export * from './StarRating';
 export * from './SocialPlatformIcon';
+export * from './AppKeyboardToolbar';

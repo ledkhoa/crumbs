@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { AppKeyboardToolbar } from '@/components/ui/AppKeyboardToolbar';
 import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { parseSocialUrl } from '@/utils/social-url';
@@ -425,6 +426,7 @@ export function IngestionOverlaySheet({
             </View>
           )}
         </View>
+        <AppKeyboardToolbar />
       </View>
     </Modal>
   );

@@ -1,4 +1,5 @@
 import { View, StyleSheet, Platform, Modal, Pressable } from 'react-native';
+import { AppKeyboardToolbar } from '@/components/ui/AppKeyboardToolbar';
 import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { CreateGuideForm } from './CreateGuideForm';
@@ -50,6 +51,7 @@ export function CreateGuideModal({
 
           <CreateGuideForm onCancel={handleClose} onSuccess={onSuccess} />
         </View>
+        <AppKeyboardToolbar />
       </View>
     </Modal>
   );

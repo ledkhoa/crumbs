@@ -15,6 +15,7 @@ import { IngestionOverlaySheet } from '@/components/ingestion/IngestionOverlaySh
 import { BackgroundIngestionPoller } from '@/components/ingestion/BackgroundIngestionPoller';
 import { InAppToastBanner } from '@/components/inbox/InAppToastBanner';
 import { QuickAddToGuideModal } from '@/components/ingestion/QuickAddToGuideModal';
+import { AppKeyboardToolbar } from '@/components/ui/AppKeyboardToolbar';
 import { useInboxStore } from '@/store/inbox';
 import { useAddCrumbToGuideMutation } from '@/hooks/useGuides';
 import { useTheme } from '@/theme/tokens';
@@ -182,6 +183,7 @@ export default function RootLayout() {
             />
           )}
         </QueryClientProvider>
+        <AppKeyboardToolbar />
       </KeyboardProvider>
     </GestureHandlerRootView>
   );

@@ -12,6 +12,7 @@ import {
   Pressable,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { AppKeyboardToolbar } from '@/components/ui/AppKeyboardToolbar';
 import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { Button } from '@/components/ui/Button';
@@ -319,6 +320,7 @@ export function EditGuideModal({
             </View>
           </KeyboardAwareScrollView>
         </View>
+        <AppKeyboardToolbar />
       </View>
     </Modal>
   );

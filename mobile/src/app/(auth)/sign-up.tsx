@@ -7,7 +7,7 @@ import {
   Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useForm } from '@tanstack/react-form';
@@ -106,24 +106,29 @@ export default function SignUpScreen() {
       {/* Dark Moody Scrim Overlay */}
       <View style={styles.darkScrim} />
 
-      <SafeAreaView style={styles.safeArea}>
-        <KeyboardAwareScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Brand Header */}
-          <View style={styles.header}>
-            <View style={styles.logoBadge}>
-              <SparkleIcon size={34} color={colors.primary} weight="fill" />
-            </View>
-            <Text style={styles.logoText}>Crumbs</Text>
-            <Text style={styles.taglineText}>Your Living Cravings Guide</Text>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Brand Header */}
+        <View style={styles.header}>
+          <View style={styles.logoBadge}>
+            <SparkleIcon size={34} color={colors.primary} weight="fill" />
           </View>
+          <Text style={styles.logoText}>Crumbs</Text>
+          <Text style={styles.taglineText}>Your Living Cravings Guide</Text>
+        </View>
 
-          {/* Auth Bottom Sheet Container */}
+        {/* Auth Bottom Sheet Container */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.cardWrapper}
+        >
           <Card
-            style={[styles.card, { backgroundColor: colors.cardBackground }]}
+            style={[
+              styles.card,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.cardBorder,
+              },
+            ]}
           >
             <GrabHandle />
 
@@ -334,7 +339,7 @@ export default function SignUpScreen() {
               </Text>
             </TouchableOpacity>
           </Card>
-        </KeyboardAwareScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
@@ -355,10 +360,10 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
     justifyContent: 'space-between',
+  },
+  cardWrapper: {
+    width: '100%',
   },
   header: {
     alignItems: 'center',
@@ -391,11 +396,15 @@ const styles = StyleSheet.create({
   card: {
     borderTopLeftRadius: Theme.radii.sheet,
     borderTopRightRadius: Theme.radii.sheet,
-    borderBottomLeftRadius: Theme.radii.sheet,
-    borderBottomRightRadius: Theme.radii.sheet,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    borderBottomWidth: 0,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
+    borderTopWidth: 1,
     paddingHorizontal: Theme.spacing.lg,
     paddingTop: Theme.spacing.md,
-    paddingBottom: Theme.spacing.xxl,
+    paddingBottom: Platform.OS === 'ios' ? 44 : Theme.spacing.xxl,
   },
   title: {
     fontSize: 28,

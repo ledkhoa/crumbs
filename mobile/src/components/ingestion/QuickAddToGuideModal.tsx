@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, StyleSheet, Modal, Platform, Pressable } from 'react-native';
+import { AppKeyboardToolbar } from '@/components/ui/AppKeyboardToolbar';
 import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { GuidePickerView } from './GuidePickerView';
@@ -106,6 +107,7 @@ export function QuickAddToGuideModal({
             </View>
           )}
         </View>
+        <AppKeyboardToolbar />
       </View>
     </Modal>
   );

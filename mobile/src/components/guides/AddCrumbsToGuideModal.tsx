@@ -10,6 +10,7 @@ import {
   Pressable,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { AppKeyboardToolbar } from '@/components/ui/AppKeyboardToolbar';
 import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { formatPriceLevel } from '@/utils/price';
@@ -274,6 +275,7 @@ export function AddCrumbsToGuideModal({
             </Button>
           </View>
         </View>
+        <AppKeyboardToolbar />
       </View>
     </Modal>
   );
