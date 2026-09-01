@@ -37,6 +37,10 @@ export interface UseMapCrumbsResult {
   setSelectedGuideId: (guideId: string | null) => void;
   quickFilter: MapQuickFilter;
   setQuickFilter: (filter: MapQuickFilter) => void;
+  quickFilters: MapQuickFilter[];
+  setQuickFilters: (filters: MapQuickFilter[]) => void;
+  toggleQuickFilter: (filter: MapQuickFilter) => void;
+  clearQuickFilters: () => void;
   filterState: MapFilterState;
   guides: GuideSummary[];
 }
@@ -50,9 +54,34 @@ export function useMapCrumbs(
   const [selectedGuideId, setSelectedGuideId] = useState<string | null>(
     initialFilters?.selectedGuideId || null,
   );
-  const [quickFilter, setQuickFilter] = useState<MapQuickFilter>(
-    initialFilters?.quickFilter || 'all',
+  const [quickFilters, setQuickFilters] = useState<MapQuickFilter[]>(
+    initialFilters?.quickFilters ??
+      (initialFilters?.quickFilter && initialFilters.quickFilter !== 'all'
+        ? [initialFilters.quickFilter]
+        : []),
   );
+
+  const toggleQuickFilter = useCallback((filter: MapQuickFilter) => {
+    setQuickFilters((prev) =>
+      prev.includes(filter)
+        ? prev.filter((f) => f !== filter)
+        : [...prev, filter],
+    );
+  }, []);
+
+  const clearQuickFilters = useCallback(() => {
+    setQuickFilters([]);
+  }, []);
+
+  const setQuickFilter = useCallback((filter: MapQuickFilter) => {
+    if (filter === 'all') {
+      setQuickFilters([]);
+    } else {
+      setQuickFilters([filter]);
+    }
+  }, []);
+
+  const quickFilter = quickFilters[0] || 'all';
 
   const {
     data: crumbsData,
@@ -88,9 +117,9 @@ export function useMapCrumbs(
     return filterCrumbs(allSavedCrumbs, {
       searchQuery,
       selectedGuideId,
-      quickFilter,
+      quickFilters,
     });
-  }, [allSavedCrumbs, searchQuery, selectedGuideId, quickFilter]);
+  }, [allSavedCrumbs, searchQuery, selectedGuideId, quickFilters]);
 
   const pinData = useMemo<CrumbPinData[]>(() => {
     return filteredCrumbs.map((crumb) => {
@@ -135,8 +164,9 @@ export function useMapCrumbs(
       searchQuery,
       selectedGuideId,
       quickFilter,
+      quickFilters,
     }),
-    [searchQuery, selectedGuideId, quickFilter],
+    [searchQuery, selectedGuideId, quickFilter, quickFilters],
   );
 
   return {
@@ -153,6 +183,10 @@ export function useMapCrumbs(
     setSelectedGuideId,
     quickFilter,
     setQuickFilter,
+    quickFilters,
+    setQuickFilters,
+    toggleQuickFilter,
+    clearQuickFilters,
     filterState,
     guides,
   };

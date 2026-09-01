@@ -55,8 +55,8 @@ export default function HomeScreen() {
     filteredCrumbs,
     selectedGuideId,
     setSelectedGuideId,
-    quickFilter,
-    setQuickFilter,
+    quickFilters,
+    toggleQuickFilter,
     guides,
     refetch: refetchMapCrumbs,
   } = useMapCrumbs();
@@ -255,8 +255,8 @@ export default function HomeScreen() {
         selectedGuideId={selectedGuideId}
         guides={guides}
         onSelectGuide={setSelectedGuideId}
-        activeQuickFilter={quickFilter}
-        onSelectQuickFilter={setQuickFilter}
+        activeQuickFilters={quickFilters}
+        onToggleQuickFilter={toggleQuickFilter}
         onRecenterPress={handleRecenterPress}
         onDecideNowPress={handleDecideNowPress}
         isLocating={isLocating}

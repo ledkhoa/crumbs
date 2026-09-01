@@ -32,7 +32,8 @@ export type MapQuickFilter = 'all' | 'open_now' | 'bookable' | 'visited';
 export interface MapFilterState {
   searchQuery: string;
   selectedGuideId: string | null;
-  quickFilter: MapQuickFilter;
+  quickFilter?: MapQuickFilter;
+  quickFilters?: MapQuickFilter[];
 }
 
 export interface CrumbPinData {

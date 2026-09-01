@@ -31,6 +31,9 @@ import {
   LinkIcon,
   ArrowRightIcon,
   XCircleIcon,
+  ClockIcon,
+  CalendarCheckIcon,
+  CheckCircleIcon,
 } from 'phosphor-react-native';
 import { haversineDistanceMiles } from '@/utils/map-clustering';
 import {
@@ -190,8 +193,10 @@ export interface LivingMapBottomSheetProps {
   selectedGuideId: string | null;
   guides: GuideSummary[];
   onSelectGuide: (guideId: string | null) => void;
-  activeQuickFilter: MapQuickFilter;
-  onSelectQuickFilter: (filter: MapQuickFilter) => void;
+  activeQuickFilters?: MapQuickFilter[];
+  onToggleQuickFilter?: (filter: MapQuickFilter) => void;
+  activeQuickFilter?: MapQuickFilter;
+  onSelectQuickFilter?: (filter: MapQuickFilter) => void;
   onRecenterPress: () => void;
   onDecideNowPress: () => void;
   isLocating?: boolean;
@@ -200,10 +205,14 @@ export interface LivingMapBottomSheetProps {
   bottomInset?: number;
 }
 
-const FILTER_CHIPS: Array<{ key: MapQuickFilter; label: string }> = [
-  { key: 'open_now', label: 'Open Now' },
-  { key: 'bookable', label: 'Bookable' },
-  { key: 'visited', label: 'Visited' },
+const STATUS_FILTERS: Array<{
+  key: MapQuickFilter;
+  label: string;
+  icon: typeof ClockIcon;
+}> = [
+  { key: 'open_now', label: 'Open Now', icon: ClockIcon },
+  { key: 'bookable', label: 'Bookable', icon: CalendarCheckIcon },
+  { key: 'visited', label: 'Visited', icon: CheckCircleIcon },
 ];
 
 export function LivingMapBottomSheet({
@@ -219,6 +228,8 @@ export function LivingMapBottomSheet({
   selectedGuideId,
   guides,
   onSelectGuide,
+  activeQuickFilters,
+  onToggleQuickFilter,
   activeQuickFilter,
   onSelectQuickFilter,
   onRecenterPress,
@@ -398,12 +409,24 @@ export function LivingMapBottomSheet({
     }).length;
   }, [allSavedCrumbs]);
 
+  const activeFilters = useMemo<MapQuickFilter[]>(() => {
+    if (activeQuickFilters) return activeQuickFilters;
+    if (activeQuickFilter && activeQuickFilter !== 'all') {
+      return [activeQuickFilter];
+    }
+    return [];
+  }, [activeQuickFilters, activeQuickFilter]);
+
   const handleChipPress = (filter: MapQuickFilter) => {
     haptics.tap();
-    if (activeQuickFilter === filter) {
-      onSelectQuickFilter('all');
-    } else {
-      onSelectQuickFilter(filter);
+    if (onToggleQuickFilter) {
+      onToggleQuickFilter(filter);
+    } else if (onSelectQuickFilter) {
+      if (activeQuickFilter === filter) {
+        onSelectQuickFilter('all');
+      } else {
+        onSelectQuickFilter(filter);
+      }
     }
   };
 
@@ -686,10 +709,10 @@ export function LivingMapBottomSheet({
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.guidesScrollContainer}
                   >
-                    {/* All Crumbs Chip */}
+                    {/* All Crumbs Card */}
                     <TouchableOpacity
                       style={[
-                        styles.guideChip,
+                        styles.guideCard,
                         {
                           backgroundColor:
                             selectedGuideId === null
@@ -698,7 +721,7 @@ export function LivingMapBottomSheet({
                           borderColor:
                             selectedGuideId === null
                               ? colors.primary
-                              : colors.inputBorder,
+                              : colors.cardBorder,
                         },
                       ]}
                       onPress={() => handleGuideChipPress(null)}
@@ -706,27 +729,55 @@ export function LivingMapBottomSheet({
                       accessibilityRole="button"
                       accessibilityLabel="All Crumbs"
                     >
+                      <Text style={styles.guideCardEmoji}>🗺️</Text>
                       <Text
                         style={[
-                          styles.guideChipText,
+                          styles.guideCardName,
                           {
                             color:
                               selectedGuideId === null
                                 ? colors.onPrimary
                                 : colors.text,
                             fontWeight:
-                              selectedGuideId === null ? '700' : '500',
+                              selectedGuideId === null ? '700' : '600',
                           },
                         ]}
                       >
-                        🗺️ All ({allSavedCrumbs.length})
+                        All
                       </Text>
+                      <View
+                        style={[
+                          styles.guideCardCountBadge,
+                          {
+                            backgroundColor:
+                              selectedGuideId === null
+                                ? 'rgba(255, 255, 255, 0.24)'
+                                : colors.cardBackground,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.guideCardCountText,
+                            {
+                              color:
+                                selectedGuideId === null
+                                  ? colors.onPrimary
+                                  : colors.textMuted,
+                              fontWeight:
+                                selectedGuideId === null ? '700' : '600',
+                            },
+                          ]}
+                        >
+                          {allSavedCrumbs.length}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
 
-                    {/* Uncategorized Chip */}
+                    {/* Uncategorized Card */}
                     <TouchableOpacity
                       style={[
-                        styles.guideChip,
+                        styles.guideCard,
                         {
                           backgroundColor:
                             selectedGuideId === 'uncategorized'
@@ -735,7 +786,7 @@ export function LivingMapBottomSheet({
                           borderColor:
                             selectedGuideId === 'uncategorized'
                               ? colors.primary
-                              : colors.inputBorder,
+                              : colors.cardBorder,
                         },
                       ]}
                       onPress={() => handleGuideChipPress('uncategorized')}
@@ -743,9 +794,10 @@ export function LivingMapBottomSheet({
                       accessibilityRole="button"
                       accessibilityLabel="Uncategorized Crumbs"
                     >
+                      <Text style={styles.guideCardEmoji}>📥</Text>
                       <Text
                         style={[
-                          styles.guideChipText,
+                          styles.guideCardName,
                           {
                             color:
                               selectedGuideId === 'uncategorized'
@@ -754,29 +806,58 @@ export function LivingMapBottomSheet({
                             fontWeight:
                               selectedGuideId === 'uncategorized'
                                 ? '700'
-                                : '500',
+                                : '600',
                           },
                         ]}
                       >
-                        📥 Uncategorized ({uncategorizedCount})
+                        Uncategorized
                       </Text>
+                      <View
+                        style={[
+                          styles.guideCardCountBadge,
+                          {
+                            backgroundColor:
+                              selectedGuideId === 'uncategorized'
+                                ? 'rgba(255, 255, 255, 0.24)'
+                                : colors.cardBackground,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.guideCardCountText,
+                            {
+                              color:
+                                selectedGuideId === 'uncategorized'
+                                  ? colors.onPrimary
+                                  : colors.textMuted,
+                              fontWeight:
+                                selectedGuideId === 'uncategorized'
+                                  ? '700'
+                                  : '600',
+                            },
+                          ]}
+                        >
+                          {uncategorizedCount}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
 
-                    {/* Individual Guide Chips */}
+                    {/* Individual Guide Cards */}
                     {guides.map((guide) => {
                       const isSelected = selectedGuideId === guide.id;
                       return (
                         <TouchableOpacity
                           key={guide.id}
                           style={[
-                            styles.guideChip,
+                            styles.guideCard,
                             {
                               backgroundColor: isSelected
                                 ? colors.primary
                                 : colors.inputBackground,
                               borderColor: isSelected
                                 ? colors.primary
-                                : colors.inputBorder,
+                                : colors.cardBorder,
                             },
                           ]}
                           onPress={() => handleGuideChipPress(guide.id)}
@@ -784,23 +865,49 @@ export function LivingMapBottomSheet({
                           accessibilityRole="button"
                           accessibilityLabel={guide.name}
                         >
+                          <Text style={styles.guideCardEmoji}>
+                            {guide.emojiIcon || '📑'}
+                          </Text>
                           <Text
                             style={[
-                              styles.guideChipText,
+                              styles.guideCardName,
                               {
                                 color: isSelected
                                   ? colors.onPrimary
                                   : colors.text,
-                                fontWeight: isSelected ? '700' : '500',
+                                fontWeight: isSelected ? '700' : '600',
                               },
                             ]}
                             numberOfLines={1}
                           >
-                            {guide.emojiIcon || '📑'} {guide.name}
-                            {guide.crumbCount !== undefined
-                              ? ` (${guide.crumbCount})`
-                              : ''}
+                            {guide.name}
                           </Text>
+                          {guide.crumbCount !== undefined && (
+                            <View
+                              style={[
+                                styles.guideCardCountBadge,
+                                {
+                                  backgroundColor: isSelected
+                                    ? 'rgba(255, 255, 255, 0.24)'
+                                    : colors.cardBackground,
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.guideCardCountText,
+                                  {
+                                    color: isSelected
+                                      ? colors.onPrimary
+                                      : colors.textMuted,
+                                    fontWeight: isSelected ? '700' : '600',
+                                  },
+                                ]}
+                              >
+                                {guide.crumbCount}
+                              </Text>
+                            </View>
+                          )}
                         </TouchableOpacity>
                       );
                     })}
@@ -813,22 +920,23 @@ export function LivingMapBottomSheet({
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.chipsScrollContainer}
+                  contentContainerStyle={styles.statusFiltersScrollContainer}
                 >
-                  {FILTER_CHIPS.map((chip) => {
-                    const isActive = activeQuickFilter === chip.key;
+                  {STATUS_FILTERS.map((chip) => {
+                    const isActive = activeFilters.includes(chip.key);
+                    const IconComponent = chip.icon;
                     return (
                       <TouchableOpacity
                         key={chip.key}
                         style={[
-                          styles.chip,
+                          styles.statusChip,
                           {
                             backgroundColor: isActive
-                              ? colors.primary
-                              : colors.inputBackground,
+                              ? colors.inputBackground
+                              : 'transparent',
                             borderColor: isActive
                               ? colors.primary
-                              : colors.inputBorder,
+                              : colors.cardBorder,
                           },
                         ]}
                         onPress={() => handleChipPress(chip.key)}
@@ -837,11 +945,18 @@ export function LivingMapBottomSheet({
                         accessibilityState={{ selected: isActive }}
                         accessibilityLabel={chip.label}
                       >
+                        <IconComponent
+                          size={13}
+                          color={isActive ? colors.primary : colors.textMuted}
+                          weight={isActive ? 'fill' : 'bold'}
+                        />
                         <Text
                           style={[
-                            styles.chipText,
+                            styles.statusChipText,
                             {
-                              color: isActive ? colors.onPrimary : colors.text,
+                              color: isActive
+                                ? colors.primary
+                                : colors.textMuted,
                               fontWeight: isActive ? '700' : '500',
                             },
                           ]}
@@ -1529,30 +1644,54 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 2,
   },
-  guideChip: {
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: Theme.radii.pill,
+  guideCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingLeft: 9,
+    paddingRight: 6,
+    paddingVertical: 4,
+    borderRadius: Theme.radii.md,
     borderWidth: 1,
-    maxWidth: 180,
+    height: 33,
+    maxWidth: 190,
   },
-  guideChipText: {
+  guideCardEmoji: {
+    fontSize: 13,
+  },
+  guideCardName: {
     fontSize: 12,
+    flexShrink: 1,
   },
-  chipsScrollContainer: {
+  guideCardCountBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: Theme.radii.pill,
+    minWidth: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guideCardCountText: {
+    fontSize: 10,
+  },
+  statusFiltersScrollContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingVertical: 2,
   },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+  statusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: Theme.radii.pill,
     borderWidth: 1,
+    height: 27,
   },
-  chipText: {
-    fontSize: 12,
+  statusChipText: {
+    fontSize: 11,
   },
   selectedCardScroll: {
     paddingBottom: Theme.spacing.xxl,

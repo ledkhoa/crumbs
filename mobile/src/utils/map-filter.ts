@@ -183,10 +183,16 @@ export function filterCrumbs(
   filters: {
     searchQuery: string;
     selectedGuideId: string | null;
-    quickFilter: MapQuickFilter;
+    quickFilter?: MapQuickFilter;
+    quickFilters?: MapQuickFilter[];
   },
 ): EnrichedUserCrumb[] {
   const query = filters.searchQuery.trim().toLowerCase();
+  const activeFilters: MapQuickFilter[] =
+    filters.quickFilters ??
+    (filters.quickFilter && filters.quickFilter !== 'all'
+      ? [filters.quickFilter]
+      : []);
 
   return crumbs.filter((crumb) => {
     // Must have valid non-null coordinates (supporting both string and number representations)
@@ -229,22 +235,26 @@ export function filterCrumbs(
       }
     }
 
-    // Quick filter
-    if (filters.quickFilter === 'open_now') {
+    // Quick filters (AND logic: crumb must satisfy all applied quick filters)
+    if (activeFilters.includes('open_now')) {
       const openStatus = getRestaurantOpenStatus(
         crumb.restaurant.regularOpeningHours,
       );
       if (!openStatus.isOpen) {
         return false;
       }
-    } else if (filters.quickFilter === 'bookable') {
+    }
+
+    if (activeFilters.includes('bookable')) {
       const isBookable = Boolean(
         crumb.restaurant.reservationUrl || crumb.restaurant.reservationProvider,
       );
       if (!isBookable) {
         return false;
       }
-    } else if (filters.quickFilter === 'visited') {
+    }
+
+    if (activeFilters.includes('visited')) {
       const isVisited = crumb.isVisited === true || crumb.status === 'visited';
       if (!isVisited) {
         return false;
