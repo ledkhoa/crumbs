@@ -148,8 +148,12 @@ export default function GuideDetailScreen() {
   };
 
   const handleViewOnMap = () => {
+    if (!guide) return;
     haptics.primary();
-    router.push('/(tabs)/(home)');
+    router.push({
+      pathname: '/(tabs)/(home)',
+      params: { guideId: guide.id, t: String(Date.now()) },
+    });
   };
 
   const handleStartFoodCrawl = () => {
@@ -417,14 +421,6 @@ export default function GuideDetailScreen() {
           />
         ) : (
           <View style={styles.crumbsSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Saved Places
-              </Text>
-              <Text style={[styles.sectionCount, { color: colors.textMuted }]}>
-                {crumbs.length}
-              </Text>
-            </View>
             {crumbs.map((item) => (
               <GuideCrumbCard
                 key={item.crumbId}

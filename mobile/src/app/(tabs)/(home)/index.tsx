@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet, Linking } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import type MapView from 'react-native-maps';
 import { useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
@@ -12,6 +12,7 @@ import {
   DEFAULT_NYC_COORDINATES,
   USER_NEIGHBORHOOD_ZOOM_DELTA,
   type MapRegion,
+  type MapCoordinates,
 } from '@/types/map';
 import { pickRandomCraving } from '@/utils/map-clustering';
 import { LiveCravingsMapView } from '@/components/map/LiveCravingsMapView';
@@ -61,37 +62,14 @@ export default function HomeScreen() {
     refetch: refetchMapCrumbs,
   } = useMapCrumbs();
 
-  // Refetch map crumbs and guides on tab focus to reflect new additions immediately
-  useFocusEffect(
-    useCallback(() => {
-      refetchMapCrumbs();
-    }, [refetchMapCrumbs]),
-  );
+  const params = useLocalSearchParams<{ guideId?: string; t?: string }>();
+  const guideId = params.guideId;
+  const navTimestamp = params.t;
 
   const selectedCrumb = useMemo(() => {
     if (!selectedCrumbId) return null;
     return allSavedCrumbs.find((c) => c.id === selectedCrumbId) || null;
   }, [selectedCrumbId, allSavedCrumbs]);
-
-  // Initial camera sync when user location resolves
-  const hasCenteredInitialLocationRef = useRef(false);
-  useEffect(() => {
-    if (
-      userCoords &&
-      !hasCenteredInitialLocationRef.current &&
-      mapRef.current
-    ) {
-      hasCenteredInitialLocationRef.current = true;
-      const targetRegion: MapRegion = {
-        latitude: userCoords.latitude,
-        longitude: userCoords.longitude,
-        latitudeDelta: USER_NEIGHBORHOOD_ZOOM_DELTA.latitudeDelta,
-        longitudeDelta: USER_NEIGHBORHOOD_ZOOM_DELTA.longitudeDelta,
-      };
-      mapRef.current.animateToRegion(targetRegion, 800);
-      setCurrentRegion(targetRegion);
-    }
-  }, [userCoords]);
 
   // Smooth camera animator with vertical offset so bottom sheet doesn't cover pin
   const animateCameraToCrumb = useCallback((crumb: EnrichedUserCrumb) => {
@@ -103,8 +81,8 @@ export default function HomeScreen() {
       return;
     }
 
-    const lat = crumb.restaurant.latitude!;
-    const lng = crumb.restaurant.longitude!;
+    const lat = Number(crumb.restaurant.latitude);
+    const lng = Number(crumb.restaurant.longitude);
     const latDelta = USER_NEIGHBORHOOD_ZOOM_DELTA.latitudeDelta;
     const lngDelta = USER_NEIGHBORHOOD_ZOOM_DELTA.longitudeDelta;
     const targetLat = lat - latDelta * 0.18; // Shift pin into upper half of visible viewport
@@ -124,6 +102,141 @@ export default function HomeScreen() {
       isProgrammaticMoveRef.current = false;
     }, 600);
   }, []);
+
+  // Helper to zoom to a guide's neighborhood
+  const zoomToGuideArea = useCallback(
+    (targetGuideId: string, crumbsList: EnrichedUserCrumb[]) => {
+      const guideCrumbs = crumbsList.filter((c) => {
+        if (targetGuideId === 'uncategorized') {
+          const hasGuideIds = c.guideIds && c.guideIds.length > 0;
+          const hasGuides = c.guides && c.guides.length > 0;
+          return !hasGuideIds && !hasGuides;
+        }
+        return Boolean(
+          (c.guideIds && c.guideIds.includes(targetGuideId)) ||
+          (c.guides && c.guides.some((g) => g.id === targetGuideId)),
+        );
+      });
+
+      if (guideCrumbs.length === 0) return false;
+
+      const validCoords: MapCoordinates[] = guideCrumbs
+        .filter(
+          (c) =>
+            c.restaurant &&
+            Number.isFinite(c.restaurant.latitude) &&
+            Number.isFinite(c.restaurant.longitude) &&
+            Number(c.restaurant.latitude) !== 0 &&
+            Number(c.restaurant.longitude) !== 0,
+        )
+        .map((c) => ({
+          latitude: Number(c.restaurant.latitude),
+          longitude: Number(c.restaurant.longitude),
+        }));
+
+      if (validCoords.length === 0) return false;
+
+      const firstCoord = validCoords[0]!;
+      const targetRegion: MapRegion = {
+        latitude: firstCoord.latitude,
+        longitude: firstCoord.longitude,
+        latitudeDelta: USER_NEIGHBORHOOD_ZOOM_DELTA.latitudeDelta,
+        longitudeDelta: USER_NEIGHBORHOOD_ZOOM_DELTA.longitudeDelta,
+      };
+
+      if (mapRef.current) {
+        isProgrammaticMoveRef.current = true;
+        mapRef.current.animateToRegion(targetRegion, 600);
+        setCurrentRegion(targetRegion);
+        setTimeout(() => {
+          isProgrammaticMoveRef.current = false;
+        }, 700);
+        return true;
+      }
+      return false;
+    },
+    [],
+  );
+
+  const lastHandledNavKeyRef = useRef<string | null>(null);
+
+  // Refetch map crumbs and guides on tab focus; zoom to guide if navigated from guide detail
+  useFocusEffect(
+    useCallback(() => {
+      refetchMapCrumbs();
+
+      if (guideId) {
+        const navKey = `${guideId}-${navTimestamp || ''}`;
+        if (navKey !== lastHandledNavKeyRef.current) {
+          lastHandledNavKeyRef.current = navKey;
+          hasCenteredInitialLocationRef.current = true;
+          setSelectedGuideId(guideId);
+          setSelectedCrumbId(null);
+
+          // Staggered timers ensure native screen transition completes before calling animateToRegion
+          const t1 = setTimeout(() => {
+            zoomToGuideArea(guideId, allSavedCrumbs);
+          }, 150);
+          const t2 = setTimeout(() => {
+            zoomToGuideArea(guideId, allSavedCrumbs);
+          }, 450);
+
+          return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+          };
+        }
+      }
+    }, [
+      refetchMapCrumbs,
+      guideId,
+      navTimestamp,
+      allSavedCrumbs,
+      setSelectedGuideId,
+      zoomToGuideArea,
+    ]),
+  );
+
+  // Initial camera sync when user location resolves (only if not navigating directly to a guide)
+  const hasCenteredInitialLocationRef = useRef(false);
+  useEffect(() => {
+    if (
+      userCoords &&
+      !hasCenteredInitialLocationRef.current &&
+      !guideId &&
+      mapRef.current
+    ) {
+      hasCenteredInitialLocationRef.current = true;
+      const targetRegion: MapRegion = {
+        latitude: userCoords.latitude,
+        longitude: userCoords.longitude,
+        latitudeDelta: USER_NEIGHBORHOOD_ZOOM_DELTA.latitudeDelta,
+        longitudeDelta: USER_NEIGHBORHOOD_ZOOM_DELTA.longitudeDelta,
+      };
+      mapRef.current.animateToRegion(targetRegion, 800);
+      setCurrentRegion(targetRegion);
+    }
+  }, [userCoords, guideId]);
+
+  // If crumbs finish loading after navigation occurred, trigger the zoom
+  useEffect(() => {
+    if (guideId && allSavedCrumbs.length > 0) {
+      const navKey = `${guideId}-${navTimestamp || ''}`;
+      if (lastHandledNavKeyRef.current === navKey) {
+        zoomToGuideArea(guideId, allSavedCrumbs);
+      }
+    }
+  }, [guideId, navTimestamp, allSavedCrumbs, zoomToGuideArea]);
+
+  const handleSelectGuide = useCallback(
+    (newGuideId: string | null) => {
+      setSelectedGuideId(newGuideId);
+      if (newGuideId && newGuideId !== 'uncategorized') {
+        zoomToGuideArea(newGuideId, allSavedCrumbs);
+      }
+    },
+    [allSavedCrumbs, setSelectedGuideId, zoomToGuideArea],
+  );
 
   const handleMarkerSelect = useCallback(
     (crumbId: string) => {
@@ -254,7 +367,7 @@ export default function HomeScreen() {
         }
         selectedGuideId={selectedGuideId}
         guides={guides}
-        onSelectGuide={setSelectedGuideId}
+        onSelectGuide={handleSelectGuide}
         activeQuickFilters={quickFilters}
         onToggleQuickFilter={toggleQuickFilter}
         onRecenterPress={handleRecenterPress}
