@@ -41,6 +41,7 @@ export default function InboxScreen() {
 
   const [guideModalTarget, setGuideModalTarget] =
     useState<EnrichedUserCrumb | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const addCrumbMutation = useAddCrumbToGuideMutation();
   const deleteCrumbMutation = useDeleteCrumbMutation();
@@ -56,7 +57,7 @@ export default function InboxScreen() {
   const { data: countsData, refetch: refetchCounts } = useCrumbsCountsQuery();
 
   // TanStack Query for full crumbs data with distinct cache key per segment
-  const { data, isLoading, isRefetching, refetch } = useCrumbsQuery({
+  const { data, isLoading, refetch } = useCrumbsQuery({
     unorganized: activeSegment === 'uncategorized' ? true : undefined,
   });
 
@@ -75,8 +76,12 @@ export default function InboxScreen() {
 
   const handleRefresh = async () => {
     haptics.tap();
-    await Promise.all([refetch(), refetchCounts()]);
-    haptics.tap();
+    setIsRefreshing(true);
+    try {
+      await Promise.all([refetch(), refetchCounts()]);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleCardPress = (crumb: EnrichedUserCrumb) => {
@@ -184,7 +189,7 @@ export default function InboxScreen() {
   );
 
   const renderEmptyState = () => {
-    if (isLoading) {
+    if (isLoading && !data) {
       return <InboxSkeletonList count={4} />;
     }
 
@@ -242,7 +247,7 @@ export default function InboxScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={isRefetching}
+            refreshing={isRefreshing}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
             colors={[colors.primary]}

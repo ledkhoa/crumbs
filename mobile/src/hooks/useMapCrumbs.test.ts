@@ -358,6 +358,17 @@ describe('useMapCrumbs filtering & emoji logic', () => {
       expect(resultObj[0].id).toBe('crumb-guide-obj');
     });
 
+    it('filters by uncategorized to show only crumbs with no guides', () => {
+      const result = filterCrumbs(sampleCrumbs, {
+        searchQuery: '',
+        selectedGuideId: 'uncategorized',
+        quickFilter: 'all',
+      });
+      // sampleCrumbs: crumb-1 has guideIds: ['guide-101'], crumb-2 has guideIds: ['guide-102'], crumb-3 has guideIds: []
+      expect(result).toHaveLength(1);
+      expect(result.map((c) => c.id)).toEqual(['crumb-3']);
+    });
+
     it('correctly handles string and numeric coordinates without dropping crumbs', () => {
       const mockCrumb = createMockCrumb({
         id: 'crumb-str-coords',

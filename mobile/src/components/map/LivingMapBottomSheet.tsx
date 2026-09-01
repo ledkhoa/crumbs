@@ -21,7 +21,6 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { GrabHandle } from '@/components/ui/GrabHandle';
-import { SearchInput } from '@/components/ui/SearchInput';
 import { MapCrumbDetailCard } from '@/components/map/MapCrumbDetailCard';
 import {
   SparkleIcon,
@@ -188,8 +187,6 @@ export interface LivingMapBottomSheetProps {
   onAddToGuidePress: (crumb: EnrichedUserCrumb) => void;
   onBookOrMapPress: (crumb: EnrichedUserCrumb) => void;
   onIngestUrl?: (url: string) => void;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   selectedGuideId: string | null;
   guides: GuideSummary[];
   onSelectGuide: (guideId: string | null) => void;
@@ -204,7 +201,6 @@ export interface LivingMapBottomSheetProps {
 }
 
 const FILTER_CHIPS: Array<{ key: MapQuickFilter; label: string }> = [
-  { key: 'all', label: 'All' },
   { key: 'open_now', label: 'Open Now' },
   { key: 'bookable', label: 'Bookable' },
   { key: 'visited', label: 'Visited' },
@@ -220,8 +216,6 @@ export function LivingMapBottomSheet({
   onAddToGuidePress,
   onBookOrMapPress,
   onIngestUrl,
-  searchQuery,
-  onSearchChange,
   selectedGuideId,
   guides,
   onSelectGuide,
@@ -256,7 +250,7 @@ export function LivingMapBottomSheet({
   // Reanimated Sheet Height State
   const sheetHeight = useSharedValue(PEEK_HEIGHT);
   const startHeight = useSharedValue(PEEK_HEIGHT);
-  const [currentDetent, setCurrentDetent] = useState<'peek' | 'mid' | 'full'>(
+  const [_currentDetent, setCurrentDetent] = useState<'peek' | 'mid' | 'full'>(
     'peek',
   );
 
@@ -391,15 +385,22 @@ export function LivingMapBottomSheet({
     height: sheetHeight.value,
   }));
 
-  const handleSearchFocus = () => {
-    if (currentDetent === 'peek') {
-      snapTo('mid');
-    }
-  };
+  const selectedGuide = useMemo(
+    () => guides.find((g) => g.id === selectedGuideId) || null,
+    [guides, selectedGuideId],
+  );
+
+  const uncategorizedCount = useMemo(() => {
+    return allSavedCrumbs.filter((c) => {
+      const hasGuideIds = c.guideIds && c.guideIds.length > 0;
+      const hasGuides = c.guides && c.guides.length > 0;
+      return !hasGuideIds && !hasGuides;
+    }).length;
+  }, [allSavedCrumbs]);
 
   const handleChipPress = (filter: MapQuickFilter) => {
     haptics.tap();
-    if (activeQuickFilter === filter && filter !== 'all') {
+    if (activeQuickFilter === filter) {
       onSelectQuickFilter('all');
     } else {
       onSelectQuickFilter(filter);
@@ -494,169 +495,320 @@ export function LivingMapBottomSheet({
         animatedStyle,
       ]}
     >
-      {/* Pan Gesture Header (Grab Handle & Search/Filter Controls) */}
+      {/* Pan Gesture Header (Grab Handle & Guides/Status Filter Controls) */}
       <GestureDetector gesture={panGesture}>
         <View style={styles.dragHeader}>
           <GrabHandle style={styles.grabHandle} />
 
-          {/* If NO pin is selected, show Search Input & Action Buttons */}
+          {/* If NO pin is selected, show Top Context Bar, Guides Filter & Status Filters */}
           {!selectedCrumb && (
             <>
-              {/* 1. Search Bar + Decide Now + Recenter Row */}
-              <View style={styles.searchBarRow}>
-                <SearchInput
-                  value={searchQuery}
-                  onChangeText={onSearchChange}
-                  placeholder="Search cravings, dishes, vibes..."
-                  onFocus={handleSearchFocus}
-                  containerStyle={[
-                    styles.searchInput,
-                    {
-                      backgroundColor: colors.inputBackground,
-                      borderColor: colors.inputBorder,
-                    },
-                  ]}
-                />
-
-                {/* Decide Now Action Button */}
-                <TouchableOpacity
-                  style={[
-                    styles.iconActionButton,
-                    {
-                      backgroundColor: colors.primary,
-                      borderColor: colors.primary,
-                    },
-                  ]}
-                  onPress={() => {
-                    haptics.primary();
-                    onDecideNowPress();
-                  }}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
-                  accessibilityLabel="Decide a craving for me"
-                >
-                  <SparkleIcon
-                    size={18}
-                    color={colors.onPrimary}
-                    weight="fill"
-                  />
-                </TouchableOpacity>
-
-                {/* My Location Button */}
-                <TouchableOpacity
-                  style={[
-                    styles.iconActionButton,
-                    {
-                      backgroundColor: colors.inputBackground,
-                      borderColor: colors.inputBorder,
-                    },
-                  ]}
-                  onPress={() => {
-                    haptics.selection();
-                    onRecenterPress();
-                  }}
-                  activeOpacity={0.8}
-                  accessibilityRole="button"
-                  accessibilityLabel="Recenter to my location"
-                >
-                  {isLocating ? (
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  ) : (
-                    <NavigationArrowIcon
-                      size={18}
-                      color={colors.primary}
-                      weight="fill"
-                    />
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              {/* 2. My Guides Selector Chips (Above the carousel) */}
-              {guides.length > 0 && allSavedCrumbs.length > 0 && (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.guidesScrollContainer}
-                >
-                  {/* All Guides Chip */}
-                  <TouchableOpacity
-                    style={[
-                      styles.guideChip,
-                      {
-                        backgroundColor:
-                          selectedGuideId === null
-                            ? colors.primary
-                            : colors.inputBackground,
-                        borderColor:
-                          selectedGuideId === null
-                            ? colors.primary
-                            : colors.inputBorder,
-                      },
-                    ]}
-                    onPress={() => handleGuideChipPress(null)}
-                    activeOpacity={0.8}
-                    accessibilityRole="button"
-                    accessibilityLabel="All Guides"
-                  >
-                    <Text
-                      style={[
-                        styles.guideChipText,
-                        {
-                          color:
-                            selectedGuideId === null
-                              ? colors.onPrimary
-                              : colors.text,
-                          fontWeight: selectedGuideId === null ? '700' : '500',
-                        },
-                      ]}
-                    >
-                      📑 All ({allSavedCrumbs.length})
-                    </Text>
-                  </TouchableOpacity>
-
-                  {/* Individual Guide Chips */}
-                  {guides.map((guide) => {
-                    const isSelected = selectedGuideId === guide.id;
-                    return (
-                      <TouchableOpacity
-                        key={guide.id}
+              {/* 1. Top Context & Action Bar */}
+              <View style={styles.topContextRow}>
+                <View style={styles.titleContainer}>
+                  {selectedGuideId === 'uncategorized' ? (
+                    <View style={styles.activeGuideTitleRow}>
+                      <Text
                         style={[
-                          styles.guideChip,
+                          styles.activeGuideTitle,
                           {
-                            backgroundColor: isSelected
-                              ? colors.primary
-                              : colors.inputBackground,
-                            borderColor: isSelected
-                              ? colors.primary
-                              : colors.inputBorder,
+                            color: colors.text,
+                            fontFamily:
+                              Platform.OS === 'ios' ? 'Georgia' : 'serif',
                           },
                         ]}
-                        onPress={() => handleGuideChipPress(guide.id)}
-                        activeOpacity={0.8}
+                        numberOfLines={1}
+                      >
+                        📥 Uncategorized
+                      </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.clearGuideButton,
+                          {
+                            backgroundColor: colors.inputBackground,
+                            borderColor: colors.cardBorder,
+                          },
+                        ]}
+                        onPress={() => handleGuideChipPress(null)}
+                        activeOpacity={0.7}
                         accessibilityRole="button"
-                        accessibilityLabel={guide.name}
+                        accessibilityLabel="Clear uncategorized filter"
                       >
                         <Text
                           style={[
-                            styles.guideChipText,
-                            {
-                              color: isSelected
-                                ? colors.onPrimary
-                                : colors.text,
-                              fontWeight: isSelected ? '700' : '500',
-                            },
+                            styles.clearGuideText,
+                            { color: colors.primary },
                           ]}
-                          numberOfLines={1}
                         >
-                          {guide.emojiIcon || '📑'} {guide.name}
+                          ✕ Clear
                         </Text>
                       </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
+                    </View>
+                  ) : selectedGuide ? (
+                    <View style={styles.activeGuideTitleRow}>
+                      <Text
+                        style={[
+                          styles.activeGuideTitle,
+                          {
+                            color: colors.text,
+                            fontFamily:
+                              Platform.OS === 'ios' ? 'Georgia' : 'serif',
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {selectedGuide.emojiIcon || '🗺️'} {selectedGuide.name}
+                      </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.clearGuideButton,
+                          {
+                            backgroundColor: colors.inputBackground,
+                            borderColor: colors.cardBorder,
+                          },
+                        ]}
+                        onPress={() => handleGuideChipPress(null)}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel="Clear guide filter"
+                      >
+                        <Text
+                          style={[
+                            styles.clearGuideText,
+                            { color: colors.primary },
+                          ]}
+                        >
+                          ✕ Clear
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.defaultTitleRow}>
+                      <Text
+                        style={[
+                          styles.sheetTitle,
+                          {
+                            color: colors.text,
+                            fontFamily:
+                              Platform.OS === 'ios' ? 'Georgia' : 'serif',
+                          },
+                        ]}
+                      >
+                        Cravings Map
+                      </Text>
+                      <View
+                        style={[
+                          styles.countBadge,
+                          { backgroundColor: colors.inputBackground },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.countBadgeText,
+                            { color: colors.textMuted },
+                          ]}
+                        >
+                          {crumbs.length}{' '}
+                          {crumbs.length === 1 ? 'crumb' : 'crumbs'}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                {/* Quick Action Buttons */}
+                <View style={styles.actionButtonsRow}>
+                  {/* Decide Now Action Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.iconActionButton,
+                      {
+                        backgroundColor: colors.primary,
+                        borderColor: colors.primary,
+                      },
+                    ]}
+                    onPress={() => {
+                      haptics.primary();
+                      onDecideNowPress();
+                    }}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel="Decide a craving for me"
+                  >
+                    <SparkleIcon
+                      size={18}
+                      color={colors.onPrimary}
+                      weight="fill"
+                    />
+                  </TouchableOpacity>
+
+                  {/* My Location Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.iconActionButton,
+                      {
+                        backgroundColor: colors.inputBackground,
+                        borderColor: colors.inputBorder,
+                      },
+                    ]}
+                    onPress={() => {
+                      haptics.selection();
+                      onRecenterPress();
+                    }}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Recenter to my location"
+                  >
+                    {isLocating ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <NavigationArrowIcon
+                        size={18}
+                        color={colors.primary}
+                        weight="fill"
+                      />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* 2. Guides Section with Explicit Header */}
+              {allSavedCrumbs.length > 0 && (
+                <View style={styles.guidesSection}>
+                  <Text
+                    style={[styles.sectionHeading, { color: colors.textMuted }]}
+                  >
+                    GUIDES
+                  </Text>
+
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.guidesScrollContainer}
+                  >
+                    {/* All Crumbs Chip */}
+                    <TouchableOpacity
+                      style={[
+                        styles.guideChip,
+                        {
+                          backgroundColor:
+                            selectedGuideId === null
+                              ? colors.primary
+                              : colors.inputBackground,
+                          borderColor:
+                            selectedGuideId === null
+                              ? colors.primary
+                              : colors.inputBorder,
+                        },
+                      ]}
+                      onPress={() => handleGuideChipPress(null)}
+                      activeOpacity={0.8}
+                      accessibilityRole="button"
+                      accessibilityLabel="All Crumbs"
+                    >
+                      <Text
+                        style={[
+                          styles.guideChipText,
+                          {
+                            color:
+                              selectedGuideId === null
+                                ? colors.onPrimary
+                                : colors.text,
+                            fontWeight:
+                              selectedGuideId === null ? '700' : '500',
+                          },
+                        ]}
+                      >
+                        🗺️ All ({allSavedCrumbs.length})
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Uncategorized Chip */}
+                    <TouchableOpacity
+                      style={[
+                        styles.guideChip,
+                        {
+                          backgroundColor:
+                            selectedGuideId === 'uncategorized'
+                              ? colors.primary
+                              : colors.inputBackground,
+                          borderColor:
+                            selectedGuideId === 'uncategorized'
+                              ? colors.primary
+                              : colors.inputBorder,
+                        },
+                      ]}
+                      onPress={() => handleGuideChipPress('uncategorized')}
+                      activeOpacity={0.8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Uncategorized Crumbs"
+                    >
+                      <Text
+                        style={[
+                          styles.guideChipText,
+                          {
+                            color:
+                              selectedGuideId === 'uncategorized'
+                                ? colors.onPrimary
+                                : colors.text,
+                            fontWeight:
+                              selectedGuideId === 'uncategorized'
+                                ? '700'
+                                : '500',
+                          },
+                        ]}
+                      >
+                        📥 Uncategorized ({uncategorizedCount})
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Individual Guide Chips */}
+                    {guides.map((guide) => {
+                      const isSelected = selectedGuideId === guide.id;
+                      return (
+                        <TouchableOpacity
+                          key={guide.id}
+                          style={[
+                            styles.guideChip,
+                            {
+                              backgroundColor: isSelected
+                                ? colors.primary
+                                : colors.inputBackground,
+                              borderColor: isSelected
+                                ? colors.primary
+                                : colors.inputBorder,
+                            },
+                          ]}
+                          onPress={() => handleGuideChipPress(guide.id)}
+                          activeOpacity={0.8}
+                          accessibilityRole="button"
+                          accessibilityLabel={guide.name}
+                        >
+                          <Text
+                            style={[
+                              styles.guideChipText,
+                              {
+                                color: isSelected
+                                  ? colors.onPrimary
+                                  : colors.text,
+                                fontWeight: isSelected ? '700' : '500',
+                              },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {guide.emojiIcon || '📑'} {guide.name}
+                            {guide.crumbCount !== undefined
+                              ? ` (${guide.crumbCount})`
+                              : ''}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
               )}
 
-              {/* 3. Quick Status Filter Chips (All, Open Now, Bookable, Unorganized, Visited) */}
+              {/* 3. Quick Status Filter Chips (Open Now, Bookable, Visited) */}
               {allSavedCrumbs.length > 0 && (
                 <ScrollView
                   horizontal
@@ -665,11 +817,6 @@ export function LivingMapBottomSheet({
                 >
                   {FILTER_CHIPS.map((chip) => {
                     const isActive = activeQuickFilter === chip.key;
-                    const label =
-                      chip.key === 'all'
-                        ? `All (${crumbs.length})`
-                        : chip.label;
-
                     return (
                       <TouchableOpacity
                         key={chip.key}
@@ -688,7 +835,7 @@ export function LivingMapBottomSheet({
                         activeOpacity={0.8}
                         accessibilityRole="button"
                         accessibilityState={{ selected: isActive }}
-                        accessibilityLabel={label}
+                        accessibilityLabel={chip.label}
                       >
                         <Text
                           style={[
@@ -699,7 +846,7 @@ export function LivingMapBottomSheet({
                             },
                           ]}
                         >
-                          {label}
+                          {chip.label}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -1301,20 +1448,64 @@ const styles = StyleSheet.create({
   grabHandle: {
     marginBottom: 2,
   },
-  searchBarRow: {
+  topContextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+    gap: Theme.spacing.sm,
+  },
+  titleContainer: {
+    flex: 1,
+  },
+  defaultTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.xs,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  countBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: Theme.radii.pill,
+  },
+  countBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  activeGuideTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.xs,
+    flexWrap: 'nowrap',
+  },
+  activeGuideTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  clearGuideButton: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: Theme.radii.pill,
+    borderWidth: 1,
+  },
+  clearGuideText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  actionButtonsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  searchInput: {
-    flex: 1,
-    height: 40,
-    borderRadius: Theme.radii.pill,
-  },
   iconActionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1323,6 +1514,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  guidesSection: {
+    gap: 4,
+  },
+  sectionHeading: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    paddingHorizontal: 2,
+  },
   guidesScrollContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1330,14 +1530,14 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   guideChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
     borderRadius: Theme.radii.pill,
     borderWidth: 1,
-    maxWidth: 160,
+    maxWidth: 180,
   },
   guideChipText: {
-    fontSize: 11,
+    fontSize: 12,
   },
   chipsScrollContainer: {
     flexDirection: 'row',

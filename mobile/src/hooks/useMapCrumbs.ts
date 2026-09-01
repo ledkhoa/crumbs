@@ -20,6 +20,7 @@ export interface GuideSummary {
   id: string;
   name: string;
   emojiIcon: string;
+  crumbCount?: number;
 }
 
 export interface UseMapCrumbsResult {
@@ -108,17 +109,19 @@ export function useMapCrumbs(
 
   const guides = useMemo<GuideSummary[]>(() => {
     if (!guidesData) return [];
-    // SAFETY: apiClient.guides.$get returns Guide array with id, name, and emojiIcon
+    // SAFETY: apiClient.guides.$get returns Guide array with id, name, emojiIcon, and crumbCount
     return (
       guidesData as Array<{
         id: string;
         name: string;
         emojiIcon?: string;
+        crumbCount?: number;
       }>
     ).map((g) => ({
       id: g.id,
       name: g.name,
       emojiIcon: g.emojiIcon || '📑',
+      crumbCount: g.crumbCount,
     }));
   }, [guidesData]);
 

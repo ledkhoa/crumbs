@@ -32,14 +32,8 @@ export default function GuidesScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
-  const {
-    data: guides,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isRefetching,
-  } = useGuidesQuery();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { data: guides, isLoading, isError, error, refetch } = useGuidesQuery();
 
   // Position exactly 8px above the top edge of the native bottom tab bar
   const tabHeight = Platform.OS === 'ios' ? 49 : 56;
@@ -58,9 +52,14 @@ export default function GuidesScreen() {
     });
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     haptics.tap();
-    refetch();
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   return (
@@ -79,7 +78,7 @@ export default function GuidesScreen() {
       </View>
 
       {/* Main Content Area */}
-      {isLoading && !isRefetching ? (
+      {isLoading && !guides ? (
         <GuidesSkeletonList count={3} />
       ) : isError ? (
         <EmptyState
@@ -129,7 +128,7 @@ export default function GuidesScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={isRefreshing}
               onRefresh={handleRefresh}
               tintColor={colors.primary}
               colors={[colors.primary]}
