@@ -638,6 +638,29 @@ export default function CrumbDetailScreen() {
                 },
               ]}
               onPress={() => {
+                haptics.primary();
+                router.push({
+                  pathname: '/(tabs)/(home)',
+                  params: { crumbId: crumb.id, t: String(Date.now()) },
+                });
+              }}
+              activeOpacity={0.8}
+            >
+              <MapPinIcon size={16} color={colors.primary} weight="fill" />
+              <Text style={[styles.actionCapsuleText, { color: colors.text }]}>
+                Map
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionCapsule,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.cardBorder,
+                },
+              ]}
+              onPress={() => {
                 haptics.tap();
                 openDefaultMaps({
                   name: restaurant.name,

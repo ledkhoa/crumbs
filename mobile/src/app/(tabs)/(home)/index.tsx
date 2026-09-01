@@ -62,8 +62,13 @@ export default function HomeScreen() {
     refetch: refetchMapCrumbs,
   } = useMapCrumbs();
 
-  const params = useLocalSearchParams<{ guideId?: string; t?: string }>();
+  const params = useLocalSearchParams<{
+    guideId?: string;
+    crumbId?: string;
+    t?: string;
+  }>();
   const guideId = params.guideId;
+  const crumbId = params.crumbId;
   const navTimestamp = params.t;
 
   const selectedCrumb = useMemo(() => {
@@ -160,13 +165,35 @@ export default function HomeScreen() {
 
   const lastHandledNavKeyRef = useRef<string | null>(null);
 
-  // Refetch map crumbs and guides on tab focus; zoom to guide if navigated from guide detail
+  // Refetch map crumbs and guides on tab focus; focus on crumb or guide if navigated
   useFocusEffect(
     useCallback(() => {
       refetchMapCrumbs();
 
-      if (guideId) {
-        const navKey = `${guideId}-${navTimestamp || ''}`;
+      if (crumbId) {
+        const navKey = `crumb-${crumbId}-${navTimestamp || ''}`;
+        if (navKey !== lastHandledNavKeyRef.current) {
+          lastHandledNavKeyRef.current = navKey;
+          hasCenteredInitialLocationRef.current = true;
+          setSelectedCrumbId(crumbId);
+
+          const targetCrumb = allSavedCrumbs.find((c) => c.id === crumbId);
+          if (targetCrumb) {
+            const t1 = setTimeout(() => {
+              animateCameraToCrumb(targetCrumb);
+            }, 150);
+            const t2 = setTimeout(() => {
+              animateCameraToCrumb(targetCrumb);
+            }, 450);
+
+            return () => {
+              clearTimeout(t1);
+              clearTimeout(t2);
+            };
+          }
+        }
+      } else if (guideId) {
+        const navKey = `guide-${guideId}-${navTimestamp || ''}`;
         if (navKey !== lastHandledNavKeyRef.current) {
           lastHandledNavKeyRef.current = navKey;
           hasCenteredInitialLocationRef.current = true;
@@ -189,21 +216,24 @@ export default function HomeScreen() {
       }
     }, [
       refetchMapCrumbs,
+      crumbId,
       guideId,
       navTimestamp,
       allSavedCrumbs,
       setSelectedGuideId,
       zoomToGuideArea,
+      animateCameraToCrumb,
     ]),
   );
 
-  // Initial camera sync when user location resolves (only if not navigating directly to a guide)
+  // Initial camera sync when user location resolves (only if not navigating directly to a guide or crumb)
   const hasCenteredInitialLocationRef = useRef(false);
   useEffect(() => {
     if (
       userCoords &&
       !hasCenteredInitialLocationRef.current &&
       !guideId &&
+      !crumbId &&
       mapRef.current
     ) {
       hasCenteredInitialLocationRef.current = true;
@@ -216,17 +246,33 @@ export default function HomeScreen() {
       mapRef.current.animateToRegion(targetRegion, 800);
       setCurrentRegion(targetRegion);
     }
-  }, [userCoords, guideId]);
+  }, [userCoords, guideId, crumbId]);
 
-  // If crumbs finish loading after navigation occurred, trigger the zoom
+  // If crumbs finish loading after navigation occurred, trigger the zoom/selection
   useEffect(() => {
-    if (guideId && allSavedCrumbs.length > 0) {
-      const navKey = `${guideId}-${navTimestamp || ''}`;
+    if (crumbId && allSavedCrumbs.length > 0) {
+      const navKey = `crumb-${crumbId}-${navTimestamp || ''}`;
+      if (lastHandledNavKeyRef.current === navKey) {
+        const targetCrumb = allSavedCrumbs.find((c) => c.id === crumbId);
+        if (targetCrumb) {
+          setSelectedCrumbId(crumbId);
+          animateCameraToCrumb(targetCrumb);
+        }
+      }
+    } else if (guideId && allSavedCrumbs.length > 0) {
+      const navKey = `guide-${guideId}-${navTimestamp || ''}`;
       if (lastHandledNavKeyRef.current === navKey) {
         zoomToGuideArea(guideId, allSavedCrumbs);
       }
     }
-  }, [guideId, navTimestamp, allSavedCrumbs, zoomToGuideArea]);
+  }, [
+    crumbId,
+    guideId,
+    navTimestamp,
+    allSavedCrumbs,
+    zoomToGuideArea,
+    animateCameraToCrumb,
+  ]);
 
   const handleSelectGuide = useCallback(
     (newGuideId: string | null) => {

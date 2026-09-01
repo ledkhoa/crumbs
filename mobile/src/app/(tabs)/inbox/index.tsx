@@ -13,7 +13,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
-import { openDefaultMaps } from '@/utils/maps';
 import {
   useCrumbsQuery,
   useCrumbsCountsQuery,
@@ -119,13 +118,10 @@ export default function InboxScreen() {
         console.warn('[Inbox] Could not open reservation link:', err),
       );
     } else {
-      openDefaultMaps({
-        name: restaurant.name,
-        address: restaurant.formattedAddress || undefined,
-        latitude: restaurant.latitude ? Number(restaurant.latitude) : undefined,
-        longitude: restaurant.longitude
-          ? Number(restaurant.longitude)
-          : undefined,
+      haptics.primary();
+      router.push({
+        pathname: '/(tabs)/(home)',
+        params: { crumbId: crumb.id, t: String(Date.now()) },
       });
     }
   };
