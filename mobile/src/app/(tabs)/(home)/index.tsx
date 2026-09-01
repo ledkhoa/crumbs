@@ -53,8 +53,6 @@ export default function HomeScreen() {
   const {
     allSavedCrumbs,
     filteredCrumbs,
-    searchQuery,
-    setSearchQuery,
     selectedGuideId,
     setSelectedGuideId,
     quickFilter,
@@ -254,8 +252,6 @@ export default function HomeScreen() {
         onIngestUrl={(url) =>
           setIngestOverlayState({ visible: true, sourceUrl: url })
         }
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
         selectedGuideId={selectedGuideId}
         guides={guides}
         onSelectGuide={setSelectedGuideId}

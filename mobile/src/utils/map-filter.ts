@@ -207,17 +207,25 @@ export function filterCrumbs(
       return false;
     }
 
-    // Guide filtering: Check both guideIds array and populated guides object array
+    // Guide filtering: Check both guideIds array and populated guides object array, or 'uncategorized'
     if (filters.selectedGuideId) {
-      const matchesGuideIds = Boolean(
-        crumb.guideIds && crumb.guideIds.includes(filters.selectedGuideId),
-      );
-      const matchesGuides = Boolean(
-        crumb.guides &&
-        crumb.guides.some((g) => g.id === filters.selectedGuideId),
-      );
-      if (!matchesGuideIds && !matchesGuides) {
-        return false;
+      if (filters.selectedGuideId === 'uncategorized') {
+        const hasGuideIds = crumb.guideIds && crumb.guideIds.length > 0;
+        const hasGuides = crumb.guides && crumb.guides.length > 0;
+        if (hasGuideIds || hasGuides) {
+          return false;
+        }
+      } else {
+        const matchesGuideIds = Boolean(
+          crumb.guideIds && crumb.guideIds.includes(filters.selectedGuideId),
+        );
+        const matchesGuides = Boolean(
+          crumb.guides &&
+          crumb.guides.some((g) => g.id === filters.selectedGuideId),
+        );
+        if (!matchesGuideIds && !matchesGuides) {
+          return false;
+        }
       }
     }
 
