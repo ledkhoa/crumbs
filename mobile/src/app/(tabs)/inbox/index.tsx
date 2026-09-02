@@ -29,6 +29,8 @@ import {
 } from '@/components/inbox/InboxFilterBar';
 import { InboxSkeletonList } from '@/components/inbox/InboxSkeletonList';
 import { QuickAddToGuideModal } from '@/components/ingestion/QuickAddToGuideModal';
+import { SocialLinkPasteInput } from '@/components/ingestion/SocialLinkPasteInput';
+import { IngestionOverlaySheet } from '@/components/ingestion/IngestionOverlaySheet';
 import { SparkleIcon, MapTrifoldIcon } from 'phosphor-react-native';
 import type { EnrichedUserCrumb } from '@api/modules/crumbs/crumbs.types';
 
@@ -41,6 +43,13 @@ export default function InboxScreen() {
   const [guideModalTarget, setGuideModalTarget] =
     useState<EnrichedUserCrumb | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [ingestOverlayState, setIngestOverlayState] = useState<{
+    visible: boolean;
+    sourceUrl: string;
+  }>({
+    visible: false,
+    sourceUrl: '',
+  });
 
   const addCrumbMutation = useAddCrumbToGuideMutation();
   const deleteCrumbMutation = useDeleteCrumbMutation();
@@ -130,6 +139,10 @@ export default function InboxScreen() {
     deleteCrumbMutation.mutate(crumb.id);
   };
 
+  const handleIngestUrl = (url: string) => {
+    setIngestOverlayState({ visible: true, sourceUrl: url });
+  };
+
   const renderHeader = () => (
     <View style={styles.headerContainer}>
       {/* Screen Title & Subtitle */}
@@ -140,6 +153,15 @@ export default function InboxScreen() {
             Captured dining crumbs waiting to be organized
           </Text>
         </View>
+      </View>
+
+      {/* Quick Social Link Ingestion Bar */}
+      <View style={styles.pasteBarContainer}>
+        <SocialLinkPasteInput
+          compact
+          onSubmit={handleIngestUrl}
+          placeholder="Paste Instagram or TikTok link..."
+        />
       </View>
 
       {/* AI-Powered Search Trigger */}
@@ -261,6 +283,22 @@ export default function InboxScreen() {
           onGuideSelected={handleGuideSelected}
         />
       )}
+
+      {/* Link Ingestion Overlay Sheet */}
+      {ingestOverlayState.visible && (
+        <IngestionOverlaySheet
+          visible={ingestOverlayState.visible}
+          sourceUrl={ingestOverlayState.sourceUrl}
+          onClose={() =>
+            setIngestOverlayState({ visible: false, sourceUrl: '' })
+          }
+          onNavigateToInbox={() => {
+            setIngestOverlayState({ visible: false, sourceUrl: '' });
+            refetch();
+            refetchCounts();
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -281,7 +319,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Theme.spacing.lg,
     paddingTop: Theme.spacing.md,
-    marginBottom: Theme.spacing.md,
+    marginBottom: Theme.spacing.sm,
   },
   titleTextContainer: {
     flex: 1,
@@ -295,6 +333,11 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 13,
     lineHeight: 18,
+  },
+  pasteBarContainer: {
+    paddingHorizontal: Theme.spacing.lg,
+    marginTop: Theme.spacing.xs,
+    marginBottom: Theme.spacing.md,
   },
   aiSearchContainer: {
     paddingHorizontal: Theme.spacing.lg,
