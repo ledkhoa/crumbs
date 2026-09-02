@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -23,15 +22,13 @@ import { Theme, useTheme } from '@/theme/tokens';
 import { haptics } from '@/utils/haptics';
 import { GrabHandle } from '@/components/ui/GrabHandle';
 import { MapCrumbDetailCard } from '@/components/map/MapCrumbDetailCard';
+import { MapOnboardingView } from '@/components/map/MapOnboardingView';
 import {
   SparkleIcon,
   NavigationArrowIcon,
   CaretRightIcon,
   ForkKnifeIcon,
   StarIcon,
-  LinkIcon,
-  ArrowRightIcon,
-  XCircleIcon,
   ClockIcon,
   CalendarCheckIcon,
   CheckCircleIcon,
@@ -42,7 +39,6 @@ import {
   isRestaurantOpenAtMoment,
 } from '@/utils/opening-hours';
 import { formatPriceLevel } from '@/utils/price';
-import { extractSocialUrl, isValidSocialUrl } from '@/utils/social-url';
 import type { EnrichedUserCrumb } from '@api/modules/crumbs/crumbs.types';
 import type {
   MapCoordinates,
@@ -155,25 +151,7 @@ const DINING_MOMENTS: DiningMomentConfig[] = [
   },
 ];
 
-function getCurrentTimeMoment(crumbs: EnrichedUserCrumb[]): DiningMomentType {
-  const firstWithOffset = crumbs.find(
-    (c) =>
-      c.restaurant.regularOpeningHours?.utcOffsetMinutes !== undefined &&
-      c.restaurant.regularOpeningHours?.utcOffsetMinutes !== null,
-  );
-  const offsetMinutes =
-    firstWithOffset?.restaurant.regularOpeningHours?.utcOffsetMinutes;
-
-  if (offsetMinutes !== undefined && offsetMinutes !== null) {
-    const utcEpoch = Date.now();
-    const localDate = new Date(utcEpoch + offsetMinutes * 60 * 1000);
-    const hour = localDate.getUTCHours();
-    if (hour >= 5 && hour < 11) return 'morning';
-    if (hour >= 11 && hour < 16) return 'lunch';
-    if (hour >= 16 && hour < 22) return 'dinner';
-    return 'late_night';
-  }
-
+function getCurrentTimeMoment(): DiningMomentType {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 11) return 'morning';
   if (hour >= 11 && hour < 16) return 'lunch';
@@ -241,24 +219,6 @@ export function LivingMapBottomSheet({
 }: LivingMapBottomSheetProps) {
   const { colors } = useTheme();
 
-  // Fresh State Link Ingestion State
-  const [pasteUrlText, setPasteUrlText] = useState('');
-  const [urlError, setUrlError] = useState<string | null>(null);
-
-  const handlePasteUrlSubmit = () => {
-    if (!pasteUrlText.trim()) return;
-    const extracted = extractSocialUrl(pasteUrlText);
-    if (extracted.url && isValidSocialUrl(extracted.url)) {
-      setUrlError(null);
-      haptics.success();
-      onIngestUrl?.(extracted.url);
-      setPasteUrlText('');
-    } else {
-      haptics.error();
-      setUrlError('Please enter a valid Instagram or TikTok video link');
-    }
-  };
-
   const insets = useSafeAreaInsets();
   const tabHeight = Platform.OS === 'ios' ? 49 : 56;
   const navBarOffset =
@@ -294,11 +254,8 @@ export function LivingMapBottomSheet({
     }
   }, [selectedCrumb, midHeight, sheetHeight]);
 
-  // Time-Adaptive Dining Moments State (Resolved in restaurant/destination local timezone)
-  const autoMoment = useMemo(
-    () => getCurrentTimeMoment(allSavedCrumbs),
-    [allSavedCrumbs],
-  );
+  // Time-Adaptive Dining Moments State (Resolved in user's device local timezone)
+  const autoMoment = useMemo(() => getCurrentTimeMoment(), []);
   const [selectedMomentKey, setSelectedMomentKey] =
     useState<DiningMomentType | null>(null);
 
@@ -1018,216 +975,12 @@ export function LivingMapBottomSheet({
           />
         </ScrollView>
       ) : allSavedCrumbs.length === 0 ? (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.freshScrollContent,
-            { paddingBottom: navBarOffset + Theme.spacing.xl },
-          ]}
-          nestedScrollEnabled
-        >
-          <View style={styles.freshCardContainer}>
-            {/* Hero Card */}
-            <View
-              style={[
-                styles.freshHeroCard,
-                {
-                  backgroundColor: colors.inputBackground,
-                  borderColor: colors.cardBorder,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.freshIconCircle,
-                  { backgroundColor: colors.cardBackground },
-                ]}
-              >
-                <SparkleIcon size={26} color={colors.primary} weight="fill" />
-              </View>
-
-              <Text
-                style={[
-                  styles.freshTitle,
-                  {
-                    color: colors.text,
-                    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-                  },
-                ]}
-              >
-                Your Cravings Map is Fresh
-              </Text>
-
-              <Text style={[styles.freshSubtitle, { color: colors.textMuted }]}>
-                Share food videos from Instagram & TikTok or paste a link below
-                to watch your personal city dining map come alive.
-              </Text>
-
-              {/* Link Input Row */}
-              <View style={styles.linkInputWrapper}>
-                <View
-                  style={[
-                    styles.linkInputContainer,
-                    {
-                      backgroundColor: colors.cardBackground,
-                      borderColor: urlError ? colors.error : colors.inputBorder,
-                    },
-                  ]}
-                >
-                  <LinkIcon size={16} color={colors.textMuted} />
-                  <TextInput
-                    style={[styles.linkTextInput, { color: colors.text }]}
-                    placeholder="Paste Instagram or TikTok link..."
-                    placeholderTextColor={colors.textMuted}
-                    value={pasteUrlText}
-                    onChangeText={(text) => {
-                      setPasteUrlText(text);
-                      if (urlError) setUrlError(null);
-                    }}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    keyboardType="url"
-                    returnKeyType="go"
-                    onSubmitEditing={handlePasteUrlSubmit}
-                  />
-                  {pasteUrlText.length > 0 && (
-                    <TouchableOpacity
-                      onPress={() => {
-                        setPasteUrlText('');
-                        setUrlError(null);
-                      }}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <XCircleIcon
-                        size={16}
-                        color={colors.textMuted}
-                        weight="fill"
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                <TouchableOpacity
-                  style={[
-                    styles.addCrumbSubmitButton,
-                    {
-                      backgroundColor: colors.primary,
-                      opacity: pasteUrlText.trim().length > 0 ? 1 : 0.6,
-                    },
-                  ]}
-                  onPress={handlePasteUrlSubmit}
-                  disabled={!pasteUrlText.trim()}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
-                  accessibilityLabel="Add crumb from link"
-                >
-                  <ArrowRightIcon
-                    size={18}
-                    color={colors.onPrimary}
-                    weight="bold"
-                  />
-                </TouchableOpacity>
-              </View>
-
-              {urlError && (
-                <Text style={[styles.urlErrorText, { color: colors.error }]}>
-                  {urlError}
-                </Text>
-              )}
-            </View>
-
-            {/* How Crumbs Works 3-Step Guide */}
-            <View style={styles.stepsContainer}>
-              <Text style={[styles.stepsHeading, { color: colors.textMuted }]}>
-                HOW CRUMBS WORKS
-              </Text>
-
-              <View
-                style={[
-                  styles.stepItemRow,
-                  {
-                    backgroundColor: colors.inputBackground,
-                    borderColor: colors.cardBorder,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.stepIconBox,
-                    { backgroundColor: colors.cardBackground },
-                  ]}
-                >
-                  <Text style={styles.stepEmoji}>📲</Text>
-                </View>
-                <View style={styles.stepTextBox}>
-                  <Text style={[styles.stepTitle, { color: colors.text }]}>
-                    1. Share or Paste Links
-                  </Text>
-                  <Text style={[styles.stepDesc, { color: colors.textMuted }]}>
-                    Tap share on any food Reel or TikTok and send to Crumbs, or
-                    paste the link above.
-                  </Text>
-                </View>
-              </View>
-
-              <View
-                style={[
-                  styles.stepItemRow,
-                  {
-                    backgroundColor: colors.inputBackground,
-                    borderColor: colors.cardBorder,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.stepIconBox,
-                    { backgroundColor: colors.cardBackground },
-                  ]}
-                >
-                  <Text style={styles.stepEmoji}>✨</Text>
-                </View>
-                <View style={styles.stepTextBox}>
-                  <Text style={[styles.stepTitle, { color: colors.text }]}>
-                    2. Instant AI Extraction
-                  </Text>
-                  <Text style={[styles.stepDesc, { color: colors.textMuted }]}>
-                    AI pinpoints the spot, signature hero dishes, opening hours
-                    & vibes.
-                  </Text>
-                </View>
-              </View>
-
-              <View
-                style={[
-                  styles.stepItemRow,
-                  {
-                    backgroundColor: colors.inputBackground,
-                    borderColor: colors.cardBorder,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.stepIconBox,
-                    { backgroundColor: colors.cardBackground },
-                  ]}
-                >
-                  <Text style={styles.stepEmoji}>📍</Text>
-                </View>
-                <View style={styles.stepTextBox}>
-                  <Text style={[styles.stepTitle, { color: colors.text }]}>
-                    3. Living Cravings Map
-                  </Text>
-                  <Text style={[styles.stepDesc, { color: colors.textMuted }]}>
-                    Pins appear live on your personal map with real-time hours &
-                    booking links.
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        </ScrollView>
+        <MapOnboardingView
+          onIngestUrl={onIngestUrl}
+          contentContainerStyle={{
+            paddingBottom: navBarOffset + Theme.spacing.xl,
+          }}
+        />
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -1922,114 +1675,5 @@ const styles = StyleSheet.create({
   },
   momentDistanceText: {
     fontSize: 11,
-  },
-  // Fresh / Empty Map Onboarding Styles
-  freshScrollContent: {
-    paddingBottom: 40,
-  },
-  freshCardContainer: {
-    paddingHorizontal: Theme.spacing.md,
-    paddingTop: Theme.spacing.sm,
-    gap: Theme.spacing.lg,
-  },
-  freshHeroCard: {
-    padding: Theme.spacing.lg,
-    borderRadius: Theme.radii.lg,
-    borderWidth: 1,
-    alignItems: 'center',
-    gap: Theme.spacing.xs,
-  },
-  freshIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Theme.spacing.xs,
-  },
-  freshTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  freshSubtitle: {
-    fontSize: 13,
-    lineHeight: 18,
-    textAlign: 'center',
-    paddingHorizontal: Theme.spacing.xs,
-    marginBottom: Theme.spacing.sm,
-  },
-  linkInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Theme.spacing.sm,
-    width: '100%',
-  },
-  linkInputContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 44,
-    borderRadius: Theme.radii.md,
-    borderWidth: 1,
-    paddingHorizontal: Theme.spacing.sm,
-    gap: Theme.spacing.xs,
-  },
-  linkTextInput: {
-    flex: 1,
-    fontSize: 13,
-    paddingVertical: 0,
-  },
-  addCrumbSubmitButton: {
-    width: 44,
-    height: 44,
-    borderRadius: Theme.radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  urlErrorText: {
-    fontSize: 12,
-    fontWeight: '500',
-    textAlign: 'center',
-    marginTop: Theme.spacing.xs,
-  },
-  stepsContainer: {
-    gap: Theme.spacing.sm,
-  },
-  stepsHeading: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    marginLeft: Theme.spacing.xs,
-  },
-  stepItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Theme.spacing.md,
-    borderRadius: Theme.radii.md,
-    borderWidth: 1,
-    gap: Theme.spacing.md,
-  },
-  stepIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: Theme.radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepEmoji: {
-    fontSize: 20,
-  },
-  stepTextBox: {
-    flex: 1,
-    gap: 2,
-  },
-  stepTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  stepDesc: {
-    fontSize: 12,
-    lineHeight: 16,
   },
 });
