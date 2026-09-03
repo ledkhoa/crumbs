@@ -63,9 +63,9 @@ export const FloatingIslandTabBar = memo(function FloatingIslandTabBar({
         {
           bottom: bottomOffset,
           backgroundColor: colors.cardBackground,
-          borderColor: colors.cardBorder,
+          borderColor: isDark ? colors.grabHandle : colors.cardBorder,
           shadowColor: colors.shadow,
-          shadowOpacity: isDark ? 0.35 : 0.12,
+          shadowOpacity: isDark ? 0.45 : 0.18,
         },
       ]}
       accessibilityRole="tablist"
@@ -169,16 +169,16 @@ const styles = StyleSheet.create({
     right: Theme.spacing.md,
     maxWidth: 400,
     alignSelf: 'center',
-    height: 58,
+    height: 60,
     borderRadius: Theme.radii.pill,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingHorizontal: 6,
-    borderWidth: 1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 14,
-    elevation: 10,
+    borderWidth: 1.5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 18,
+    elevation: 16,
     zIndex: 100,
   },
   tabButton: {
