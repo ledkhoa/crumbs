@@ -48,7 +48,7 @@ import type {
 import type { GuideSummary } from '@/hooks/useMapCrumbs';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-export const PEEK_HEIGHT = Platform.OS === 'android' ? 80 : 28;
+export const PEEK_HEIGHT = Platform.OS === 'android' ? 80 : 20;
 export const MID_HEIGHT = Math.round(SCREEN_HEIGHT * 0.52);
 export const FULL_HEIGHT = Math.round(SCREEN_HEIGHT * 0.86);
 
