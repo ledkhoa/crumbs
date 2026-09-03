@@ -44,6 +44,7 @@ In addition to these global rules, always consult and follow the domain-specific
 | 2026-08-29 | Configured iOS permissions in `app.json` only, causing missing `NSLocationWhenInUseUsageDescription` in prebuilt native project | When native directories (`ios/` / `android/`) already exist in the repository, permissions and metadata must be added directly to `ios/<AppName>/Info.plist` and `android/app/src/main/AndroidManifest.xml` in addition to `app.json`. |
 | 2026-08-29 | Permissive overnight shift check (`closeMin >= 60`) in `isRestaurantOpenAtMoment` caused 2 AM bars to qualify for morning breakfast | An overnight shift starting yesterday only overlaps with morning if `closeMin > 420` (7:00 AM). Always verify shift boundaries against the specific moment's `slotStart` and resolve auto-selected dining moments in the restaurant/crumbs' local timezone. |
 | 2026-08-31 | Replaced KeyboardAvoidingView with ScrollView on auth screen against user preference | When the user specifically requests a layout structure or asks not to use ScrollView on a screen, respect the explicit architecture preference and use KeyboardAvoidingView directly. |
+| 2026-09-03 | Used hardcoded raw rgba colors (`rgba(255,255,255,...)`, `rgba(0,0,0,...)`) for borders and backgrounds in map marker component | Never hardcode ad-hoc rgba/hex color strings for themed UI elements; strictly bind to design tokens from `useTheme().colors` (e.g. `colors.cardBorder`, `colors.cardBackground`, `colors.inputBackground`). |
 
 ---
 

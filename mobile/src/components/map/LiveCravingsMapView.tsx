@@ -2,7 +2,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Platform } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
 import { useTheme } from '@/theme/tokens';
-import { MAP_LIGHT_STYLE, MAP_DARK_STYLE } from '@/utils/map-theme';
+import { CLEAN_MAP_STYLE } from '@/utils/map-theme';
 import { CrumbMapMarker } from '@/components/map/CrumbMapMarker';
 import { CrumbClusterMarker } from '@/components/map/CrumbClusterMarker';
 import {
@@ -88,7 +88,8 @@ export const LiveCravingsMapView = memo(function LiveCravingsMapView({
       ref={mapRef}
       style={StyleSheet.absoluteFill}
       provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
-      customMapStyle={isDark ? MAP_DARK_STYLE : MAP_LIGHT_STYLE}
+      customMapStyle={CLEAN_MAP_STYLE}
+      userInterfaceStyle={isDark ? 'dark' : 'light'}
       initialRegion={initialRegion}
       onRegionChangeComplete={handleRegionChangeComplete}
       showsUserLocation={showsUserLocation}

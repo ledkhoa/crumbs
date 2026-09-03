@@ -1,5 +1,6 @@
-import { generateText, Output } from 'ai';
+import { generateText, Output, type LanguageModel } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { sanitizeHeroDish } from './places.service';
 import type { ScrapedPostData } from './scraper.service';
@@ -101,6 +102,46 @@ export const postExtractionSchema = z.object({
 export type ExtractedRestaurant = z.infer<typeof extractedRestaurantSchema>;
 export type PostExtractionResult = z.infer<typeof postExtractionSchema>;
 
+export type AIProvider = 'openai' | 'google';
+
+export interface AIServiceConfig {
+  provider?: 'openai' | 'google' | string;
+  model?: string;
+  apiKey?: string;
+}
+
+const prunedMetadataInputSchema = z.object({
+  locationName: z.string().optional(),
+  location: z.string().optional(),
+  locationAddress: z.string().optional(),
+  locationCity: z.string().optional(),
+  hashtags: z.array(z.string()).optional(),
+  mentions: z.array(z.string()).optional(),
+  taggedUsers: z.array(z.string()).optional(),
+  alt: z.string().optional(),
+  childPosts: z
+    .array(
+      z.object({
+        alt: z.string().optional(),
+      }),
+    )
+    .optional(),
+  ownerUsername: z.string().optional(),
+  username: z.string().optional(),
+});
+
+interface PrunedPromptMetadata {
+  location?: string;
+  address?: string;
+  city?: string;
+  hashtags?: string[];
+  mentions?: string[];
+  taggedUsers?: string[];
+  imageAltText?: string;
+  slideAltTexts?: string[];
+  author?: string;
+}
+
 export class AIError extends Error {
   constructor(
     message: string,
@@ -113,15 +154,92 @@ export class AIError extends Error {
 }
 
 /**
- * AIService handles multimodal structured entity extraction and classification.
+ * Prunes raw scraper metadata down to high-signal fields for LLM extraction prompt,
+ * removing heavy payload noise (e.g. comments, analytics) while preserving key metadata.
+ */
+export function pruneMetadataForPrompt(rawJson?: string): string | undefined {
+  if (!rawJson) return undefined;
+  try {
+    const rawParsed = JSON.parse(rawJson);
+    const parsed = prunedMetadataInputSchema.safeParse(rawParsed);
+    if (!parsed.success) return undefined;
+
+    const data = parsed.data;
+    const pruned: PrunedPromptMetadata = {};
+
+    // Keep location descriptors
+    if (data.locationName || data.location) {
+      pruned.location = data.locationName || data.location;
+    }
+    if (data.locationAddress) pruned.address = data.locationAddress;
+    if (data.locationCity) pruned.city = data.locationCity;
+
+    // Keep social context & tags
+    if (data.hashtags && data.hashtags.length > 0) {
+      pruned.hashtags = data.hashtags.slice(0, 15);
+    }
+    if (data.mentions && data.mentions.length > 0) {
+      pruned.mentions = data.mentions.slice(0, 10);
+    }
+    if (data.taggedUsers && data.taggedUsers.length > 0) {
+      pruned.taggedUsers = data.taggedUsers.slice(0, 10);
+    }
+
+    // Keep accessibility alt text (Instagram creators/vision tags frequently describe dishes/scenes here)
+    if (data.alt) {
+      pruned.imageAltText = data.alt;
+    }
+    if (data.childPosts) {
+      const altTexts = data.childPosts
+        .map((child) => child.alt)
+        .filter((alt): alt is string => Boolean(alt));
+      if (altTexts.length > 0) {
+        pruned.slideAltTexts = altTexts.slice(0, 5);
+      }
+    }
+
+    if (data.ownerUsername || data.username) {
+      pruned.author = data.ownerUsername || data.username;
+    }
+
+    if (Object.keys(pruned).length === 0) return undefined;
+    return JSON.stringify(pruned);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * AIService handles multimodal structured entity extraction and classification
+ * with dynamically configured provider (OpenAI / Google), model, and credentials.
  */
 export class AIService {
-  private google: ReturnType<typeof createGoogleGenerativeAI>;
+  public readonly provider: AIProvider;
+  public readonly modelName: string;
+  private readonly modelInstance: LanguageModel;
 
-  constructor(apiKey?: string) {
-    this.google = createGoogleGenerativeAI({
-      apiKey: apiKey || process.env.GOOGLE_GENERATIVE_AI_API_KEY,
-    });
+  constructor(config: AIServiceConfig = {}) {
+    const rawProvider = config.provider ?? process.env.AI_PROVIDER ?? 'openai';
+    this.provider = rawProvider.toLowerCase().includes('google')
+      ? 'google'
+      : 'openai';
+
+    const apiKey = config.apiKey ?? process.env.AI_API_KEY;
+    const model = config.model ?? process.env.AI_MODEL;
+    if (!model) {
+      throw new AIError(
+        'AI_MODEL is required. Please set the AI_MODEL environment variable or pass it via config.',
+      );
+    }
+    this.modelName = model;
+
+    if (this.provider === 'google') {
+      const google = createGoogleGenerativeAI({ apiKey });
+      this.modelInstance = google(this.modelName);
+    } else {
+      const openai = createOpenAI({ apiKey });
+      this.modelInstance = openai(this.modelName);
+    }
   }
 
   /**
@@ -129,6 +247,7 @@ export class AIService {
    * returning structured restaurant entities with high precision.
    */
   async extract(scrapedData: ScrapedPostData): Promise<PostExtractionResult> {
+    const prunedMetadata = pruneMetadataForPrompt(scrapedData.rawMetadataJson);
     const promptText = `Analyze this social media post for restaurant/dining/food recommendations:
 Tagged Location: ${scrapedData.locationName || 'None'}
 Platform: ${scrapedData.platform}
@@ -136,7 +255,7 @@ Caption:
 """
 ${scrapedData.caption}
 """
-${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` : ''}`;
+${prunedMetadata ? `Metadata: ${prunedMetadata}` : ''}`;
 
     const mediaUrls = (scrapedData.mediaUrls || []).filter(
       (url) => url.startsWith('http://') || url.startsWith('https://'),
@@ -148,11 +267,11 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
 
     const content: MessageContentPart[] = [{ type: 'text', text: promptText }];
 
-    // Concurrently fetch up to 5 image slides safely with strict 4s timeouts (skip any that fail)
+    // Concurrently fetch up to 5 image slides safely with strict 3s timeouts and 1.5MB max payload budget
     if (mediaUrls.length > 0) {
       const fetchPromises = mediaUrls.slice(0, 5).map(async (url) => {
         const imageRes = await fetch(url, {
-          signal: AbortSignal.timeout(4000),
+          signal: AbortSignal.timeout(3000),
           headers: {
             'User-Agent':
               'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
@@ -160,7 +279,7 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
         });
         if (!imageRes.ok) return null;
         const buffer = await imageRes.arrayBuffer();
-        if (buffer.byteLength === 0 || buffer.byteLength > 4 * 1024 * 1024) {
+        if (buffer.byteLength === 0 || buffer.byteLength > 1.5 * 1024 * 1024) {
           return null;
         }
         const mimeType =
@@ -194,9 +313,9 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
     });
 
     try {
-      // First attempt: with loaded images (if any succeeded)
+      // First attempt: with loaded images and 25s hard request timeout
       const { output } = await generateText({
-        model: this.google('gemini-2.5-flash'),
+        model: this.modelInstance,
         output: Output.object({ schema: postExtractionSchema }),
         system: systemPrompt,
         messages: [
@@ -205,6 +324,7 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
             content,
           },
         ],
+        abortSignal: AbortSignal.timeout(25_000),
       });
 
       if (!output) {
@@ -217,11 +337,11 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
       const hasImagesAttached = content.length > 1;
       if (hasImagesAttached) {
         console.warn(
-          `[AIService] Multimodal extraction failed or timed out. Falling back to text-only extraction...`,
+          `[AIService] Multimodal extraction failed (${this.provider}/${this.modelName}). Falling back to text-only extraction...`,
         );
         try {
           const { output: fallbackOutput } = await generateText({
-            model: this.google('gemini-2.5-flash'),
+            model: this.modelInstance,
             output: Output.object({ schema: postExtractionSchema }),
             system: systemPrompt,
             messages: [
@@ -230,6 +350,7 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
                 content: [{ type: 'text', text: promptText }],
               },
             ],
+            abortSignal: AbortSignal.timeout(15_000),
           });
 
           if (fallbackOutput) {
@@ -249,6 +370,7 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
         errorMessage.includes('429') ||
         errorMessage.includes('quota') ||
         errorMessage.includes('RESOURCE_EXHAUSTED') ||
+        errorMessage.includes('rate_limit') ||
         errorMessage.includes('rate limit');
 
       console.error(
@@ -256,14 +378,11 @@ ${scrapedData.rawMetadataJson ? `Raw Metadata: ${scrapedData.rawMetadataJson}` :
       );
       if (isQuotaOrRateLimit) {
         console.error(
-          `🚨 [AIService ERROR] GEMINI API RATE LIMIT / QUOTA EXCEEDED!`,
-        );
-        console.error(
-          `💡 Details: Your Google Generative AI API key has exceeded its free-tier RPM (Requests Per Minute) or daily token quota.`,
+          `🚨 [AIService ERROR] ${this.provider.toUpperCase()} API RATE LIMIT / QUOTA EXCEEDED!`,
         );
       } else {
         console.error(
-          `🚨 [AIService ERROR] Failed to extract entities via Gemini API:`,
+          `🚨 [AIService ERROR] Extraction failed via ${this.provider.toUpperCase()} (${this.modelName}):`,
         );
       }
       console.error(`💥 Error Message: ${errorMessage}`);

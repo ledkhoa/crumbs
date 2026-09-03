@@ -88,7 +88,7 @@ export async function fetchInstagramData(url: string): Promise<InstagramData> {
 
 /**
  * Passes an Instagram link to the AI SDK model for analysis by scraping/fetching its content first.
- * Make sure to set the GOOGLE_GENERATIVE_AI_API_KEY environment variable.
+ * Make sure to set the AI_API_KEY environment variable.
  */
 export async function processInstagramLink(
   instagramUrl: string,
@@ -108,8 +108,9 @@ export async function processInstagramLink(
 
   // Step 2: Pass the retrieved data to the AI model
   const startTime = performance.now();
+  const modelName = process.env.AI_MODEL || "gemini-2.5-flash";
   const { text } = await generateText({
-    model: google("gemini-2.5-flash"),
+    model: google(modelName),
     system: `You are a precise assistant designed to extract restaurant details or classify social media posts.
 
 Rules for evaluation:
