@@ -55,10 +55,12 @@ export class IngestWorkflow extends WorkflowEntrypoint<
     );
 
     const scraper = new ScraperService(this.env.APIFY_TOKEN);
-    const ai = new AIService(this.env.GOOGLE_GENERATIVE_AI_API_KEY);
-    const places = new PlacesService(
-      this.env.GOOGLE_PLACES_API_KEY || this.env.GOOGLE_GENERATIVE_AI_API_KEY,
-    );
+    const ai = new AIService({
+      provider: this.env.AI_PROVIDER,
+      model: this.env.AI_MODEL,
+      apiKey: this.env.AI_API_KEY,
+    });
+    const places = new PlacesService(this.env.GOOGLE_PLACES_API_KEY);
 
     let apifyWebhookUrl: string | undefined = undefined;
     if (this.env.API_BASE_URL) {

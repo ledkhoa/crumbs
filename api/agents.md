@@ -107,10 +107,10 @@ All services located under `src/services/` (`ScraperService`, `AIService`, `Plac
 3. **`src/services/places.ts`**:
    - `PlacesService`: Google Places API (New) Text Search (`https://places.googleapis.com/v1/places:searchText`) resolving restaurant name/city into exact address, lat/lng, Place ID, photo URLs, opening hours, and Maps URLs.
 4. **`src/services/ai.ts`**:
-   - `AIService`: Uses `@ai-sdk/google` + `generateText({ output: Output.object({ schema }) })` with `gemini-3.7-flash` and multimodal vision support for OCR on graphic slides and videos.
+   - `AIService`: Uses Vercel AI SDK (with dynamically configured `AI_PROVIDER` and `AI_MODEL`) + `generateText({ output: Output.object({ schema }) })` with multimodal vision support for OCR on graphic slides and videos.
 5. **`src/services/scraper.ts`**:
    - `ScraperService`: Apify REST synchronous actor endpoint (`run-sync-get-dataset-items`) for reliable Cloudflare Workers edge compatibility with typed `ScraperError` and retry policies.
 6. **`src/types/env.ts`**:
-   - Defines all Cloudflare environment bindings (`INGEST_WORKFLOW`, `APIFY_TOKEN`, `GOOGLE_GENERATIVE_AI_API_KEY`, `GOOGLE_PLACES_API_KEY`, `DATABASE_URL`).
+   - Defines all Cloudflare environment bindings (`INGEST_WORKFLOW`, `APIFY_TOKEN`, `AI_PROVIDER`, `AI_MODEL`, `AI_API_KEY`, `GOOGLE_PLACES_API_KEY`, `DATABASE_URL`).
 7. **`src/index.ts`**:
    - Exports `type AppType = typeof _routes` for Hono RPC and exports `IngestWorkflow` for Cloudflare Workers runtime.

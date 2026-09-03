@@ -35,7 +35,9 @@ export interface WorkflowBinding<T = unknown> {
 export type Bindings = {
   INGEST_WORKFLOW: WorkflowBinding<IngestWorkflowParams>;
   APIFY_TOKEN?: string;
-  GOOGLE_GENERATIVE_AI_API_KEY?: string;
+  AI_PROVIDER?: 'openai' | 'google' | string;
+  AI_MODEL?: string;
+  AI_API_KEY?: string;
   GOOGLE_PLACES_API_KEY?: string;
   DATABASE_URL?: string;
   BETTER_AUTH_SECRET?: string;

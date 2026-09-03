@@ -15,7 +15,7 @@ export const getApiBaseUrl = (): string => {
     return `http://${ip}:8787`;
   }
 
-  return 'http://localhost:8787';
+  return 'https://stenotopic-nilda-nonmasculinely.ngrok-free.dev';
 };
 
 /**

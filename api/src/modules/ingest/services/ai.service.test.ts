@@ -106,3 +106,89 @@ describe('postExtractionSchema', () => {
     expect(parsed.restaurants).toHaveLength(0);
   });
 });
+
+describe('pruneMetadataForPrompt', () => {
+  it('should return undefined for missing or invalid JSON', () => {
+    const { pruneMetadataForPrompt } = require('./ai.service');
+    expect(pruneMetadataForPrompt(undefined)).toBeUndefined();
+    expect(pruneMetadataForPrompt('')).toBeUndefined();
+    expect(pruneMetadataForPrompt('invalid json')).toBeUndefined();
+  });
+
+  it('should prune noisy fields and keep essential metadata (locations, hashtags, mentions, alt text)', () => {
+    const { pruneMetadataForPrompt } = require('./ai.service');
+    const rawData = {
+      locationName: 'Lilia Ristorante',
+      locationAddress: '567 Union Ave',
+      locationCity: 'Brooklyn',
+      hashtags: ['nycfood', 'pasta', 'williamsburg'],
+      mentions: ['lilianewyork'],
+      taggedUsers: ['chefmissyrobbins'],
+      alt: 'A plate of sheep milk agnolotti in buttery sauce',
+      ownerUsername: 'foodie_nyc',
+      // noisy fields that should be stripped
+      comments: [{ text: 'omg so good', user: 'bob' }],
+      latestComments: [1, 2, 3],
+      videoPlayInfo: { duration: 15 },
+      unrelatedAnalytics: { views: 50000 },
+    };
+
+    const prunedStr = pruneMetadataForPrompt(JSON.stringify(rawData));
+    expect(prunedStr).toBeDefined();
+
+    const parsed = JSON.parse(prunedStr!);
+    expect(parsed.location).toBe('Lilia Ristorante');
+    expect(parsed.address).toBe('567 Union Ave');
+    expect(parsed.city).toBe('Brooklyn');
+    expect(parsed.hashtags).toEqual(['nycfood', 'pasta', 'williamsburg']);
+    expect(parsed.mentions).toEqual(['lilianewyork']);
+    expect(parsed.taggedUsers).toEqual(['chefmissyrobbins']);
+    expect(parsed.imageAltText).toBe(
+      'A plate of sheep milk agnolotti in buttery sauce',
+    );
+    expect(parsed.author).toBe('foodie_nyc');
+    expect(parsed.comments).toBeUndefined();
+    expect(parsed.videoPlayInfo).toBeUndefined();
+  });
+});
+
+describe('AIService Dynamic Provider Configuration', () => {
+  it('should initialize with OpenAI provider and provided model', () => {
+    const { AIService } = require('./ai.service');
+    const ai = new AIService({
+      provider: 'openai',
+      model: 'gpt-5.6-luna',
+      apiKey: 'sk-test-key',
+    });
+    expect(ai.provider).toBe('openai');
+    expect(ai.modelName).toBe('gpt-5.6-luna');
+  });
+
+  it('should initialize with Google provider and provided model', () => {
+    const { AIService } = require('./ai.service');
+    const ai = new AIService({
+      provider: 'google',
+      model: 'gemini-2.5-flash',
+      apiKey: 'AIzaSyTestKey',
+    });
+    expect(ai.provider).toBe('google');
+    expect(ai.modelName).toBe('gemini-2.5-flash');
+  });
+
+  it('should throw an AIError if AI_MODEL is not provided in config or env', () => {
+    const { AIService } = require('./ai.service');
+    const prevModel = process.env.AI_MODEL;
+    delete process.env.AI_MODEL;
+    try {
+      expect(
+        () =>
+          new AIService({
+            provider: 'openai',
+            apiKey: 'sk-test-key',
+          }),
+      ).toThrow('AI_MODEL is required');
+    } finally {
+      if (prevModel) process.env.AI_MODEL = prevModel;
+    }
+  });
+});

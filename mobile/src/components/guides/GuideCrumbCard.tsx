@@ -12,6 +12,7 @@ import { haptics } from '@/utils/haptics';
 import { formatPriceLevel } from '@/utils/price';
 import { getRestaurantOpenStatus } from '@/utils/opening-hours';
 import type { OpeningHoursInfo } from '@/types/ingest';
+import { StarRating } from '@/components/ui/StarRating';
 import {
   CaretRightIcon,
   TrashIcon,
@@ -63,6 +64,10 @@ export function GuideCrumbCard({
   const { restaurant, effectiveHeroDish } = item;
 
   const formattedPrice = formatPriceLevel(restaurant.priceLevel);
+  const numericRating =
+    restaurant.rating != null && !Number.isNaN(Number(restaurant.rating))
+      ? Number(restaurant.rating)
+      : null;
   const locationSubtitle =
     [restaurant.neighborhood, restaurant.city].filter(Boolean).join(', ') ||
     restaurant.formattedAddress ||
@@ -125,11 +130,24 @@ export function GuideCrumbCard({
             {restaurant.name}
           </Text>
 
-          {/* Subtitle Row (Price + Location + Open Status) */}
+          {/* Subtitle Row (Price + Rating + Location + Open Status) */}
           <View style={styles.metaRow}>
             {formattedPrice ? (
               <Text style={[styles.metaText, { color: colors.textMuted }]}>
-                {formattedPrice} ·{' '}
+                {formattedPrice}
+              </Text>
+            ) : null}
+            {formattedPrice && numericRating ? (
+              <Text style={[styles.dotSeparator, { color: colors.textSubtle }]}>
+                ·
+              </Text>
+            ) : null}
+            {numericRating ? (
+              <StarRating rating={numericRating} size="sm" />
+            ) : null}
+            {(formattedPrice || numericRating) && locationSubtitle ? (
+              <Text style={[styles.dotSeparator, { color: colors.textSubtle }]}>
+                ·
               </Text>
             ) : null}
             {locationSubtitle ? (
@@ -259,6 +277,11 @@ const styles = StyleSheet.create({
   metaText: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  dotSeparator: {
+    fontSize: 12,
+    fontWeight: '400',
+    marginHorizontal: 1,
   },
   locationText: {
     flexShrink: 1,
